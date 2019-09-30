@@ -754,6 +754,9 @@ public class LogicalOperatorDotVisitor implements ILogicalOperatorVisitor<String
                         break;
                     case UNPARTITIONED:
                         stringBuilder.append("Data is in one place.");
+                    case PARTIAL_BROADCAST_ORDERED_FOLLOWING:
+                        stringBuilder.append("Data is partially broadcasted to partitions.");
+                        break;
                 }
                 if (nodeDomain instanceof DefaultNodeGroupDomain) {
                     DefaultNodeGroupDomain nd = (DefaultNodeGroupDomain) nodeDomain;
