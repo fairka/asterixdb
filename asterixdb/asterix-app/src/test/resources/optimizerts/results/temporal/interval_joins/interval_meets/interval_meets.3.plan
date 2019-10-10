@@ -1,0 +1,42 @@
+distribute result [$$27]
+-- DISTRIBUTE_RESULT  |PARTITIONED|
+  exchange
+  -- ONE_TO_ONE_EXCHANGE  |PARTITIONED|
+    project ([$$27])
+    -- STREAM_PROJECT  |PARTITIONED|
+      assign [$$27] <- [{"staff": $$28, "student": $$29}]
+      -- ASSIGN  |PARTITIONED|
+        project ([$$28, $$29])
+        -- STREAM_PROJECT  |PARTITIONED|
+          exchange
+          -- ONE_TO_ONE_EXCHANGE  |PARTITIONED|
+            join (eq($$30, $$31))
+            -- HYBRID_HASH_JOIN [$$30][$$31]  |PARTITIONED|
+              exchange
+              -- HASH_PARTITION_EXCHANGE [$$30]  |PARTITIONED|
+                project ([$$28, $$30])
+                -- STREAM_PROJECT  |PARTITIONED|
+                  assign [$$30] <- [get-interval-end($$f.getField(2))]
+                  -- ASSIGN  |PARTITIONED|
+                    exchange
+                    -- ONE_TO_ONE_EXCHANGE  |PARTITIONED|
+                      data-scan []<-[$$28, $$f] <- TinyCollege.Staff
+                      -- DATASOURCE_SCAN  |PARTITIONED|
+                        exchange
+                        -- ONE_TO_ONE_EXCHANGE  |PARTITIONED|
+                          empty-tuple-source
+                          -- EMPTY_TUPLE_SOURCE  |PARTITIONED|
+              exchange
+              -- HASH_PARTITION_EXCHANGE [$$31]  |PARTITIONED|
+                project ([$$29, $$31])
+                -- STREAM_PROJECT  |PARTITIONED|
+                  assign [$$31] <- [get-interval-start($$d.getField(2))]
+                  -- ASSIGN  |PARTITIONED|
+                    exchange
+                    -- ONE_TO_ONE_EXCHANGE  |PARTITIONED|
+                      data-scan []<-[$$29, $$d] <- TinyCollege.Students
+                      -- DATASOURCE_SCAN  |PARTITIONED|
+                        exchange
+                        -- ONE_TO_ONE_EXCHANGE  |PARTITIONED|
+                          empty-tuple-source
+                          -- EMPTY_TUPLE_SOURCE  |PARTITIONED|
