@@ -17,4 +17,4 @@
 # under the License.
 #
 
-temporal/interval_joins/interval_after/interval_after.3.query.sqlpp
+
