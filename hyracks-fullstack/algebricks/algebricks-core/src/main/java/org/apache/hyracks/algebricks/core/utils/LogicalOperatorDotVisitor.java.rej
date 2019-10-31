@@ -1,0 +1,11 @@
+diff a/hyracks-fullstack/algebricks/algebricks-core/src/main/java/org/apache/hyracks/algebricks/core/utils/LogicalOperatorDotVisitor.java b/hyracks-fullstack/algebricks/algebricks-core/src/main/java/org/apache/hyracks/algebricks/core/utils/LogicalOperatorDotVisitor.java	(rejected hunks)
+@@ -754,6 +754,9 @@
+                         break;
+                     case UNPARTITIONED:
+                         stringBuilder.append("Data is in one place.");
++                    case PARTIAL_BROADCAST_ORDERED_FOLLOWING:
++                        stringBuilder.append("Data is partially broadcasted to partitions.");
++                        break;
+                 }
+                 if (nodeDomain instanceof DefaultNodeGroupDomain) {
+                     DefaultNodeGroupDomain nd = (DefaultNodeGroupDomain) nodeDomain;
