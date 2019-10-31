@@ -19,6 +19,13 @@
 
 package org.apache.asterix.om.util;
 
+import java.io.ByteArrayOutputStream;
+import java.io.DataOutput;
+import java.io.DataOutputStream;
+import java.io.IOException;
+import java.nio.ByteBuffer;
+import java.util.BitSet;
+
 import junit.framework.TestCase;
 import org.apache.asterix.dataflow.data.nontagged.comparators.AIntervalAscPartialBinaryComparatorFactory;
 import org.apache.asterix.dataflow.data.nontagged.comparators.AIntervalDescPartialBinaryComparatorFactory;
@@ -41,13 +48,6 @@ import org.apache.hyracks.dataflow.common.data.marshalling.Integer64SerializerDe
 import org.apache.hyracks.dataflow.common.data.partition.range.*;
 import org.apache.hyracks.test.support.TestUtils;
 import org.junit.Assert;
-
-import java.io.ByteArrayOutputStream;
-import java.io.DataOutput;
-import java.io.DataOutputStream;
-import java.io.IOException;
-import java.nio.ByteBuffer;
-import java.util.BitSet;
 
 public abstract class AbstractFieldRangeMultiPartitionComputerFactoryTest extends TestCase {
 
