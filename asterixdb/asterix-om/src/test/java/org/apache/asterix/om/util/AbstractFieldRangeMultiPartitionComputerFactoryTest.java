@@ -297,7 +297,7 @@ public abstract class AbstractFieldRangeMultiPartitionComputerFactoryTest extend
                 results.length == map.cardinality());
         for (int i = 0; i < results.length; ++i) {
             Assert.assertFalse("The map partition " + getString(map) + " and the results " + getString(results)
-                    + " do not match. 2. Results", map.get(i));
+                    + " do not match. 2.", map.get(i));
         }
     }
 }
