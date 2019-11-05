@@ -48,10 +48,7 @@ public class FieldRangeReplicatePartitionComputerFactoryTest
 
         RangeMap rangeMap = getRangeMap(MAP_POINTS);
 
-        //executeFieldRangeMultiPartitionTests(PARTITION_EDGE_CASES, rangeMap, BINARY_ASC_COMPARATOR_FACTORIES,
-        //        BINARY_ASC_COMPARATOR_FACTORIES, RangePartitioningType.REPLICATE, 4, results, 3);
-
-        executeFieldRangeFollowingPartitionTests(PARTITION_EDGE_CASES, rangeMap, BINARY_ASC_COMPARATOR_FACTORIES,
+        executeFieldRangeReplicatePartitionTests(PARTITION_EDGE_CASES, rangeMap, BINARY_ASC_COMPARATOR_FACTORIES,
                 BINARY_ASC_COMPARATOR_FACTORIES, 4, results, 3);
     }
 
@@ -78,10 +75,7 @@ public class FieldRangeReplicatePartitionComputerFactoryTest
         ArrayUtils.reverse(map);
         RangeMap rangeMap = getRangeMap(map);
 
-        //executeFieldRangeMultiPartitionTests(PARTITION_EDGE_CASES, rangeMap, BINARY_DESC_COMPARATOR_FACTORIES,
-        //        BINARY_DESC_COMPARATOR_FACTORIES, RangePartitioningType.REPLICATE, 4, results, 3);
-
-        executeFieldRangeFollowingPartitionTests(PARTITION_EDGE_CASES, rangeMap, BINARY_DESC_COMPARATOR_FACTORIES,
+        executeFieldRangeReplicatePartitionTests(PARTITION_EDGE_CASES, rangeMap, BINARY_DESC_COMPARATOR_FACTORIES,
                 BINARY_DESC_COMPARATOR_FACTORIES, 4, results, 3);
     }
 }
