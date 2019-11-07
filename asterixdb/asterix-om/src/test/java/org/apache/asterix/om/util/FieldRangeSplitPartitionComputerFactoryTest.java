@@ -20,11 +20,16 @@
 package org.apache.asterix.om.util;
 
 import org.apache.commons.lang3.ArrayUtils;
+import org.apache.hyracks.api.dataflow.value.IBinaryComparatorFactory;
 import org.apache.hyracks.api.exceptions.HyracksDataException;
+import org.apache.hyracks.data.std.accessors.IntegerBinaryComparatorFactory;
 import org.apache.hyracks.dataflow.common.data.partition.range.RangeMap;
 import org.junit.Test;
 
 public class FieldRangeSplitPartitionComputerFactoryTest extends AbstractFieldRangeMultiPartitionComputerFactoryTest {
+
+    IBinaryComparatorFactory[] BINARY_COMPARATOR_FACTORIES =
+            new IBinaryComparatorFactory[] { IntegerBinaryComparatorFactory.INSTANCE };
 
     @Test
     public void testFRMPCF_Split_ASC_D3_N4_EDGE() throws HyracksDataException {
@@ -45,10 +50,10 @@ public class FieldRangeSplitPartitionComputerFactoryTest extends AbstractFieldRa
         results[13] = new int[] { 3 }; // 350:353
         results[14] = new int[] { 3 }; // 425:428
 
-        RangeMap rangeMap = getRangeMap(MAP_POINTS);
+        RangeMap rangeMap = getIntervalRangeMap(MAP_POINTS);
 
-        executeFieldRangeSplitPartitionTests(PARTITION_EDGE_CASES, rangeMap, BINARY_ASC_COMPARATOR_FACTORIES,
-                BINARY_ASC_MAX_COMPARATOR_FACTORIES, 4, results, 3);
+        executeFieldRangeSplitPartitionTests(PARTITION_EDGE_CASES, rangeMap, BINARY_COMPARATOR_FACTORIES, 4, results,
+                3);
     }
 
     @Test
@@ -72,10 +77,10 @@ public class FieldRangeSplitPartitionComputerFactoryTest extends AbstractFieldRa
 
         Long[] map = MAP_POINTS.clone();
         ArrayUtils.reverse(map);
-        RangeMap rangeMap = getRangeMap(map);
+        RangeMap rangeMap = getIntervalRangeMap(map);
 
-        executeFieldRangeSplitPartitionTests(PARTITION_EDGE_CASES, rangeMap, BINARY_DESC_COMPARATOR_FACTORIES,
-                BINARY_DESC_MAX_COMPARATOR_FACTORIES, 4, results, 3);
+        executeFieldRangeSplitPartitionTests(PARTITION_EDGE_CASES, rangeMap, BINARY_COMPARATOR_FACTORIES, 4, results,
+                3);
     }
 
     @Test
@@ -97,10 +102,10 @@ public class FieldRangeSplitPartitionComputerFactoryTest extends AbstractFieldRa
         results[13] = new int[] { 14, 15 }; // 350:400
         results[14] = new int[] { 15 }; // 425:475
 
-        RangeMap rangeMap = getRangeMap(MAP_POINTS);
+        RangeMap rangeMap = getIntervalRangeMap(MAP_POINTS);
 
-        executeFieldRangeSplitPartitionTests(PARTITION_EDGE_CASES, rangeMap, BINARY_ASC_COMPARATOR_FACTORIES,
-                BINARY_ASC_MAX_COMPARATOR_FACTORIES, 16, results, 50);
+        executeFieldRangeSplitPartitionTests(PARTITION_EDGE_CASES, rangeMap, BINARY_COMPARATOR_FACTORIES, 16, results,
+                50);
     }
 
     @Test
@@ -124,10 +129,10 @@ public class FieldRangeSplitPartitionComputerFactoryTest extends AbstractFieldRa
 
         Long[] map = MAP_POINTS.clone();
         ArrayUtils.reverse(map);
-        RangeMap rangeMap = getRangeMap(map);
+        RangeMap rangeMap = getIntervalRangeMap(map);
 
-        executeFieldRangeSplitPartitionTests(PARTITION_EDGE_CASES, rangeMap, BINARY_DESC_COMPARATOR_FACTORIES,
-                BINARY_DESC_MAX_COMPARATOR_FACTORIES, 16, results, 50);
+        executeFieldRangeSplitPartitionTests(PARTITION_EDGE_CASES, rangeMap, BINARY_COMPARATOR_FACTORIES, 16, results,
+                50);
     }
 
     @Test
@@ -150,10 +155,9 @@ public class FieldRangeSplitPartitionComputerFactoryTest extends AbstractFieldRa
         results[14] = new int[] { 14 }; // 370:373
         results[15] = new int[] { 15 }; // 395:398
 
-        RangeMap rangeMap = getRangeMap(MAP_POINTS);
+        RangeMap rangeMap = getIntervalRangeMap(MAP_POINTS);
 
-        executeFieldRangeSplitPartitionTests(EACH_PARTITION, rangeMap, BINARY_ASC_COMPARATOR_FACTORIES,
-                BINARY_ASC_MAX_COMPARATOR_FACTORIES, 16, results, 3);
+        executeFieldRangeSplitPartitionTests(EACH_PARTITION, rangeMap, BINARY_COMPARATOR_FACTORIES, 16, results, 3);
     }
 
     @Test
@@ -178,10 +182,9 @@ public class FieldRangeSplitPartitionComputerFactoryTest extends AbstractFieldRa
 
         Long[] map = MAP_POINTS.clone();
         ArrayUtils.reverse(map);
-        RangeMap rangeMap = getRangeMap(map);
+        RangeMap rangeMap = getIntegerRangeMap(map);
 
-        executeFieldRangeSplitPartitionTests(EACH_PARTITION, rangeMap, BINARY_DESC_COMPARATOR_FACTORIES,
-                BINARY_DESC_MAX_COMPARATOR_FACTORIES, 16, results, 3);
+        executeFieldRangeSplitPartitionTests(EACH_PARTITION, rangeMap, BINARY_COMPARATOR_FACTORIES, 16, results, 3);
 
     }
 }

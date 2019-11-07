@@ -45,7 +45,7 @@ public class FieldRangeProjectPartitionComputerFactoryTest extends AbstractField
         results[13] = new int[] { 3 }; // 350:353
         results[14] = new int[] { 3 }; // 425:428
 
-        RangeMap rangeMap = getRangeMap(MAP_POINTS);
+        RangeMap rangeMap = getIntervalRangeMap(MAP_POINTS);
 
         executeFieldRangeProjectPartitionTests(PARTITION_EDGE_CASES, rangeMap, BINARY_ASC_COMPARATOR_FACTORIES,
                 BINARY_ASC_COMPARATOR_FACTORIES, 4, results, 3);
@@ -72,7 +72,7 @@ public class FieldRangeProjectPartitionComputerFactoryTest extends AbstractField
 
         Long[] map = MAP_POINTS.clone();
         ArrayUtils.reverse(map);
-        RangeMap rangeMap = getRangeMap(map);
+        RangeMap rangeMap = getIntervalRangeMap(map);
 
         executeFieldRangeProjectPartitionTests(PARTITION_EDGE_CASES, rangeMap, BINARY_DESC_COMPARATOR_FACTORIES,
                 BINARY_DESC_COMPARATOR_FACTORIES, 4, results, 3);

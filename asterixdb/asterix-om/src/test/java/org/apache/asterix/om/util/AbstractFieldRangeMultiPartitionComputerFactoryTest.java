@@ -53,10 +53,14 @@ import junit.framework.TestCase;
 public abstract class AbstractFieldRangeMultiPartitionComputerFactoryTest extends TestCase {
 
     private final AIntervalSerializerDeserializer intervalSerde = AIntervalSerializerDeserializer.INSTANCE;
+    private final Integer64SerializerDeserializer integerSerde = Integer64SerializerDeserializer.INSTANCE;
     @SuppressWarnings("rawtypes")
     private final ISerializerDeserializer[] SerDers =
             new ISerializerDeserializer[] { Integer64SerializerDeserializer.INSTANCE };
     private final RecordDescriptor RecordDesc = new RecordDescriptor(SerDers);
+    private final ISerializerDeserializer[] TwoIntegerSerDers = new ISerializerDeserializer[] {
+            Integer64SerializerDeserializer.INSTANCE, Integer64SerializerDeserializer.INSTANCE };
+    private final RecordDescriptor RecordIntegerDesc = new RecordDescriptor(TwoIntegerSerDers);
 
     IBinaryComparatorFactory[] BINARY_ASC_COMPARATOR_FACTORIES =
             new IBinaryComparatorFactory[] { AIntervalAscPartialBinaryComparatorFactory.INSTANCE };
@@ -141,12 +145,34 @@ public abstract class AbstractFieldRangeMultiPartitionComputerFactoryTest extend
         }
     }
 
-    protected RangeMap getRangeMap(Long[] integers) throws HyracksDataException {
+    private byte[] getIntegerBytes(Long[] integers) throws HyracksDataException {
+        try {
+            ByteArrayOutputStream bos = new ByteArrayOutputStream();
+            DataOutput dos = new DataOutputStream(bos);
+            for (int i = 0; i < integers.length; ++i) {
+                integerSerde.serialize(integers[i], dos);
+            }
+            bos.close();
+            return bos.toByteArray();
+        } catch (IOException e) {
+            throw HyracksDataException.create(e);
+        }
+    }
+
+    protected RangeMap getIntervalRangeMap(Long[] integers) throws HyracksDataException {
         int offsets[] = new int[integers.length];
         for (int i = 0; i < integers.length; ++i) {
             offsets[i] = (i + 1) * INTERVAL_LENGTH;
         }
         return new RangeMap(1, getIntervalBytes(integers, 0), offsets);
+    }
+
+    protected RangeMap getIntegerRangeMap(Long[] integers) throws HyracksDataException {
+        int offsets[] = new int[integers.length];
+        for (int i = 0; i < integers.length; ++i) {
+            offsets[i] = (i + 1) * INTEGER_LENGTH;
+        }
+        return new RangeMap(1, getIntegerBytes(integers), offsets);
     }
 
     private AInterval[] getAIntervals(Long[] integers, long duration) {
@@ -175,6 +201,26 @@ public abstract class AbstractFieldRangeMultiPartitionComputerFactoryTest extend
         return frame.getBuffer();
     }
 
+    private ByteBuffer prepareData(IHyracksTaskContext ctx, Long[] startPoints, Long duration)
+            throws HyracksDataException {
+        IFrame frame = new VSizeFrame(ctx);
+
+        FrameTupleAppender appender = new FrameTupleAppender();
+        ArrayTupleBuilder tb = new ArrayTupleBuilder(RecordIntegerDesc.getFieldCount());
+        DataOutput dos = tb.getDataOutput();
+        appender.reset(frame, true);
+
+        for (int i = 0; i < startPoints.length; ++i) {
+            tb.reset();
+            integerSerde.serialize(startPoints[i], dos);
+            tb.addFieldEndOffset();
+            integerSerde.serialize(startPoints[i] + duration, dos);
+            tb.addFieldEndOffset();
+            appender.append(tb.getFieldEndOffsets(), tb.getByteArray(), 0, tb.getSize());
+        }
+        return frame.getBuffer();
+    }
+
     protected void executeFieldRangeReplicatePartitionTests(Long[] integers, RangeMap rangeMap,
             IBinaryComparatorFactory[] minComparatorFactories, IBinaryComparatorFactory[] maxComparatorFactories,
             int nParts, int[][] results, long duration) throws HyracksDataException {
@@ -191,8 +237,8 @@ public abstract class AbstractFieldRangeMultiPartitionComputerFactoryTest extend
     }
 
     protected void executeFieldRangeSplitPartitionTests(Long[] integers, RangeMap rangeMap,
-            IBinaryComparatorFactory[] minComparatorFactories, IBinaryComparatorFactory[] maxComparatorFactories,
-            int nParts, int[][] results, long duration) throws HyracksDataException {
+            IBinaryComparatorFactory[] minComparatorFactories, int nParts, int[][] results, long duration)
+            throws HyracksDataException {
 
         StaticRangeMapSupplier rangeMapSupplier = new StaticRangeMapSupplier(rangeMap);
         SourceLocation sourceLocation = new SourceLocation(0, 0);
@@ -228,16 +274,16 @@ public abstract class AbstractFieldRangeMultiPartitionComputerFactoryTest extend
         partitioner.initialize();
 
         IFrameTupleAccessor accessor = new FrameTupleAccessor(RecordDesc);
-        AInterval[] intervals = getAIntervals(integers, duration);
-        ByteBuffer buffer = prepareData(ctx, intervals);
+        ByteBuffer buffer = prepareData(ctx, integers, duration);
         accessor.reset(buffer);
 
         BitSet map = new BitSet(16);
+        map.clear();
 
         for (int i = 0; i < results.length; ++i) {
             map.clear();
             map = partitioner.partition(accessor, i, nParts);
-            checkPartitionResult(intervals[i], results[i], map);
+            checkPartitionResult(results[i], map);
         }
     }
 
@@ -278,7 +324,7 @@ public abstract class AbstractFieldRangeMultiPartitionComputerFactoryTest extend
     private String getString(BitSet results) {
         int count = 0;
         String result = "[";
-        for (int i = 0; i < results.size(); ++i) {
+        for (int i = 0; i < results.length(); ++i) {
             if (results.get(i)) {
                 if (count > 0) {
                     result += ", ";
@@ -291,13 +337,12 @@ public abstract class AbstractFieldRangeMultiPartitionComputerFactoryTest extend
         return result;
     }
 
-    private void checkPartitionResult(AInterval interval, int[] results, BitSet map) {
-        Assert.assertFalse(
-                "The map partition " + getString(map) + " and the results " + getString(results) + " do not match. 1",
-                results.length == map.cardinality());
+    private void checkPartitionResult(int[] results, BitSet map) {
+        Assert.assertTrue("The number of partitions in the Bitset:(" + map.cardinality() + ") and the results:("
+                + results.length + ") do not match.", results.length == map.cardinality());
         for (int i = 0; i < results.length; ++i) {
-            Assert.assertFalse("The map partition " + getString(map) + " and the results " + getString(results)
-                    + " do not match. 2.", map.get(i));
+            Assert.assertTrue("The map partition " + getString(map) + " and the results " + getString(results)
+                    + " do not match. 2.", map.get(results[i]));
         }
     }
 }
