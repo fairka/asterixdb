@@ -37,21 +37,76 @@ import org.apache.hyracks.api.comm.IFrame;
 import org.apache.hyracks.api.comm.IFrameTupleAccessor;
 import org.apache.hyracks.api.comm.VSizeFrame;
 import org.apache.hyracks.api.context.IHyracksTaskContext;
-import org.apache.hyracks.api.dataflow.value.*;
+import org.apache.hyracks.api.dataflow.value.IBinaryComparatorFactory;
+import org.apache.hyracks.api.dataflow.value.ISerializerDeserializer;
+import org.apache.hyracks.api.dataflow.value.ITupleMultiPartitionComputer;
+import org.apache.hyracks.api.dataflow.value.ITupleMultiPartitionComputerFactory;
+import org.apache.hyracks.api.dataflow.value.ITuplePartitionComputer;
+import org.apache.hyracks.api.dataflow.value.ITuplePartitionComputerFactory;
+import org.apache.hyracks.api.dataflow.value.RecordDescriptor;
 import org.apache.hyracks.api.exceptions.HyracksDataException;
 import org.apache.hyracks.api.exceptions.SourceLocation;
 import org.apache.hyracks.dataflow.common.comm.io.ArrayTupleBuilder;
 import org.apache.hyracks.dataflow.common.comm.io.FrameTupleAccessor;
 import org.apache.hyracks.dataflow.common.comm.io.FrameTupleAppender;
 import org.apache.hyracks.dataflow.common.data.marshalling.Integer64SerializerDeserializer;
-import org.apache.hyracks.dataflow.common.data.partition.range.*;
+import org.apache.hyracks.dataflow.common.data.partition.range.FieldRangeFollowingPartitionComputerFactory;
+import org.apache.hyracks.dataflow.common.data.partition.range.FieldRangeIntersectPartitionComputerFactory;
+import org.apache.hyracks.dataflow.common.data.partition.range.FieldRangePartitionComputerFactory;
+import org.apache.hyracks.dataflow.common.data.partition.range.RangeMap;
+import org.apache.hyracks.dataflow.common.data.partition.range.StaticRangeMapSupplier;
 import org.apache.hyracks.test.support.TestUtils;
 import org.junit.Assert;
 
 import junit.framework.TestCase;
 
+/*
+ * These tests check the range partitioning types with various interval sizes and range map split points.
+ * For each range type they check the ASCending and DESCending comparators for intervals with durations of D = 3, and
+ * a range map of the overall range that has been split into N = 4 parts.
+ * the test for the Split type also checks larger intervals and more splits on the range map to make sure it splits
+ * correctly across many partitions, and within single partitions.
+ *
+ * The map of the partitions, listed as the rangeMap split points in ascending and descending orders:
+ *
+ * The following points (X) will be tested for these 4 partitions.
+ *
+ *     X  -----------X----------XXX----------X----------XXX----------X------------XXX------------X------------  X
+ *        -----------------------|-----------------------|-------------------------|--------------------------
+ *
+ * The following points (X) will be tested for these 16 partitions.
+ *
+ *     X  -----------X----------XXX----------X----------XXX----------X------------XXX------------X------------  X
+ *        -----|-----|-----|-----|-----|-----|-----|-----|-----|-----|------|------|------|------|------|-----
+ *
+ * N4                0          )[           1          )[           2            )[             3
+ * N16     0  )[  1 )[  2 )[  3 )[  4 )[  5 )[  6 )[  7 )[  8 )[  9 )[  10 )[  11 )[  12 )[  13 )[  14 )[  15
+ * ASC   0     25    50    75    100   125   150   175   200   225   250    275    300    325    350    375    400
+ * DESC  400   375   350   325   300   275   250   225   200   175   150    125    100    75     50     25     0
+ *
+ * First and last partitions include all values less than and greater than min and max split points respectively.
+ *
+ * Both rangeMap partitions and test intervals are end exclusive.
+ * an ascending test interval ending on 200 like (190, 200) is not in partition 8.
+ * similarly, a descending test ending on 200 like (210, 200) is not in partition 8.
+ */
 public abstract class AbstractFieldRangeMultiPartitionComputerFactoryTest extends TestCase {
 
+    // Tests points inside each partition.
+    //result index {      0,   1,   2,   3,    4,    5,    6,    7,    8,    9,   10,   11,   12,   13,   14,   15   };
+    //points       {     20l, 45l, 70l, 95l, 120l, 145l, 170l, 195l, 220l, 245l, 270l, 295l, 320l, 345l, 370l, 395l  };
+    protected final Long[] EACH_PARTITION =
+            new Long[] { 20l, 45l, 70l, 95l, 120l, 145l, 170l, 195l, 220l, 245l, 270l, 295l, 320l, 345l, 370l, 395l };
+    // Tests points at or near partition boundaries and at the ends of the partition range.
+    //result index {      0,   1,   2,   3,    4,    5,    6,    7,    8,    9,    10,   11,   12,   13,   14        };
+    //points       {    -25l, 50l, 99l, 100l, 101l, 150l, 199l, 200l, 201l, 250l, 299l, 300l, 301l, 350l, 425l       };
+    protected final Long[] PARTITION_EDGE_CASES =
+            new Long[] { -25l, 50l, 99l, 100l, 101l, 150l, 199l, 200l, 201l, 250l, 299l, 300l, 301l, 350l, 425l };
+    // The map of the partitions, listed as the split points.
+    // partitions   {  0,   1,   2,   3,    4,    5,    6,    7,    8,    9,   10,   11,   12,   13,   14,   15,   16 };
+    // map          { 0l, 25l, 50l, 75l, 100l, 125l, 150l, 175l, 200l, 225l, 250l, 275l, 300l, 325l, 350l, 375l, 400l };
+    protected final Long[] MAP_POINTS =
+            new Long[] { 25l, 50l, 75l, 100l, 125l, 150l, 175l, 200l, 225l, 250l, 275l, 300l, 325l, 350l, 375l };
     private final AIntervalSerializerDeserializer intervalSerde = AIntervalSerializerDeserializer.INSTANCE;
     private final Integer64SerializerDeserializer integerSerde = Integer64SerializerDeserializer.INSTANCE;
     @SuppressWarnings("rawtypes")
@@ -61,7 +116,9 @@ public abstract class AbstractFieldRangeMultiPartitionComputerFactoryTest extend
     private final ISerializerDeserializer[] TwoIntegerSerDers = new ISerializerDeserializer[] {
             Integer64SerializerDeserializer.INSTANCE, Integer64SerializerDeserializer.INSTANCE };
     private final RecordDescriptor RecordIntegerDesc = new RecordDescriptor(TwoIntegerSerDers);
-
+    private final int FRAME_SIZE = 640;
+    private final int INTEGER_LENGTH = Long.BYTES;
+    private final int INTERVAL_LENGTH = 1 + 2 * INTEGER_LENGTH;
     IBinaryComparatorFactory[] BINARY_ASC_COMPARATOR_FACTORIES =
             new IBinaryComparatorFactory[] { AIntervalAscPartialBinaryComparatorFactory.INSTANCE };
     IBinaryComparatorFactory[] BINARY_DESC_COMPARATOR_FACTORIES =
@@ -71,80 +128,26 @@ public abstract class AbstractFieldRangeMultiPartitionComputerFactoryTest extend
     IBinaryComparatorFactory[] BINARY_DESC_MAX_COMPARATOR_FACTORIES =
             new IBinaryComparatorFactory[] { AIntervalStartpointDescPartialBinaryComparatorFactory.INSTANCE };
 
-    /*
-     * These tests check the range partitioning types with various interval sizes and range map split points.
-     * For each range type they check the ASCending and DESCending comparators for intervals with durations of D = 3, and
-     * a range map of the overall range that has been split into N = 4 parts.
-     * the test for the Split type also checks larger intervals and more splits on the range map to make sure it splits
-     * correctly across many partitions, and within single partitions.
-     *
-     * The map of the partitions, listed as the rangeMap split points in ascending and descending orders:
-     *
-     * The following points (X) will be tested for these 4 partitions.
-     *
-     *     X  -----------X----------XXX----------X----------XXX----------X------------XXX------------X------------  X
-     *        -----------------------|-----------------------|-------------------------|--------------------------
-     *
-     * The following points (X) will be tested for these 16 partitions.
-     *
-     *     X  -----------X----------XXX----------X----------XXX----------X------------XXX------------X------------  X
-     *        -----|-----|-----|-----|-----|-----|-----|-----|-----|-----|------|------|------|------|------|-----
-     *
-     * N4                0          )[           1          )[           2            )[             3
-     * N16     0  )[  1 )[  2 )[  3 )[  4 )[  5 )[  6 )[  7 )[  8 )[  9 )[  10 )[  11 )[  12 )[  13 )[  14 )[  15
-     * ASC   0     25    50    75    100   125   150   175   200   225   250    275    300    325    350    375    400
-     * DESC  400   375   350   325   300   275   250   225   200   175   150    125    100    75     50     25     0
-     *
-     * First and last partitions include all values less than and greater than min and max split points respectively.
-     *
-     * Both rangeMap partitions and test intervals are end exclusive.
-     * an ascending test interval ending on 200 like (190, 200) is not in partition 8.
-     * similarly, a descending test ending on 200 like (210, 200) is not in partition 8.
-     */
-
-    private final int FRAME_SIZE = 640;
-    private final int INTEGER_LENGTH = Long.BYTES;
-    private final int INTERVAL_LENGTH = 1 + 2 * INTEGER_LENGTH;
-
-    // Tests points inside each partition.
-    //result index {      0,   1,   2,   3,    4,    5,    6,    7,    8,    9,   10,   11,   12,   13,   14,   15   };
-    //points       {     20l, 45l, 70l, 95l, 120l, 145l, 170l, 195l, 220l, 245l, 270l, 295l, 320l, 345l, 370l, 395l  };
-    protected final Long[] EACH_PARTITION =
-            new Long[] { 20l, 45l, 70l, 95l, 120l, 145l, 170l, 195l, 220l, 245l, 270l, 295l, 320l, 345l, 370l, 395l };
-
-    // Tests points at or near partition boundaries and at the ends of the partition range.
-    //result index {      0,   1,   2,   3,    4,    5,    6,    7,    8,    9,    10,   11,   12,   13,   14        };
-    //points       {    -25l, 50l, 99l, 100l, 101l, 150l, 199l, 200l, 201l, 250l, 299l, 300l, 301l, 350l, 425l       };
-    protected final Long[] PARTITION_EDGE_CASES =
-            new Long[] { -25l, 50l, 99l, 100l, 101l, 150l, 199l, 200l, 201l, 250l, 299l, 300l, 301l, 350l, 425l };
-
-    // The map of the partitions, listed as the split points.
-    // partitions   {  0,   1,   2,   3,    4,    5,    6,    7,    8,    9,   10,   11,   12,   13,   14,   15,   16 };
-    // map          { 0l, 25l, 50l, 75l, 100l, 125l, 150l, 175l, 200l, 225l, 250l, 275l, 300l, 325l, 350l, 375l, 400l };
-    protected final Long[] MAP_POINTS =
-            new Long[] { 25l, 50l, 75l, 100l, 125l, 150l, 175l, 200l, 225l, 250l, 275l, 300l, 325l, 350l, 375l };
-
     /**
      * @param integers
      * @param duration
      * @return
      * @throws HyracksDataException
      */
-    private byte[] getIntervalBytes(Long[] integers, long duration) throws HyracksDataException {
-        try {
-            ByteArrayOutputStream bos = new ByteArrayOutputStream();
-            DataOutput dos = new DataOutputStream(bos);
-            AInterval[] intervals = getAIntervals(integers, duration);
-            for (int i = 0; i < integers.length; ++i) {
-                intervalSerde.serialize(intervals[i], dos);
-            }
-            bos.close();
-            return bos.toByteArray();
-        } catch (IOException e) {
-            throw HyracksDataException.create(e);
-        }
-    }
-
+    //    private byte[] getIntervalBytes(Long[] integers, long duration) throws HyracksDataException {
+    //        try {
+    //            ByteArrayOutputStream bos = new ByteArrayOutputStream();
+    //            DataOutput dos = new DataOutputStream(bos);
+    //            AInterval[] intervals = getAIntervals(integers, duration);
+    //            for (int i = 0; i < integers.length; ++i) {
+    //                intervalSerde.serialize(intervals[i], dos);
+    //            }
+    //            bos.close();
+    //            return bos.toByteArray();
+    //        } catch (IOException e) {
+    //            throw HyracksDataException.create(e);
+    //        }
+    //    }
     private byte[] getIntegerBytes(Long[] integers) throws HyracksDataException {
         try {
             ByteArrayOutputStream bos = new ByteArrayOutputStream();
@@ -159,13 +162,13 @@ public abstract class AbstractFieldRangeMultiPartitionComputerFactoryTest extend
         }
     }
 
-    protected RangeMap getIntervalRangeMap(Long[] integers) throws HyracksDataException {
-        int offsets[] = new int[integers.length];
-        for (int i = 0; i < integers.length; ++i) {
-            offsets[i] = (i + 1) * INTERVAL_LENGTH;
-        }
-        return new RangeMap(1, getIntervalBytes(integers, 0), offsets);
-    }
+    //    protected RangeMap getIntervalRangeMap(Long[] integers) throws HyracksDataException {
+    //        int offsets[] = new int[integers.length];
+    //        for (int i = 0; i < integers.length; ++i) {
+    //            offsets[i] = (i + 1) * INTERVAL_LENGTH;
+    //        }
+    //        return new RangeMap(1, getIntervalBytes(integers, 0), offsets);
+    //    }
 
     protected RangeMap getIntegerRangeMap(Long[] integers) throws HyracksDataException {
         int offsets[] = new int[integers.length];
@@ -222,8 +225,8 @@ public abstract class AbstractFieldRangeMultiPartitionComputerFactoryTest extend
     }
 
     protected void executeFieldRangeReplicatePartitionTests(Long[] integers, RangeMap rangeMap,
-            IBinaryComparatorFactory[] minComparatorFactories, IBinaryComparatorFactory[] maxComparatorFactories,
-            int nParts, int[][] results, long duration) throws HyracksDataException {
+            IBinaryComparatorFactory[] minComparatorFactories, int nParts, int[][] results, long duration)
+            throws HyracksDataException {
 
         StaticRangeMapSupplier rangeMapSupplier = new StaticRangeMapSupplier(rangeMap);
         SourceLocation sourceLocation = new SourceLocation(0, 0);
@@ -252,8 +255,8 @@ public abstract class AbstractFieldRangeMultiPartitionComputerFactoryTest extend
     }
 
     protected void executeFieldRangeProjectPartitionTests(Long[] integers, RangeMap rangeMap,
-            IBinaryComparatorFactory[] minComparatorFactories, IBinaryComparatorFactory[] maxComparatorFactories,
-            int nParts, int[][] results, long duration) throws HyracksDataException {
+            IBinaryComparatorFactory[] minComparatorFactories, int nParts, int[][] results, long duration)
+            throws HyracksDataException {
 
         StaticRangeMapSupplier rangeMapSupplier = new StaticRangeMapSupplier(rangeMap);
         SourceLocation sourceLocation = new SourceLocation(0, 0);
@@ -273,7 +276,7 @@ public abstract class AbstractFieldRangeMultiPartitionComputerFactoryTest extend
         ITupleMultiPartitionComputer partitioner = itmpcf.createPartitioner(ctx);
         partitioner.initialize();
 
-        IFrameTupleAccessor accessor = new FrameTupleAccessor(RecordDesc);
+        IFrameTupleAccessor accessor = new FrameTupleAccessor(RecordIntegerDesc);
         ByteBuffer buffer = prepareData(ctx, integers, duration);
         accessor.reset(buffer);
 
