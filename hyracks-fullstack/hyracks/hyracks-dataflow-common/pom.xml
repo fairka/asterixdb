@@ -70,6 +70,12 @@
       <artifactId>hyracks-control-nc</artifactId>
       <version>${project.version}</version>
     </dependency>
+    <!--<dependency>-->
+      <!--<groupId>org.apache.hyracks</groupId>-->
+      <!--<artifactId>hyracks-test-support</artifactId>-->
+      <!--<version>${project.version}</version>-->
+      <!--<scope>test</scope>-->
+    <!--</dependency>-->
     <dependency>
       <groupId>commons-io</groupId>
       <artifactId>commons-io</artifactId>
