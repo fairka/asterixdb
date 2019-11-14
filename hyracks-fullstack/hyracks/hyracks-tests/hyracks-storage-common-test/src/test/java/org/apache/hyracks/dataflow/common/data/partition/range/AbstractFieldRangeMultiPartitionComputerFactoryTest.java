@@ -17,7 +17,7 @@
  * under the License.
  */
 
-package org.apache.asterix.om.util;
+package org.apache.hyracks.dataflow.common.data.partition.range;
 
 import java.io.ByteArrayOutputStream;
 import java.io.DataOutput;
@@ -26,13 +26,6 @@ import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.BitSet;
 
-import org.apache.asterix.dataflow.data.nontagged.comparators.AIntervalAscPartialBinaryComparatorFactory;
-import org.apache.asterix.dataflow.data.nontagged.comparators.AIntervalDescPartialBinaryComparatorFactory;
-import org.apache.asterix.dataflow.data.nontagged.comparators.AIntervalEndpointAscPartialBinaryComparatorFactory;
-import org.apache.asterix.dataflow.data.nontagged.comparators.AIntervalStartpointDescPartialBinaryComparatorFactory;
-import org.apache.asterix.dataflow.data.nontagged.serde.AIntervalSerializerDeserializer;
-import org.apache.asterix.om.base.AInterval;
-import org.apache.asterix.om.types.ATypeTag;
 import org.apache.hyracks.api.comm.IFrame;
 import org.apache.hyracks.api.comm.IFrameTupleAccessor;
 import org.apache.hyracks.api.comm.VSizeFrame;
@@ -46,15 +39,11 @@ import org.apache.hyracks.api.dataflow.value.ITuplePartitionComputerFactory;
 import org.apache.hyracks.api.dataflow.value.RecordDescriptor;
 import org.apache.hyracks.api.exceptions.HyracksDataException;
 import org.apache.hyracks.api.exceptions.SourceLocation;
+import org.apache.hyracks.data.std.accessors.LongBinaryComparatorFactory;
 import org.apache.hyracks.dataflow.common.comm.io.ArrayTupleBuilder;
 import org.apache.hyracks.dataflow.common.comm.io.FrameTupleAccessor;
 import org.apache.hyracks.dataflow.common.comm.io.FrameTupleAppender;
 import org.apache.hyracks.dataflow.common.data.marshalling.Integer64SerializerDeserializer;
-import org.apache.hyracks.dataflow.common.data.partition.range.FieldRangeFollowingPartitionComputerFactory;
-import org.apache.hyracks.dataflow.common.data.partition.range.FieldRangeIntersectPartitionComputerFactory;
-import org.apache.hyracks.dataflow.common.data.partition.range.FieldRangePartitionComputerFactory;
-import org.apache.hyracks.dataflow.common.data.partition.range.RangeMap;
-import org.apache.hyracks.dataflow.common.data.partition.range.StaticRangeMapSupplier;
 import org.apache.hyracks.test.support.TestUtils;
 import org.junit.Assert;
 
@@ -107,7 +96,6 @@ public abstract class AbstractFieldRangeMultiPartitionComputerFactoryTest extend
     // map          { 0l, 25l, 50l, 75l, 100l, 125l, 150l, 175l, 200l, 225l, 250l, 275l, 300l, 325l, 350l, 375l, 400l };
     protected final Long[] MAP_POINTS =
             new Long[] { 25l, 50l, 75l, 100l, 125l, 150l, 175l, 200l, 225l, 250l, 275l, 300l, 325l, 350l, 375l };
-    private final AIntervalSerializerDeserializer intervalSerde = AIntervalSerializerDeserializer.INSTANCE;
     private final Integer64SerializerDeserializer integerSerde = Integer64SerializerDeserializer.INSTANCE;
     @SuppressWarnings("rawtypes")
     private final ISerializerDeserializer[] SerDers =
@@ -118,36 +106,16 @@ public abstract class AbstractFieldRangeMultiPartitionComputerFactoryTest extend
     private final RecordDescriptor RecordIntegerDesc = new RecordDescriptor(TwoIntegerSerDers);
     private final int FRAME_SIZE = 640;
     private final int INTEGER_LENGTH = Long.BYTES;
-    private final int INTERVAL_LENGTH = 1 + 2 * INTEGER_LENGTH;
     IBinaryComparatorFactory[] BINARY_ASC_COMPARATOR_FACTORIES =
-            new IBinaryComparatorFactory[] { AIntervalAscPartialBinaryComparatorFactory.INSTANCE };
-    IBinaryComparatorFactory[] BINARY_DESC_COMPARATOR_FACTORIES =
-            new IBinaryComparatorFactory[] { AIntervalDescPartialBinaryComparatorFactory.INSTANCE };
-    IBinaryComparatorFactory[] BINARY_ASC_MAX_COMPARATOR_FACTORIES =
-            new IBinaryComparatorFactory[] { AIntervalEndpointAscPartialBinaryComparatorFactory.INSTANCE };
-    IBinaryComparatorFactory[] BINARY_DESC_MAX_COMPARATOR_FACTORIES =
-            new IBinaryComparatorFactory[] { AIntervalStartpointDescPartialBinaryComparatorFactory.INSTANCE };
+            new IBinaryComparatorFactory[] { LongBinaryComparatorFactory.INSTANCE };
 
-    /**
-     * @param integers
-     * @param duration
-     * @return
-     * @throws HyracksDataException
-     */
-    //    private byte[] getIntervalBytes(Long[] integers, long duration) throws HyracksDataException {
-    //        try {
-    //            ByteArrayOutputStream bos = new ByteArrayOutputStream();
-    //            DataOutput dos = new DataOutputStream(bos);
-    //            AInterval[] intervals = getAIntervals(integers, duration);
-    //            for (int i = 0; i < integers.length; ++i) {
-    //                intervalSerde.serialize(intervals[i], dos);
-    //            }
-    //            bos.close();
-    //            return bos.toByteArray();
-    //        } catch (IOException e) {
-    //            throw HyracksDataException.create(e);
-    //        }
-    //    }
+    //    /**
+    //     * @param integers
+    //     * @param duration
+    //     * @return
+    //     * @throws HyracksDataException
+    //     */
+
     private byte[] getIntegerBytes(Long[] integers) throws HyracksDataException {
         try {
             ByteArrayOutputStream bos = new ByteArrayOutputStream();
@@ -162,46 +130,12 @@ public abstract class AbstractFieldRangeMultiPartitionComputerFactoryTest extend
         }
     }
 
-    //    protected RangeMap getIntervalRangeMap(Long[] integers) throws HyracksDataException {
-    //        int offsets[] = new int[integers.length];
-    //        for (int i = 0; i < integers.length; ++i) {
-    //            offsets[i] = (i + 1) * INTERVAL_LENGTH;
-    //        }
-    //        return new RangeMap(1, getIntervalBytes(integers, 0), offsets);
-    //    }
-
     protected RangeMap getIntegerRangeMap(Long[] integers) throws HyracksDataException {
-        int offsets[] = new int[integers.length];
+        int[] offsets = new int[integers.length];
         for (int i = 0; i < integers.length; ++i) {
             offsets[i] = (i + 1) * INTEGER_LENGTH;
         }
         return new RangeMap(1, getIntegerBytes(integers), offsets);
-    }
-
-    private AInterval[] getAIntervals(Long[] integers, long duration) {
-        AInterval[] intervals = new AInterval[integers.length];
-        for (int i = 0; i < integers.length; ++i) {
-            intervals[i] = new AInterval(integers[i], integers[i] + duration, ATypeTag.SERIALIZED_DATETIME_TYPE_TAG);
-        }
-        return intervals;
-    }
-
-    private ByteBuffer prepareData(IHyracksTaskContext ctx, AInterval[] intervals) throws HyracksDataException {
-        IFrame frame = new VSizeFrame(ctx);
-
-        FrameTupleAppender appender = new FrameTupleAppender();
-        ArrayTupleBuilder tb = new ArrayTupleBuilder(RecordDesc.getFieldCount());
-        DataOutput dos = tb.getDataOutput();
-        appender.reset(frame, true);
-
-        for (int i = 0; i < intervals.length; ++i) {
-            tb.reset();
-            intervalSerde.serialize(intervals[i], dos);
-            tb.addFieldEndOffset();
-            appender.append(tb.getFieldEndOffsets(), tb.getByteArray(), 0, tb.getSize());
-        }
-
-        return frame.getBuffer();
     }
 
     private ByteBuffer prepareData(IHyracksTaskContext ctx, Long[] startPoints, Long duration)
@@ -297,18 +231,15 @@ public abstract class AbstractFieldRangeMultiPartitionComputerFactoryTest extend
         ITuplePartitionComputer partitioner = itpcf.createPartitioner(ctx);
         partitioner.initialize();
 
-        IFrameTupleAccessor accessor = new FrameTupleAccessor(RecordDesc);
-        AInterval[] intervals = getAIntervals(integers, duration);
-        ByteBuffer buffer = prepareData(ctx, intervals);
+        IFrameTupleAccessor accessor = new FrameTupleAccessor(RecordIntegerDesc);
+        ByteBuffer buffer = prepareData(ctx, integers, duration);
         accessor.reset(buffer);
 
         int partition;
 
         for (int i = 0; i < results.length; ++i) {
             partition = partitioner.partition(accessor, i, nParts);
-            Assert.assertEquals("The partition for value (" + intervals[i].getIntervalStart() + ":"
-                    + intervals[i].getIntervalEnd() + ") gives different number of partitions", results[i][0],
-                    partition);
+            Assert.assertEquals("The partitions do not match for test " + i + ".", results[i][0], partition);
         }
     }
 
