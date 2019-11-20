@@ -49,7 +49,52 @@ import org.junit.Assert;
 
 import junit.framework.TestCase;
 
-public abstract class AbstractFieldRangeMultiPartitionComputerFactoryTest extends TestCase {
+/**
+ * These tests check the range partitioning types with various interval sizes and range map split points.
+ * For each range type they check the ASCending comparators for intervals with durations of D = 3, and
+ * a range map of the overall range that has been split into N = 4 parts.
+ * the test for the Split type also checks larger intervals and more splits on the range map to make sure it splits
+ * correctly across many partitions, and within single partitions.
+ * <p>
+ * Currently, this test does not support DESCending intervals, and there is no test case that checks which interval
+ * is included in split if the ending point lands on the point between two partitions.
+ * <p>
+ * The map of the partitions, listed as the rangeMap split points in ascending order:
+ * <p>
+ * The following points (X) will be tested for these 4 partitions.
+ * <p>
+ * X  -----------X----------XXX----------X----------XXX----------X------------XXX------------X------------  X
+ * -----------------------|-----------------------|-------------------------|--------------------------
+ * <p>
+ * The following points (X) will be tested for these 16 partitions.
+ * <p>
+ * X  -----------X----------XXX----------X----------XXX----------X------------XXX------------X------------  X
+ * -----|-----|-----|-----|-----|-----|-----|-----|-----|-----|------|------|------|------|------|-----
+ * <p>
+ * N4                0          )[           1          )[           2            )[             3
+ * N16     0  )[  1 )[  2 )[  3 )[  4 )[  5 )[  6 )[  7 )[  8 )[  9 )[  10 )[  11 )[  12 )[  13 )[  14 )[  15
+ * ASC   0     25    50    75    100   125   150   175   200   225   250    275    300    325    350    375    400
+ * <p>
+ * First and last partitions include all values less than and greater than min and max split points respectively.
+ * <p>
+ * Here are the test points inside EACH_PARTITION:
+ * result index {      0,   1,   2,   3,    4,    5,    6,    7,    8,    9,   10,   11,   12,   13,   14,   15   };
+ * points       {     20l, 45l, 70l, 95l, 120l, 145l, 170l, 195l, 220l, 245l, 270l, 295l, 320l, 345l, 370l, 395l  };
+ * <p>
+ * PARTITION_EDGE_CASES: Tests points at or near partition boundaries and at the ends of the partition range.
+ * result index {      0,   1,   2,   3,    4,    5,    6,    7,    8,    9,    10,   11,   12,   13,   14        };
+ * points       {    -25l, 50l, 99l, 100l, 101l, 150l, 199l, 200l, 201l, 250l, 299l, 300l, 301l, 350l, 425l       };
+ * <p>
+ * MAP_POINTS: The map of the partitions, listed as the split points.
+ * partitions   {  0,   1,   2,   3,    4,    5,    6,    7,    8,    9,   10,   11,   12,   13,   14,   15,   16 };
+ * map          { 0l, 25l, 50l, 75l, 100l, 125l, 150l, 175l, 200l, 225l, 250l, 275l, 300l, 325l, 350l, 375l, 400l };
+ * <p>
+ * Both rangeMap partitions and test intervals are end exclusive.
+ * an ascending test interval ending on 200 like (190, 200) is not in partition 8.
+ *
+ */
+
+ public abstract class AbstractFieldRangeMultiPartitionComputerFactoryTest extends TestCase {
 
     protected final Long[] EACH_PARTITION =
             new Long[] { 20l, 45l, 70l, 95l, 120l, 145l, 170l, 195l, 220l, 245l, 270l, 295l, 320l, 345l, 370l, 395l };
@@ -58,64 +103,16 @@ public abstract class AbstractFieldRangeMultiPartitionComputerFactoryTest extend
     protected final Long[] MAP_POINTS =
             new Long[] { 25l, 50l, 75l, 100l, 125l, 150l, 175l, 200l, 225l, 250l, 275l, 300l, 325l, 350l, 375l };
     private final Integer64SerializerDeserializer integerSerde = Integer64SerializerDeserializer.INSTANCE;
-    @SuppressWarnings("rawtypes")
-    private final ISerializerDeserializer[] SerDers =
+    @SuppressWarnings("rawtypes") private final ISerializerDeserializer[] SerDers =
             new ISerializerDeserializer[] { Integer64SerializerDeserializer.INSTANCE };
-    private final ISerializerDeserializer[] TwoIntegerSerDers = new ISerializerDeserializer[] {
-            Integer64SerializerDeserializer.INSTANCE, Integer64SerializerDeserializer.INSTANCE };
+    private final ISerializerDeserializer[] TwoIntegerSerDers =
+            new ISerializerDeserializer[] { Integer64SerializerDeserializer.INSTANCE,
+                    Integer64SerializerDeserializer.INSTANCE };
     private final RecordDescriptor RecordIntegerDesc = new RecordDescriptor(TwoIntegerSerDers);
     private final int FRAME_SIZE = 640;
     private final int INTEGER_LENGTH = Long.BYTES;
     IBinaryComparatorFactory[] BINARY_ASC_COMPARATOR_FACTORIES =
             new IBinaryComparatorFactory[] { LongBinaryComparatorFactory.INSTANCE };
-
-    //    /**
-    //     * These tests check the range partitioning types with various interval sizes and range map split points.
-    //     * For each range type they check the ASCending comparators for intervals with durations of D = 3, and
-    //     * a range map of the overall range that has been split into N = 4 parts.
-    //     * the test for the Split type also checks larger intervals and more splits on the range map to make sure it splits
-    //     * correctly across many partitions, and within single partitions.
-    //     *
-    //     * Currently, this test does not support DESCending intervals, and there is no test case that checks which interval
-    //     * is included in split if the ending point lands on the point between two partitions.
-    //     *
-    //     * The map of the partitions, listed as the rangeMap split points in ascending order:
-    //     *
-    //     * The following points (X) will be tested for these 4 partitions.
-    //     *
-    //     *     X  -----------X----------XXX----------X----------XXX----------X------------XXX------------X------------  X
-    //     *        -----------------------|-----------------------|-------------------------|--------------------------
-    //     *
-    //     * The following points (X) will be tested for these 16 partitions.
-    //     *
-    //     *     X  -----------X----------XXX----------X----------XXX----------X------------XXX------------X------------  X
-    //     *        -----|-----|-----|-----|-----|-----|-----|-----|-----|-----|------|------|------|------|------|-----
-    //     *
-    //     * N4                0          )[           1          )[           2            )[             3
-    //     * N16     0  )[  1 )[  2 )[  3 )[  4 )[  5 )[  6 )[  7 )[  8 )[  9 )[  10 )[  11 )[  12 )[  13 )[  14 )[  15
-    //     * ASC   0     25    50    75    100   125   150   175   200   225   250    275    300    325    350    375    400
-    //     *
-    //     * First and last partitions include all values less than and greater than min and max split points respectively.
-    //     *
-    //     * Here are the test points inside EACH_PARTITION:
-    //     * result index {      0,   1,   2,   3,    4,    5,    6,    7,    8,    9,   10,   11,   12,   13,   14,   15   };
-    //     * points       {     20l, 45l, 70l, 95l, 120l, 145l, 170l, 195l, 220l, 245l, 270l, 295l, 320l, 345l, 370l, 395l  };
-    //     *
-    //     * PARTITION_EDGE_CASES: Tests points at or near partition boundaries and at the ends of the partition range.
-    //     * result index {      0,   1,   2,   3,    4,    5,    6,    7,    8,    9,    10,   11,   12,   13,   14        };
-    //     * points       {    -25l, 50l, 99l, 100l, 101l, 150l, 199l, 200l, 201l, 250l, 299l, 300l, 301l, 350l, 425l       };
-    //     *
-    //     * MAP_POINTS: The map of the partitions, listed as the split points.
-    //     * partitions   {  0,   1,   2,   3,    4,    5,    6,    7,    8,    9,   10,   11,   12,   13,   14,   15,   16 };
-    //     * map          { 0l, 25l, 50l, 75l, 100l, 125l, 150l, 175l, 200l, 225l, 250l, 275l, 300l, 325l, 350l, 375l, 400l };
-    //     *
-    //     * Both rangeMap partitions and test intervals are end exclusive.
-    //     * an ascending test interval ending on 200 like (190, 200) is not in partition 8.
-    //     * @param integers
-    //     * @param duration
-    //     * @return
-    //     * @throws HyracksDataException
-    //     */
 
     private byte[] getIntegerBytes(Long[] integers) throws HyracksDataException {
         try {
@@ -167,8 +164,9 @@ public abstract class AbstractFieldRangeMultiPartitionComputerFactoryTest extend
         SourceLocation sourceLocation = new SourceLocation(0, 0);
         int[] rangeFields = new int[] { 0 };
 
-        ITupleMultiPartitionComputerFactory itmpcf = new FieldRangeFollowingPartitionComputerFactory(rangeFields,
-                minComparatorFactories, rangeMapSupplier, sourceLocation);
+        ITupleMultiPartitionComputerFactory itmpcf =
+                new FieldRangeFollowingPartitionComputerFactory(rangeFields, minComparatorFactories, rangeMapSupplier,
+                        sourceLocation);
 
         executeFieldRangeMultiPartitionTests(integers, itmpcf, nParts, results, duration);
 
@@ -183,8 +181,9 @@ public abstract class AbstractFieldRangeMultiPartitionComputerFactoryTest extend
         int[] startFields = new int[] { 0 };
         int[] endFields = new int[] { 1 };
 
-        ITupleMultiPartitionComputerFactory itmpcf = new FieldRangeIntersectPartitionComputerFactory(startFields,
-                endFields, minComparatorFactories, rangeMapSupplier, sourceLocation);
+        ITupleMultiPartitionComputerFactory itmpcf =
+                new FieldRangeIntersectPartitionComputerFactory(startFields, endFields, minComparatorFactories,
+                        rangeMapSupplier, sourceLocation);
 
         executeFieldRangeMultiPartitionTests(integers, itmpcf, nParts, results, duration);
     }
@@ -197,8 +196,9 @@ public abstract class AbstractFieldRangeMultiPartitionComputerFactoryTest extend
         SourceLocation sourceLocation = new SourceLocation(0, 0);
         int[] rangeFields = new int[] { 0 };
 
-        ITuplePartitionComputerFactory itpcf = new FieldRangePartitionComputerFactory(rangeFields,
-                minComparatorFactories, rangeMapSupplier, sourceLocation);
+        ITuplePartitionComputerFactory itpcf =
+                new FieldRangePartitionComputerFactory(rangeFields, minComparatorFactories, rangeMapSupplier,
+                        sourceLocation);
 
         executeFieldRangePartitionTests(integers, itpcf, nParts, results, duration);
 
@@ -273,8 +273,9 @@ public abstract class AbstractFieldRangeMultiPartitionComputerFactoryTest extend
     }
 
     private void checkPartitionResult(int[] results, BitSet map) {
-        Assert.assertTrue("The number of partitions in the Bitset:(" + map.cardinality() + ") and the results:("
-                + results.length + ") do not match.", results.length == map.cardinality());
+        Assert.assertTrue(
+                "The number of partitions in the Bitset:(" + map.cardinality() + ") and the results:(" + results.length
+                        + ") do not match.", results.length == map.cardinality());
         for (int i = 0; i < results.length; ++i) {
             Assert.assertTrue("The map partition " + getString(map) + " and the results " + getString(results)
                     + " do not match. 2.", map.get(results[i]));
