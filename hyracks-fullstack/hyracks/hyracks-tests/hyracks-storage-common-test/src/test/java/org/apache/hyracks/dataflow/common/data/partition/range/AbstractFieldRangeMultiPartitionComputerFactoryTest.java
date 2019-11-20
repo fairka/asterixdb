@@ -49,7 +49,7 @@ import org.junit.Assert;
 
 import junit.framework.TestCase;
 
-/**
+/*
  * These tests check the range partitioning types with various interval sizes and range map split points.
  * For each range type they check the ASCending comparators for intervals with durations of D = 3, and
  * a range map of the overall range that has been split into N = 4 parts.
