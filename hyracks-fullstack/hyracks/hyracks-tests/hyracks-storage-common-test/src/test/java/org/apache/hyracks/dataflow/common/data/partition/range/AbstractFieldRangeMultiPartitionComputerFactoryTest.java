@@ -94,7 +94,7 @@ import junit.framework.TestCase;
  *
  */
 
- public abstract class AbstractFieldRangeMultiPartitionComputerFactoryTest extends TestCase {
+public abstract class AbstractFieldRangeMultiPartitionComputerFactoryTest extends TestCase {
 
     protected final Long[] EACH_PARTITION =
             new Long[] { 20l, 45l, 70l, 95l, 120l, 145l, 170l, 195l, 220l, 245l, 270l, 295l, 320l, 345l, 370l, 395l };
@@ -103,16 +103,23 @@ import junit.framework.TestCase;
     protected final Long[] MAP_POINTS =
             new Long[] { 25l, 50l, 75l, 100l, 125l, 150l, 175l, 200l, 225l, 250l, 275l, 300l, 325l, 350l, 375l };
     private final Integer64SerializerDeserializer integerSerde = Integer64SerializerDeserializer.INSTANCE;
-    @SuppressWarnings("rawtypes") private final ISerializerDeserializer[] SerDers =
+    @SuppressWarnings("rawtypes")
+    private final ISerializerDeserializer[] SerDers =
             new ISerializerDeserializer[] { Integer64SerializerDeserializer.INSTANCE };
-    private final ISerializerDeserializer[] TwoIntegerSerDers =
-            new ISerializerDeserializer[] { Integer64SerializerDeserializer.INSTANCE,
-                    Integer64SerializerDeserializer.INSTANCE };
+    private final ISerializerDeserializer[] TwoIntegerSerDers = new ISerializerDeserializer[] {
+            Integer64SerializerDeserializer.INSTANCE, Integer64SerializerDeserializer.INSTANCE };
     private final RecordDescriptor RecordIntegerDesc = new RecordDescriptor(TwoIntegerSerDers);
     private final int FRAME_SIZE = 640;
     private final int INTEGER_LENGTH = Long.BYTES;
     IBinaryComparatorFactory[] BINARY_ASC_COMPARATOR_FACTORIES =
             new IBinaryComparatorFactory[] { LongBinaryComparatorFactory.INSTANCE };
+
+    /**
+     * @param integers
+     * @param duration
+     * @return
+     * @throws HyracksDataException
+     */
 
     private byte[] getIntegerBytes(Long[] integers) throws HyracksDataException {
         try {
@@ -164,9 +171,8 @@ import junit.framework.TestCase;
         SourceLocation sourceLocation = new SourceLocation(0, 0);
         int[] rangeFields = new int[] { 0 };
 
-        ITupleMultiPartitionComputerFactory itmpcf =
-                new FieldRangeFollowingPartitionComputerFactory(rangeFields, minComparatorFactories, rangeMapSupplier,
-                        sourceLocation);
+        ITupleMultiPartitionComputerFactory itmpcf = new FieldRangeFollowingPartitionComputerFactory(rangeFields,
+                minComparatorFactories, rangeMapSupplier, sourceLocation);
 
         executeFieldRangeMultiPartitionTests(integers, itmpcf, nParts, results, duration);
 
@@ -181,9 +187,8 @@ import junit.framework.TestCase;
         int[] startFields = new int[] { 0 };
         int[] endFields = new int[] { 1 };
 
-        ITupleMultiPartitionComputerFactory itmpcf =
-                new FieldRangeIntersectPartitionComputerFactory(startFields, endFields, minComparatorFactories,
-                        rangeMapSupplier, sourceLocation);
+        ITupleMultiPartitionComputerFactory itmpcf = new FieldRangeIntersectPartitionComputerFactory(startFields,
+                endFields, minComparatorFactories, rangeMapSupplier, sourceLocation);
 
         executeFieldRangeMultiPartitionTests(integers, itmpcf, nParts, results, duration);
     }
@@ -196,9 +201,8 @@ import junit.framework.TestCase;
         SourceLocation sourceLocation = new SourceLocation(0, 0);
         int[] rangeFields = new int[] { 0 };
 
-        ITuplePartitionComputerFactory itpcf =
-                new FieldRangePartitionComputerFactory(rangeFields, minComparatorFactories, rangeMapSupplier,
-                        sourceLocation);
+        ITuplePartitionComputerFactory itpcf = new FieldRangePartitionComputerFactory(rangeFields,
+                minComparatorFactories, rangeMapSupplier, sourceLocation);
 
         executeFieldRangePartitionTests(integers, itpcf, nParts, results, duration);
 
@@ -273,9 +277,8 @@ import junit.framework.TestCase;
     }
 
     private void checkPartitionResult(int[] results, BitSet map) {
-        Assert.assertTrue(
-                "The number of partitions in the Bitset:(" + map.cardinality() + ") and the results:(" + results.length
-                        + ") do not match.", results.length == map.cardinality());
+        Assert.assertTrue("The number of partitions in the Bitset:(" + map.cardinality() + ") and the results:("
+                + results.length + ") do not match.", results.length == map.cardinality());
         for (int i = 0; i < results.length; ++i) {
             Assert.assertTrue("The map partition " + getString(map) + " and the results " + getString(results)
                     + " do not match. 2.", map.get(results[i]));
