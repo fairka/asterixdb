@@ -49,7 +49,7 @@ import org.junit.Assert;
 
 import junit.framework.TestCase;
 
-/*
+/**
  * These tests check the range partitioning types with various interval sizes and range map split points.
  * For each range type they check the ASCending comparators for intervals with durations of D = 3, and
  * a range map of the overall range that has been split into N = 4 parts.
@@ -64,12 +64,12 @@ import junit.framework.TestCase;
  * The following points (X) will be tested for these 4 partitions.
  * <p>
  * X  -----------X----------XXX----------X----------XXX----------X------------XXX------------X------------  X
- * -----------------------|-----------------------|-------------------------|--------------------------
+ *    -----------------------|-----------------------|-------------------------|--------------------------
  * <p>
  * The following points (X) will be tested for these 16 partitions.
  * <p>
  * X  -----------X----------XXX----------X----------XXX----------X------------XXX------------X------------  X
- * -----|-----|-----|-----|-----|-----|-----|-----|-----|-----|------|------|------|------|------|-----
+ *    -----|-----|-----|-----|-----|-----|-----|-----|-----|-----|------|------|------|------|------|-----
  * <p>
  * N4                0          )[           1          )[           2            )[             3
  * N16     0  )[  1 )[  2 )[  3 )[  4 )[  5 )[  6 )[  7 )[  8 )[  9 )[  10 )[  11 )[  12 )[  13 )[  14 )[  15
@@ -93,7 +93,6 @@ import junit.framework.TestCase;
  * an ascending test interval ending on 200 like (190, 200) is not in partition 8.
  *
  */
-
 public abstract class AbstractFieldRangeMultiPartitionComputerFactoryTest extends TestCase {
 
     protected final Long[] EACH_PARTITION =
@@ -113,13 +112,6 @@ public abstract class AbstractFieldRangeMultiPartitionComputerFactoryTest extend
     private final int INTEGER_LENGTH = Long.BYTES;
     IBinaryComparatorFactory[] BINARY_ASC_COMPARATOR_FACTORIES =
             new IBinaryComparatorFactory[] { LongBinaryComparatorFactory.INSTANCE };
-
-    /**
-     * @param integers
-     * @param duration
-     * @return
-     * @throws HyracksDataException
-     */
 
     private byte[] getIntegerBytes(Long[] integers) throws HyracksDataException {
         try {
@@ -219,12 +211,8 @@ public abstract class AbstractFieldRangeMultiPartitionComputerFactoryTest extend
         ByteBuffer buffer = prepareData(ctx, integers, duration);
         accessor.reset(buffer);
 
-        BitSet map = new BitSet(16);
-        map.clear();
-
         for (int i = 0; i < results.length; ++i) {
-            map.clear();
-            map = partitioner.partition(accessor, i, nParts);
+            BitSet map = partitioner.partition(accessor, i, nParts);
             checkPartitionResult(results[i], map);
         }
     }
