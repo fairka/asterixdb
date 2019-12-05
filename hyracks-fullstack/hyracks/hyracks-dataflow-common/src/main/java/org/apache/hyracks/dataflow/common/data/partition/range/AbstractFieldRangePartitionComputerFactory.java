@@ -149,6 +149,12 @@ abstract class AbstractFieldRangePartitionComputerFactory implements Serializabl
             return mapRangeMapSlotToPartition(slotIndex, nParts);
         }
 
+        int exclusivePartition(IFrameTupleAccessor accessor, int tIndex, int[] rangeFields, int nParts)
+                throws HyracksDataException {
+            int slotIndex = findRangeMapExclusiveSlot(accessor, tIndex, rangeFields);
+            return mapRangeMapSlotToPartition(slotIndex, nParts);
+        }
+
         private int mapRangeMapSlotToPartition(int slotIndex, int nParts) {
             // Map range partition to node partitions.
             double rangesPerPart = 1;
@@ -164,6 +170,19 @@ abstract class AbstractFieldRangePartitionComputerFactory implements Serializabl
             for (int slotNumber = 0, n = rangeMap.getSplitCount(); slotNumber < n; ++slotNumber) {
                 int c = compareSlotAndFields(accessor, tIndex, rangeFields, slotNumber);
                 if (c < 0) {
+                    return slotIndex;
+                }
+                slotIndex++;
+            }
+            return slotIndex;
+        }
+
+        private int findRangeMapExclusiveSlot(IFrameTupleAccessor accessor, int tIndex, int[] rangeFields)
+                throws HyracksDataException {
+            int slotIndex = 0;
+            for (int slotNumber = 0, n = rangeMap.getSplitCount(); slotNumber < n; ++slotNumber) {
+                int c = compareSlotAndFields(accessor, tIndex, rangeFields, slotNumber);
+                if (c <= 0) {
                     return slotIndex;
                 }
                 slotIndex++;

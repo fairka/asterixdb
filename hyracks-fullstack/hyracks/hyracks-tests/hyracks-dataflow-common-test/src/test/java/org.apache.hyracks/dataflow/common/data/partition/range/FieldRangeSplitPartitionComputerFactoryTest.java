@@ -71,7 +71,7 @@ public class FieldRangeSplitPartitionComputerFactoryTest extends AbstractFieldRa
         RangeMap rangeMap = getIntegerRangeMap(MAP_POINTS);
 
         executeFieldRangeSplitPartitionTests(PARTITION_EDGE_CASES, rangeMap, BINARY_ASC_COMPARATOR_FACTORIES, 16,
-                results, 60);
+                results, 50);
     }
 
     @Test

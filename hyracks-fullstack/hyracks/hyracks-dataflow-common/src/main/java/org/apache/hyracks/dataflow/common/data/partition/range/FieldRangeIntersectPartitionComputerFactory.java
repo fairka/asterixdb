@@ -56,7 +56,7 @@ public final class FieldRangeIntersectPartitionComputerFactory extends AbstractF
             @Override
             protected int computeEndPartition(IFrameTupleAccessor accessor, int tIndex, int nParts)
                     throws HyracksDataException {
-                return rangeMapPartitionComputer.partition(accessor, tIndex, endFields, nParts);
+                return rangeMapPartitionComputer.exclusivePartition(accessor, tIndex, endFields, nParts);
             }
         };
     }
