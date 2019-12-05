@@ -52,21 +52,21 @@ public class FieldRangeSplitPartitionComputerFactoryTest extends AbstractFieldRa
     @Test
     public void testFRMPCF_Split_ASC_D50_N16_EDGE() throws HyracksDataException {
         int[][] results = new int[15][];
-        results[0] = new int[] { 0, 1 }; // -25:35
-        results[1] = new int[] { 2, 3, 4 }; // 50:110
-        results[2] = new int[] { 3, 4, 5, 6 }; // 99:159
-        results[3] = new int[] { 4, 5, 6 }; // 100:160
-        results[4] = new int[] { 4, 5, 6 }; // 101:161
-        results[5] = new int[] { 6, 7, 8 }; // 150:210
-        results[6] = new int[] { 7, 8, 9, 10 }; // 199:259
-        results[7] = new int[] { 8, 9, 10 }; // 200:260
-        results[8] = new int[] { 8, 9, 10 }; // 201:261
-        results[9] = new int[] { 10, 11, 12 }; // 250:310
-        results[10] = new int[] { 11, 12, 13, 14 }; // 299:359
-        results[11] = new int[] { 12, 13, 14 }; // 300:360
-        results[12] = new int[] { 12, 13, 14 }; // 301:361
-        results[13] = new int[] { 14, 15 }; // 350:410
-        results[14] = new int[] { 15 }; // 425:485
+        results[0] = new int[] { 0 }; // -25:25
+        results[1] = new int[] { 2, 3 }; // 50:100
+        results[2] = new int[] { 3, 4, 5 }; // 99:149
+        results[3] = new int[] { 4, 5 }; // 100:150
+        results[4] = new int[] { 4, 5, 6 }; // 101:151
+        results[5] = new int[] { 6, 7 }; // 150:200
+        results[6] = new int[] { 7, 8, 9 }; // 199:249
+        results[7] = new int[] { 8, 9 }; // 200:250
+        results[8] = new int[] { 8, 9, 10 }; // 201:251
+        results[9] = new int[] { 10, 11 }; // 250:300
+        results[10] = new int[] { 11, 12, 13 }; // 299:349
+        results[11] = new int[] { 12, 13 }; // 300:350
+        results[12] = new int[] { 12, 13, 14 }; // 301:351
+        results[13] = new int[] { 14, 15 }; // 350:400
+        results[14] = new int[] { 15 }; // 425:475
 
         RangeMap rangeMap = getIntegerRangeMap(MAP_POINTS);
 

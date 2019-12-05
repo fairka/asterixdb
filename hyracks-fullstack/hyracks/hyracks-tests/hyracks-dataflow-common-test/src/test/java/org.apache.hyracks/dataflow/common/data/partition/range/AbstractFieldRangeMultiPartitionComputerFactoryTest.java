@@ -112,6 +112,8 @@ public abstract class AbstractFieldRangeMultiPartitionComputerFactoryTest extend
     private final int INTEGER_LENGTH = Long.BYTES;
     IBinaryComparatorFactory[] BINARY_ASC_COMPARATOR_FACTORIES =
             new IBinaryComparatorFactory[] { LongBinaryComparatorFactory.INSTANCE };
+    IBinaryComparatorFactory[] BINARY_DESC_COMPARATOR_FACTORIES =
+            new IBinaryComparatorFactory[] { LongDescBinaryComparatorFactory.INSTANCE };
 
     private byte[] getIntegerBytes(Long[] integers) throws HyracksDataException {
         try {
