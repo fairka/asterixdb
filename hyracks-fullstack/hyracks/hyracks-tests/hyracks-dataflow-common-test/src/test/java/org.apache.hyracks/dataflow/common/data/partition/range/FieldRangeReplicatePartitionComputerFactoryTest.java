@@ -48,7 +48,7 @@ public class FieldRangeReplicatePartitionComputerFactoryTest
         RangeMap rangeMap = getIntegerRangeMap(MAP_POINTS);
 
         executeFieldRangeReplicatePartitionTests(PARTITION_EDGE_CASES, rangeMap, BINARY_ASC_COMPARATOR_FACTORIES, 4,
-                results, 3);
+                results, 3, START_FIELD);
     }
 
     @Test
@@ -73,8 +73,9 @@ public class FieldRangeReplicatePartitionComputerFactoryTest
         Long[] map = MAP_POINTS.clone();
         ArrayUtils.reverse(map);
         RangeMap rangeMap = getIntegerRangeMap(map);
+        int[] rangeFields = new int[] { 1 };
 
         executeFieldRangeReplicatePartitionTests(PARTITION_EDGE_CASES, rangeMap, BINARY_DESC_COMPARATOR_FACTORIES, 4,
-                results, 3);
+                results, 3, END_FIELD);
     }
 }

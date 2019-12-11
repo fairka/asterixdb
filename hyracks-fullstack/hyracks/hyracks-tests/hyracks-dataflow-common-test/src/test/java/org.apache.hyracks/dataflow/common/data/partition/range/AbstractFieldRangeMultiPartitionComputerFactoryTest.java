@@ -114,6 +114,8 @@ public abstract class AbstractFieldRangeMultiPartitionComputerFactoryTest extend
             new IBinaryComparatorFactory[] { LongBinaryComparatorFactory.INSTANCE };
     IBinaryComparatorFactory[] BINARY_DESC_COMPARATOR_FACTORIES =
             new IBinaryComparatorFactory[] { LongDescBinaryComparatorFactory.INSTANCE };
+    protected final int[] START_FIELD = new int[] { 0 };
+    protected final int[] END_FIELD = new int[] { 1 };
 
     private byte[] getIntegerBytes(Long[] integers) throws HyracksDataException {
         try {
@@ -158,12 +160,11 @@ public abstract class AbstractFieldRangeMultiPartitionComputerFactoryTest extend
     }
 
     protected void executeFieldRangeReplicatePartitionTests(Long[] integers, RangeMap rangeMap,
-            IBinaryComparatorFactory[] minComparatorFactories, int nParts, int[][] results, long duration)
-            throws HyracksDataException {
+            IBinaryComparatorFactory[] minComparatorFactories, int nParts, int[][] results, long duration,
+            int[] rangeFields) throws HyracksDataException {
 
         StaticRangeMapSupplier rangeMapSupplier = new StaticRangeMapSupplier(rangeMap);
         SourceLocation sourceLocation = new SourceLocation(0, 0);
-        int[] rangeFields = new int[] { 0 };
 
         ITupleMultiPartitionComputerFactory itmpcf = new FieldRangeFollowingPartitionComputerFactory(rangeFields,
                 minComparatorFactories, rangeMapSupplier, sourceLocation);
@@ -173,13 +174,11 @@ public abstract class AbstractFieldRangeMultiPartitionComputerFactoryTest extend
     }
 
     protected void executeFieldRangeSplitPartitionTests(Long[] integers, RangeMap rangeMap,
-            IBinaryComparatorFactory[] minComparatorFactories, int nParts, int[][] results, long duration)
-            throws HyracksDataException {
+            IBinaryComparatorFactory[] minComparatorFactories, int nParts, int[][] results, long duration,
+            int[] startFields, int[] endFields) throws HyracksDataException {
 
         StaticRangeMapSupplier rangeMapSupplier = new StaticRangeMapSupplier(rangeMap);
         SourceLocation sourceLocation = new SourceLocation(0, 0);
-        int[] startFields = new int[] { 0 };
-        int[] endFields = new int[] { 1 };
 
         ITupleMultiPartitionComputerFactory itmpcf = new FieldRangeIntersectPartitionComputerFactory(startFields,
                 endFields, minComparatorFactories, rangeMapSupplier, sourceLocation);
@@ -188,12 +187,11 @@ public abstract class AbstractFieldRangeMultiPartitionComputerFactoryTest extend
     }
 
     protected void executeFieldRangeProjectPartitionTests(Long[] integers, RangeMap rangeMap,
-            IBinaryComparatorFactory[] minComparatorFactories, int nParts, int[][] results, long duration)
-            throws HyracksDataException {
+            IBinaryComparatorFactory[] minComparatorFactories, int nParts, int[][] results, long duration,
+            int[] rangeFields) throws HyracksDataException {
 
         StaticRangeMapSupplier rangeMapSupplier = new StaticRangeMapSupplier(rangeMap);
         SourceLocation sourceLocation = new SourceLocation(0, 0);
-        int[] rangeFields = new int[] { 0 };
 
         ITuplePartitionComputerFactory itpcf = new FieldRangePartitionComputerFactory(rangeFields,
                 minComparatorFactories, rangeMapSupplier, sourceLocation);
