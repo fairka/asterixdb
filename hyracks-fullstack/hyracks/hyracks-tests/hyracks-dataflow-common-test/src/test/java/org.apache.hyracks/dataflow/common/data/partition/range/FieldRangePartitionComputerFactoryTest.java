@@ -23,7 +23,7 @@ import org.apache.commons.lang3.ArrayUtils;
 import org.apache.hyracks.api.exceptions.HyracksDataException;
 import org.junit.Test;
 
-public class FieldRangeProjectPartitionComputerFactoryTest extends AbstractFieldRangeMultiPartitionComputerFactoryTest {
+public class FieldRangePartitionComputerFactoryTest extends AbstractFieldRangeMultiPartitionComputerFactoryTest {
 
     @Test
     public void testFRMPCF_Project_ASC_D3_N4_EDGE() throws HyracksDataException {
@@ -47,8 +47,8 @@ public class FieldRangeProjectPartitionComputerFactoryTest extends AbstractField
         RangeMap rangeMap = getIntegerRangeMap(MAP_POINTS);
         int[] rangeFields = new int[] { 0 };
 
-        executeFieldRangeProjectPartitionTests(PARTITION_EDGE_CASES, rangeMap, BINARY_ASC_COMPARATOR_FACTORIES, 4,
-                results, 3, START_FIELD);
+        executeFieldRangePartitionTests(PARTITION_EDGE_CASES, rangeMap, BINARY_ASC_COMPARATOR_FACTORIES, 4, results, 3,
+                START_FIELD);
     }
 
     @Test
@@ -74,7 +74,7 @@ public class FieldRangeProjectPartitionComputerFactoryTest extends AbstractField
         ArrayUtils.reverse(map);
         RangeMap rangeMap = getIntegerRangeMap(map);
 
-        executeFieldRangeProjectPartitionTests(PARTITION_EDGE_CASES, rangeMap, BINARY_DESC_COMPARATOR_FACTORIES, 4,
-                results, 3, END_FIELD);
+        executeFieldRangePartitionTests(PARTITION_EDGE_CASES, rangeMap, BINARY_DESC_COMPARATOR_FACTORIES, 4, results, 3,
+                END_FIELD);
     }
 }

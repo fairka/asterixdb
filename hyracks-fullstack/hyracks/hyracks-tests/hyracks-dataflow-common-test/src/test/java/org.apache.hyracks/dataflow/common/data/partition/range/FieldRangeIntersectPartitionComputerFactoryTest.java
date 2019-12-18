@@ -23,7 +23,8 @@ import org.apache.commons.lang3.ArrayUtils;
 import org.apache.hyracks.api.exceptions.HyracksDataException;
 import org.junit.Test;
 
-public class FieldRangeSplitPartitionComputerFactoryTest extends AbstractFieldRangeMultiPartitionComputerFactoryTest {
+public class FieldRangeIntersectPartitionComputerFactoryTest
+        extends AbstractFieldRangeMultiPartitionComputerFactoryTest {
 
     @Test
     public void testFRMPCF_Split_ASC_D3_N4_EDGE() throws HyracksDataException {
@@ -46,7 +47,7 @@ public class FieldRangeSplitPartitionComputerFactoryTest extends AbstractFieldRa
 
         RangeMap rangeMap = getIntegerRangeMap(MAP_POINTS);
 
-        executeFieldRangeSplitPartitionTests(PARTITION_EDGE_CASES, rangeMap, BINARY_ASC_COMPARATOR_FACTORIES, 4,
+        executeFieldRangeIntersectPartitionTests(PARTITION_EDGE_CASES, rangeMap, BINARY_ASC_COMPARATOR_FACTORIES, 4,
                 results, 3, START_FIELD, END_FIELD);
     }
 
@@ -73,7 +74,7 @@ public class FieldRangeSplitPartitionComputerFactoryTest extends AbstractFieldRa
         ArrayUtils.reverse(map);
         RangeMap rangeMap = getIntegerRangeMap(map);
 
-        executeFieldRangeSplitPartitionTests(PARTITION_EDGE_CASES, rangeMap, BINARY_DESC_COMPARATOR_FACTORIES, 4,
+        executeFieldRangeIntersectPartitionTests(PARTITION_EDGE_CASES, rangeMap, BINARY_DESC_COMPARATOR_FACTORIES, 4,
                 results, 3, END_FIELD, START_FIELD);
     }
 
@@ -98,7 +99,7 @@ public class FieldRangeSplitPartitionComputerFactoryTest extends AbstractFieldRa
 
         RangeMap rangeMap = getIntegerRangeMap(MAP_POINTS);
 
-        executeFieldRangeSplitPartitionTests(PARTITION_EDGE_CASES, rangeMap, BINARY_ASC_COMPARATOR_FACTORIES, 16,
+        executeFieldRangeIntersectPartitionTests(PARTITION_EDGE_CASES, rangeMap, BINARY_ASC_COMPARATOR_FACTORIES, 16,
                 results, 50, START_FIELD, END_FIELD);
     }
 
@@ -125,7 +126,7 @@ public class FieldRangeSplitPartitionComputerFactoryTest extends AbstractFieldRa
         ArrayUtils.reverse(map);
         RangeMap rangeMap = getIntegerRangeMap(map);
 
-        executeFieldRangeSplitPartitionTests(PARTITION_EDGE_CASES, rangeMap, BINARY_DESC_COMPARATOR_FACTORIES, 16,
+        executeFieldRangeIntersectPartitionTests(PARTITION_EDGE_CASES, rangeMap, BINARY_DESC_COMPARATOR_FACTORIES, 16,
                 results, 50, END_FIELD, START_FIELD);
     }
 
@@ -151,8 +152,8 @@ public class FieldRangeSplitPartitionComputerFactoryTest extends AbstractFieldRa
 
         RangeMap rangeMap = getIntegerRangeMap(MAP_POINTS);
 
-        executeFieldRangeSplitPartitionTests(EACH_PARTITION, rangeMap, BINARY_ASC_COMPARATOR_FACTORIES, 16, results, 3,
-                START_FIELD, END_FIELD);
+        executeFieldRangeIntersectPartitionTests(EACH_PARTITION, rangeMap, BINARY_ASC_COMPARATOR_FACTORIES, 16, results,
+                3, START_FIELD, END_FIELD);
     }
 
     @Test
@@ -179,7 +180,7 @@ public class FieldRangeSplitPartitionComputerFactoryTest extends AbstractFieldRa
         ArrayUtils.reverse(map);
         RangeMap rangeMap = getIntegerRangeMap(map);
 
-        executeFieldRangeSplitPartitionTests(EACH_PARTITION, rangeMap, BINARY_DESC_COMPARATOR_FACTORIES, 16, results, 3,
-                END_FIELD, START_FIELD);
+        executeFieldRangeIntersectPartitionTests(EACH_PARTITION, rangeMap, BINARY_DESC_COMPARATOR_FACTORIES, 16,
+                results, 3, END_FIELD, START_FIELD);
     }
 }

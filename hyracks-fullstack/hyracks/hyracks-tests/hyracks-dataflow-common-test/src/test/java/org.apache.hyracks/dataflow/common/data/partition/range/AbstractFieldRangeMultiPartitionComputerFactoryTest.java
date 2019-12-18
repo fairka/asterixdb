@@ -64,12 +64,12 @@ import junit.framework.TestCase;
  * The following points (X) will be tested for these 4 partitions.
  * <p>
  * X  -----------X----------XXX----------X----------XXX----------X------------XXX------------X------------  X
- *    -----------------------|-----------------------|-------------------------|--------------------------
+ * -----------------------|-----------------------|-------------------------|--------------------------
  * <p>
  * The following points (X) will be tested for these 16 partitions.
  * <p>
  * X  -----------X----------XXX----------X----------XXX----------X------------XXX------------X------------  X
- *    -----|-----|-----|-----|-----|-----|-----|-----|-----|-----|------|------|------|------|------|-----
+ * -----|-----|-----|-----|-----|-----|-----|-----|-----|-----|------|------|------|------|------|-----
  * <p>
  * N4                0          )[           1          )[           2            )[             3
  * N16     0  )[  1 )[  2 )[  3 )[  4 )[  5 )[  6 )[  7 )[  8 )[  9 )[  10 )[  11 )[  12 )[  13 )[  14 )[  15
@@ -91,7 +91,9 @@ import junit.framework.TestCase;
  * <p>
  * Both rangeMap partitions and test intervals are end exclusive.
  * an ascending test interval ending on 200 like (190, 200) is not in partition 8.
- *
+ * <p>
+ * The Following, Intersect, and Partition partitioning is based off of Split, Replicate, Project in
+ * "Processing Interval Joins On Map-Reduce" by Chawda, et. al.
  */
 public abstract class AbstractFieldRangeMultiPartitionComputerFactoryTest extends TestCase {
 
@@ -157,7 +159,7 @@ public abstract class AbstractFieldRangeMultiPartitionComputerFactoryTest extend
         return frame.getBuffer();
     }
 
-    protected void executeFieldRangeReplicatePartitionTests(Long[] integers, RangeMap rangeMap,
+    protected void executeFieldRangeFollowingPartitionTests(Long[] integers, RangeMap rangeMap,
             IBinaryComparatorFactory[] minComparatorFactories, int nParts, int[][] results, long duration,
             int[] rangeFields) throws HyracksDataException {
 
@@ -171,7 +173,7 @@ public abstract class AbstractFieldRangeMultiPartitionComputerFactoryTest extend
 
     }
 
-    protected void executeFieldRangeSplitPartitionTests(Long[] integers, RangeMap rangeMap,
+    protected void executeFieldRangeIntersectPartitionTests(Long[] integers, RangeMap rangeMap,
             IBinaryComparatorFactory[] minComparatorFactories, int nParts, int[][] results, long duration,
             int[] startFields, int[] endFields) throws HyracksDataException {
 
@@ -184,7 +186,7 @@ public abstract class AbstractFieldRangeMultiPartitionComputerFactoryTest extend
         executeFieldRangeMultiPartitionTests(integers, itmpcf, nParts, results, duration);
     }
 
-    protected void executeFieldRangeProjectPartitionTests(Long[] integers, RangeMap rangeMap,
+    protected void executeFieldRangePartitionTests(Long[] integers, RangeMap rangeMap,
             IBinaryComparatorFactory[] minComparatorFactories, int nParts, int[][] results, long duration,
             int[] rangeFields) throws HyracksDataException {
 
