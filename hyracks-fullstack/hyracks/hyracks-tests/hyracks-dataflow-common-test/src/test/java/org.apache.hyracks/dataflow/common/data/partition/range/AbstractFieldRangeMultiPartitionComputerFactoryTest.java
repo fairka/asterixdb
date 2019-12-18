@@ -103,8 +103,6 @@ public abstract class AbstractFieldRangeMultiPartitionComputerFactoryTest extend
             new Long[] { 25l, 50l, 75l, 100l, 125l, 150l, 175l, 200l, 225l, 250l, 275l, 300l, 325l, 350l, 375l };
     private final Integer64SerializerDeserializer integerSerde = Integer64SerializerDeserializer.INSTANCE;
     @SuppressWarnings("rawtypes")
-    private final ISerializerDeserializer[] SerDers =
-            new ISerializerDeserializer[] { Integer64SerializerDeserializer.INSTANCE };
     private final ISerializerDeserializer[] TwoIntegerSerDers = new ISerializerDeserializer[] {
             Integer64SerializerDeserializer.INSTANCE, Integer64SerializerDeserializer.INSTANCE };
     private final RecordDescriptor RecordIntegerDesc = new RecordDescriptor(TwoIntegerSerDers);
