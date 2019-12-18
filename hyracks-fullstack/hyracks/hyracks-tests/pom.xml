@@ -22,7 +22,7 @@
   <artifactId>hyracks-tests</artifactId>
   <packaging>pom</packaging>
   <name>hyracks-tests</name>
-    
+
   <parent>
     <groupId>org.apache.hyracks</groupId>
     <artifactId>hyracks</artifactId>
