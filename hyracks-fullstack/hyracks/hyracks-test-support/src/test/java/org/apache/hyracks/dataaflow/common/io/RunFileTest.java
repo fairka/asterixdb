@@ -1,45 +1,25 @@
+/*
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied.  See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
+ */
+
 package org.apache.hyracks.dataaflow.common.io;
 
-/*
- * Licensed to the Apache Software Foundation (ASF) under one
- * or more contributor license agreements.  See the NOTICE file
- * distributed with this work for additional information
- * regarding copyright ownership.  The ASF licenses this file
- * to you under the Apache License, Version 2.0 (the
- * "License"); you may not use this file except in compliance
- * with the License.  You may obtain a copy of the License at
- *
- *   http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing,
- * software distributed under the License is distributed on an
- * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- * KIND, either express or implied.  See the License for the
- * specific language governing permissions and limitations
- * under the License.
- */
-/*
- * Licensed to the Apache Software Foundation (ASF) under one
- * or more contributor license agreements.  See the NOTICE file
- * distributed with this work for additional information
- * regarding copyright ownership.  The ASF licenses this file
- * to you under the Apache License, Version 2.0 (the
- * "License"); you may not use this file except in compliance
- * with the License.  You may obtain a copy of the License at
- *
- *   http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing,
- * software distributed under the License is distributed on an
- * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- * KIND, either express or implied.  See the License for the
- * specific language governing permissions and limitations
- * under the License.
- */
-import java.io.ByteArrayOutputStream;
 import java.io.DataOutput;
-import java.io.DataOutputStream;
-import java.io.IOException;
 import java.util.Random;
 
 import org.apache.hyracks.api.comm.IFrame;
@@ -56,7 +36,6 @@ import org.apache.hyracks.data.std.primitive.IntegerPointable;
 import org.apache.hyracks.dataflow.common.comm.io.ArrayTupleBuilder;
 import org.apache.hyracks.dataflow.common.comm.io.FrameTupleAccessor;
 import org.apache.hyracks.dataflow.common.comm.io.FrameTupleAppender;
-import org.apache.hyracks.dataflow.common.data.accessors.FrameTupleReference;
 import org.apache.hyracks.dataflow.common.data.marshalling.IntegerSerializerDeserializer;
 import org.apache.hyracks.dataflow.common.io.RunFileReader;
 import org.apache.hyracks.dataflow.common.io.RunFileWriter;
@@ -67,7 +46,7 @@ import org.junit.Test;
 
 /**
  * Test for RunFileReader and RunFileWriter.
- *
+ * <p>
  * Runs test for single and multiple frames written to the run file.
  * The reading can be done in sequence, reverse and in separate sessions between writing.
  *
@@ -76,7 +55,6 @@ import org.junit.Test;
  */
 public class RunFileTest {
 
-    private static final int INPUT_BUFFER_SIZE = 4096;
     private static final int TEST_FRAME_SIZE = 256;
     private static final int TEST_FRAME_SIZE_ALTERNATE = 512;
     private static final int MULTIPLE_FRAMES = 5;
@@ -95,22 +73,6 @@ public class RunFileTest {
         writer = new RunFileWriter(file, ioManager);
     }
 
-    @SuppressWarnings("unused")
-    private byte[] getIntegerBytes(Integer[] numbers) throws HyracksDataException {
-        try {
-            ByteArrayOutputStream bos = new ByteArrayOutputStream();
-            DataOutput dos = new DataOutputStream(bos);
-            for (int i = 0; i < numbers.length; ++i) {
-                dos.writeLong(numbers[i].longValue());
-            }
-            bos.close();
-            return bos.toByteArray();
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-        return null;
-    }
-
     private IFrame[] getFrames(int count) throws HyracksDataException {
         IFrame[] frames = new IFrame[count];
         for (int f = 0; f < frames.length; f++) {
@@ -121,7 +83,7 @@ public class RunFileTest {
 
     private IFrame[] getFramesAlternate(int count) throws HyracksDataException {
         if (count < 2) {
-            throw new HyracksDataException("Must provided more that one frames.");
+            throw new HyracksDataException("Must provide more than one frame.");
         }
         IFrame[] frames = new IFrame[count];
         frames[0] = new VSizeFrame(ctx);
@@ -134,8 +96,6 @@ public class RunFileTest {
 
     @Test
     public void testSingleFrame() throws HyracksDataException {
-        Random rnd = new Random();
-        rnd.setSeed(50);
 
         // declare fields
         int fieldCount = 2;
@@ -153,26 +113,9 @@ public class RunFileTest {
         RecordDescriptor recDesc = new RecordDescriptor(recDescSers);
         IFrameTupleAccessor accessor = new FrameTupleAccessor(recDesc);
         accessor.reset(frame.getBuffer());
-        FrameTupleReference tuple = new FrameTupleReference();
 
         appender.reset(frame, true);
-
-        for (int i = 0; i < NUMBER_OF_TUPLES; i++) {
-
-            int f0 = rnd.nextInt() % 100000;
-            int f1 = 5;
-
-            tb.reset();
-            IntegerSerializerDeserializer.INSTANCE.serialize(f0, dos);
-            tb.addFieldEndOffset();
-            IntegerSerializerDeserializer.INSTANCE.serialize(f1, dos);
-            tb.addFieldEndOffset();
-
-            if (appender.append(tb.getFieldEndOffsets(), tb.getByteArray(), 0, tb.getSize())) {
-                break;
-            }
-        }
-
+        fillerName(appender, dos, tb);
         IFrame readFrame = new VSizeFrame(ctx);
 
         // Writer test
@@ -191,8 +134,6 @@ public class RunFileTest {
 
     @Test
     public void testMultipleFrame() throws HyracksDataException {
-        Random rnd = new Random();
-        rnd.setSeed(50);
 
         // declare fields
         int fieldCount = 2;
@@ -209,48 +150,21 @@ public class RunFileTest {
                 { IntegerSerializerDeserializer.INSTANCE, IntegerSerializerDeserializer.INSTANCE };
         RecordDescriptor recDesc = new RecordDescriptor(recDescSers);
         IFrameTupleAccessor accessor = new FrameTupleAccessor(recDesc);
-        //FrameTupleReference tuple = new FrameTupleReference();
 
         // Writer test
         writer.open();
-
-        for (int f = 0; f < frames.length; f++) {
-            accessor.reset(frames[f].getBuffer());
-            appender.reset(frames[f], true);
-
-            for (int i = 0; i < NUMBER_OF_TUPLES; i++) {
-                int f0 = rnd.nextInt() % 100000;
-                int f1 = 5;
-
-                tb.reset();
-                IntegerSerializerDeserializer.INSTANCE.serialize(f0, dos);
-                tb.addFieldEndOffset();
-                IntegerSerializerDeserializer.INSTANCE.serialize(f1, dos);
-                tb.addFieldEndOffset();
-
-                if (appender.append(tb.getFieldEndOffsets(), tb.getByteArray(), 0, tb.getSize())) {
-                    break;
-                }
-            }
-            writer.nextFrame(frames[f].getBuffer());
-        }
+        writeFrames(frames, accessor, appender, dos, tb);
         IFrame[] readFrames = getFrames(MULTIPLE_FRAMES);
 
         // Reading what was written
         reader = writer.createDeleteOnCloseReader();
         reader.open();
-        for (int f = 0; f < frames.length; f++) {
-            reader.nextFrame(readFrames[f]);
-            Assert.assertArrayEquals("Reading frame[" + f + "] bytes", frames[f].getBuffer().array(),
-                    readFrames[f].getBuffer().array());
-        }
+        readFrames(frames, readFrames);
         reader.close();
     }
 
     @Test
     public void testMultipleFrameMultipleReads() throws HyracksDataException {
-        Random rnd = new Random();
-        rnd.setSeed(50);
 
         // declare fields
         int fieldCount = 2;
@@ -267,60 +181,23 @@ public class RunFileTest {
                 { IntegerSerializerDeserializer.INSTANCE, IntegerSerializerDeserializer.INSTANCE };
         RecordDescriptor recDesc = new RecordDescriptor(recDescSers);
         IFrameTupleAccessor accessor = new FrameTupleAccessor(recDesc);
-        //FrameTupleReference tuple = new FrameTupleReference();
 
         // Writer test
         writer.open();
-
-        for (int f = 0; f < frames.length; f++) {
-            accessor.reset(frames[f].getBuffer());
-            appender.reset(frames[f], true);
-
-            for (int i = 0; i < NUMBER_OF_TUPLES; i++) {
-                int f0 = rnd.nextInt() % 100000;
-                int f1 = 5;
-
-                tb.reset();
-                IntegerSerializerDeserializer.INSTANCE.serialize(f0, dos);
-                tb.addFieldEndOffset();
-                IntegerSerializerDeserializer.INSTANCE.serialize(f1, dos);
-                tb.addFieldEndOffset();
-
-                if (appender.append(tb.getFieldEndOffsets(), tb.getByteArray(), 0, tb.getSize())) {
-                    break;
-                }
-            }
-            writer.nextFrame(frames[f].getBuffer());
-        }
+        writeFrames(frames, accessor, appender, dos, tb);
         IFrame[] readFrames = getFrames(MULTIPLE_FRAMES);
 
         // Reading what was written
         reader = writer.createDeleteOnCloseReader();
         reader.open();
-        for (int f = 0; f < frames.length; f++) {
-            reader.nextFrame(readFrames[f]);
-            Assert.assertArrayEquals("Reading frame[" + f + "] bytes", frames[f].getBuffer().array(),
-                    readFrames[f].getBuffer().array());
-        }
+        readFrames(frames, readFrames);
         reader.seek(0);
-        for (int f = 0; f < frames.length; f++) {
-            reader.nextFrame(readFrames[f]);
-            Assert.assertArrayEquals("Reading frame[" + f + "] bytes", frames[f].getBuffer().array(),
-                    readFrames[f].getBuffer().array());
-        }
-        reader.seek(0);
-        for (int f = 0; f < frames.length; f++) {
-            reader.nextFrame(readFrames[f]);
-            Assert.assertArrayEquals("Reading frame[" + f + "] bytes", frames[f].getBuffer().array(),
-                    readFrames[f].getBuffer().array());
-        }
+        readFrames(frames, readFrames);
         reader.close();
     }
 
     @Test
     public void testMultipleFrameRandomReads() throws HyracksDataException {
-        Random rnd = new Random();
-        rnd.setSeed(50);
 
         // declare fields
         int fieldCount = 2;
@@ -329,7 +206,8 @@ public class RunFileTest {
         typeTraits[1] = IntegerPointable.TYPE_TRAITS;
 
         IFrame[] frames = getFrames(MULTIPLE_FRAMES);
-        long[] frameOffets = new long[frames.length];
+        IFrame[] readFrames = getFrames(MULTIPLE_FRAMES);
+        long[] frameOffsets = new long[frames.length];
 
         FrameTupleAppender appender = new FrameTupleAppender();
         ArrayTupleBuilder tb = new ArrayTupleBuilder(fieldCount);
@@ -339,55 +217,17 @@ public class RunFileTest {
                 { IntegerSerializerDeserializer.INSTANCE, IntegerSerializerDeserializer.INSTANCE };
         RecordDescriptor recDesc = new RecordDescriptor(recDescSers);
         IFrameTupleAccessor accessor = new FrameTupleAccessor(recDesc);
-        //FrameTupleReference tuple = new FrameTupleReference();
 
         // Writer test
         writer.open();
-
-        for (int f = 0; f < frames.length; f++) {
-            accessor.reset(frames[f].getBuffer());
-            appender.reset(frames[f], true);
-
-            for (int i = 0; i < NUMBER_OF_TUPLES; i++) {
-                int f0 = rnd.nextInt() % 100000;
-                int f1 = 5;
-
-                tb.reset();
-                IntegerSerializerDeserializer.INSTANCE.serialize(f0, dos);
-                tb.addFieldEndOffset();
-                IntegerSerializerDeserializer.INSTANCE.serialize(f1, dos);
-                tb.addFieldEndOffset();
-
-                if (appender.append(tb.getFieldEndOffsets(), tb.getByteArray(), 0, tb.getSize())) {
-                    break;
-                }
-            }
-            frameOffets[f] = writer.getFileSize();
-            writer.nextFrame(frames[f].getBuffer());
-        }
-        IFrame[] readFrames = getFrames(MULTIPLE_FRAMES);
+        writeFramesWithOffsets(frames, accessor, appender, dos, tb, frameOffsets, 1);
 
         // Reading what was written
-        reader = writer.createDeleteOnCloseReader();
-        reader.open();
-        for (int f = 0; f < frames.length; f++) {
-            reader.nextFrame(readFrames[f]);
-            Assert.assertArrayEquals("Reading frame[" + f + "] bytes", frames[f].getBuffer().array(),
-                    readFrames[f].getBuffer().array());
-        }
-        for (int f = frames.length - 1; f >= 0; f--) {
-            reader.seek(frameOffets[f]);
-            reader.nextFrame(readFrames[f]);
-            Assert.assertArrayEquals("Reading backwards frame[" + f + "] bytes", frames[f].getBuffer().array(),
-                    readFrames[f].getBuffer().array());
-        }
-        reader.close();
+        readFramesFowardsAndBackwards(frames, readFrames, frameOffsets);
     }
 
     @Test
     public void testMultipleDifferentSizedFrames() throws HyracksDataException {
-        Random rnd = new Random();
-        rnd.setSeed(50);
 
         // declare fields
         int fieldCount = 2;
@@ -396,7 +236,8 @@ public class RunFileTest {
         typeTraits[1] = IntegerPointable.TYPE_TRAITS;
 
         IFrame[] frames = getFramesAlternate(MULTIPLE_FRAMES);
-        long[] frameOffets = new long[frames.length];
+        IFrame[] readFrames = getFrames(MULTIPLE_FRAMES);
+        long[] frameOffsets = new long[frames.length];
 
         FrameTupleAppender appender = new FrameTupleAppender();
         ArrayTupleBuilder tb = new ArrayTupleBuilder(fieldCount);
@@ -406,56 +247,17 @@ public class RunFileTest {
                 { IntegerSerializerDeserializer.INSTANCE, IntegerSerializerDeserializer.INSTANCE };
         RecordDescriptor recDesc = new RecordDescriptor(recDescSers);
         IFrameTupleAccessor accessor = new FrameTupleAccessor(recDesc);
-        //FrameTupleReference tuple = new FrameTupleReference();
 
         // Writer test
         writer.open();
-
-        for (int f = 0; f < frames.length; f++) {
-            accessor.reset(frames[f].getBuffer());
-            appender.reset(frames[f], false);
-
-            int tupleCount = (f == 1 ? NUMBER_OF_TUPLES_ALTERNATE : NUMBER_OF_TUPLES);
-            for (int i = 0; i < tupleCount; i++) {
-                int f0 = rnd.nextInt() % 100000;
-                int f1 = 5;
-
-                tb.reset();
-                IntegerSerializerDeserializer.INSTANCE.serialize(f0, dos);
-                tb.addFieldEndOffset();
-                IntegerSerializerDeserializer.INSTANCE.serialize(f1, dos);
-                tb.addFieldEndOffset();
-
-                if (!appender.append(tb.getFieldEndOffsets(), tb.getByteArray(), 0, tb.getSize())) {
-                    break;
-                }
-            }
-            frameOffets[f] = writer.getFileSize();
-            writer.nextFrame(frames[f].getBuffer());
-        }
-        IFrame[] readFrames = getFrames(MULTIPLE_FRAMES);
+        writeDifferentSizedFrames(frames, accessor, appender, dos, tb, frameOffsets);
 
         // Reading what was written
-        reader = writer.createDeleteOnCloseReader();
-        reader.open();
-        for (int f = 0; f < frames.length; f++) {
-            reader.nextFrame(readFrames[f]);
-            Assert.assertArrayEquals("Reading frame[" + f + "] bytes", frames[f].getBuffer().array(),
-                    readFrames[f].getBuffer().array());
-        }
-        for (int f = frames.length - 1; f >= 0; f--) {
-            reader.seek(frameOffets[f]);
-            reader.nextFrame(readFrames[f]);
-            Assert.assertArrayEquals("Reading backwards frame[" + f + "] bytes", frames[f].getBuffer().array(),
-                    readFrames[f].getBuffer().array());
-        }
-        reader.close();
+        readFramesFowardsAndBackwards(frames, readFrames, frameOffsets);
     }
 
     @Test
     public void testMultipleWriteReadSessions() throws HyracksDataException {
-        Random rnd = new Random();
-        rnd.setSeed(50);
 
         // declare fields
         int fieldCount = 2;
@@ -465,7 +267,7 @@ public class RunFileTest {
 
         IFrame[] framesAll = getFrames(MULTIPLE_FRAMES * 2);
         IFrame[] readFrames = getFrames(framesAll.length);
-        long[] frameOffets = new long[framesAll.length];
+        long[] frameOffsets = new long[framesAll.length];
 
         FrameTupleAppender appender = new FrameTupleAppender();
         ArrayTupleBuilder tb = new ArrayTupleBuilder(fieldCount);
@@ -475,104 +277,146 @@ public class RunFileTest {
                 { IntegerSerializerDeserializer.INSTANCE, IntegerSerializerDeserializer.INSTANCE };
         RecordDescriptor recDesc = new RecordDescriptor(recDescSers);
         IFrameTupleAccessor accessor = new FrameTupleAccessor(recDesc);
-        //FrameTupleReference tuple = new FrameTupleReference();
 
         // Writer test
         writer.open();
-
-        for (int f = 0; f < MULTIPLE_FRAMES; f++) {
-            accessor.reset(framesAll[f].getBuffer());
-            appender.reset(framesAll[f], true);
-
-            for (int i = 0; i < NUMBER_OF_TUPLES; i++) {
-                int f0 = rnd.nextInt() % 100000;
-                int f1 = 5;
-
-                tb.reset();
-                IntegerSerializerDeserializer.INSTANCE.serialize(f0, dos);
-                tb.addFieldEndOffset();
-                IntegerSerializerDeserializer.INSTANCE.serialize(f1, dos);
-                tb.addFieldEndOffset();
-
-                if (appender.append(tb.getFieldEndOffsets(), tb.getByteArray(), 0, tb.getSize())) {
-                    break;
-                }
-            }
-            frameOffets[f] = writer.getFileSize();
-            writer.nextFrame(framesAll[f].getBuffer());
-        }
+        writeFramesWithOffsets(framesAll, accessor, appender, dos, tb, frameOffsets, 1);
 
         // Reading what was written
-        reader = writer.createReader();
-        reader.open();
-        for (int f = 0; f < MULTIPLE_FRAMES; f++) {
-            reader.nextFrame(readFrames[f]);
-            Assert.assertArrayEquals("Reading frame[" + f + "] bytes", framesAll[f].getBuffer().array(),
-                    readFrames[f].getBuffer().array());
-        }
-        for (int f = MULTIPLE_FRAMES - 1; f >= 0; f--) {
-            reader.seek(frameOffets[f]);
-            reader.nextFrame(readFrames[f]);
-            Assert.assertArrayEquals("Reading backwards frame[" + f + "] bytes", framesAll[f].getBuffer().array(),
-                    readFrames[f].getBuffer().array());
-        }
-        reader.close();
+        readMultipleFramesFowardsAndBackwards(framesAll, readFrames, frameOffsets, 1);
 
         // Second write session
-        for (int f = MULTIPLE_FRAMES; f < MULTIPLE_FRAMES * 2; f++) {
-            accessor.reset(framesAll[f].getBuffer());
-            appender.reset(framesAll[f], true);
-
-            for (int i = 0; i < NUMBER_OF_TUPLES; i++) {
-                int f0 = rnd.nextInt() % 100000;
-                int f1 = 5;
-
-                tb.reset();
-                IntegerSerializerDeserializer.INSTANCE.serialize(f0, dos);
-                tb.addFieldEndOffset();
-                IntegerSerializerDeserializer.INSTANCE.serialize(f1, dos);
-                tb.addFieldEndOffset();
-
-                if (appender.append(tb.getFieldEndOffsets(), tb.getByteArray(), 0, tb.getSize())) {
-                    break;
-                }
-            }
-            frameOffets[f] = writer.getFileSize();
-            writer.nextFrame(framesAll[f].getBuffer());
-        }
+        writeFramesWithOffsets(framesAll, accessor, appender, dos, tb, frameOffsets, 2);
 
         // Reading what was written in both sections
+        readMultipleFramesFowardsAndBackwards(framesAll, readFrames, frameOffsets, 2);
+    }
+
+    public void writeFrames(IFrame[] frames, IFrameTupleAccessor accessor, FrameTupleAppender appender, DataOutput dos,
+            ArrayTupleBuilder tb) throws HyracksDataException {
+
+        for (int f = 0; f < MULTIPLE_FRAMES; f++) {
+            accessor.reset(frames[f].getBuffer());
+            appender.reset(frames[f], true);
+            fillerName(appender, dos, tb);
+            writer.nextFrame(frames[f].getBuffer());
+        }
+    }
+
+    public void writeFramesWithOffsets(IFrame[] frames, IFrameTupleAccessor accessor, FrameTupleAppender appender,
+            DataOutput dos, ArrayTupleBuilder tb, long[] frameOffsets, int writeSession) throws HyracksDataException {
+
+        for (int f = 0; f < MULTIPLE_FRAMES * writeSession; f++) {
+            accessor.reset(frames[f].getBuffer());
+            appender.reset(frames[f], true);
+            fillerName(appender, dos, tb);
+            frameOffsets[f] = writer.getFileSize();
+            writer.nextFrame(frames[f].getBuffer());
+        }
+    }
+
+    public void writeDifferentSizedFrames(IFrame[] frames, IFrameTupleAccessor accessor, FrameTupleAppender appender,
+            DataOutput dos, ArrayTupleBuilder tb, long[] frameOffsets) throws HyracksDataException {
+
+        for (int f = 0; f < frames.length; f++) {
+            accessor.reset(frames[f].getBuffer());
+            appender.reset(frames[f], false);
+
+            int tupleCount = (f == 1 ? NUMBER_OF_TUPLES_ALTERNATE : NUMBER_OF_TUPLES);
+            fillerName(appender, dos, tb, tupleCount);
+            frameOffsets[f] = writer.getFileSize();
+            writer.nextFrame(frames[f].getBuffer());
+        }
+    }
+
+    public void fillerName(FrameTupleAppender appender, DataOutput dos, ArrayTupleBuilder tb)
+            throws HyracksDataException {
+        Random rnd = new Random();
+        rnd.setSeed(50);
+
+        for (int i = 0; i < NUMBER_OF_TUPLES; i++) {
+            int f0 = rnd.nextInt() % 100000;
+            int f1 = 5;
+
+            tb.reset();
+            IntegerSerializerDeserializer.INSTANCE.serialize(f0, dos);
+            tb.addFieldEndOffset();
+            IntegerSerializerDeserializer.INSTANCE.serialize(f1, dos);
+            tb.addFieldEndOffset();
+
+            if (appender.append(tb.getFieldEndOffsets(), tb.getByteArray(), 0, tb.getSize())) {
+                break;
+            }
+        }
+    }
+
+    public void fillerName(FrameTupleAppender appender, DataOutput dos, ArrayTupleBuilder tb, int tupleCount)
+            throws HyracksDataException {
+        Random rnd = new Random();
+        rnd.setSeed(50);
+
+        for (int i = 0; i < tupleCount; i++) {
+            int f0 = rnd.nextInt() % 100000;
+            int f1 = 5;
+
+            tb.reset();
+            IntegerSerializerDeserializer.INSTANCE.serialize(f0, dos);
+            tb.addFieldEndOffset();
+            IntegerSerializerDeserializer.INSTANCE.serialize(f1, dos);
+            tb.addFieldEndOffset();
+
+            if (appender.append(tb.getFieldEndOffsets(), tb.getByteArray(), 0, tb.getSize())) {
+                break;
+            }
+        }
+    }
+
+    public void readFramesFowardsAndBackwards(IFrame[] frames, IFrame[] readFrames, long[] frameOffsets)
+            throws HyracksDataException {
+
         reader = writer.createDeleteOnCloseReader();
         reader.open();
-        for (int f = 0; f < MULTIPLE_FRAMES * 2; f++) {
+        readFrames(frames, readFrames);
+        readBackwardsFrame(frames, readFrames, frameOffsets);
+        reader.close();
+    }
+
+    public void readFrames(IFrame[] frames, IFrame[] readFrames) throws HyracksDataException {
+
+        for (int f = 0; f < frames.length; f++) {
+            reader.nextFrame(readFrames[f]);
+            Assert.assertArrayEquals("Reading frame[" + f + "] bytes", frames[f].getBuffer().array(),
+                    readFrames[f].getBuffer().array());
+        }
+    }
+
+    public void readBackwardsFrame(IFrame[] frames, IFrame[] readFrames, long[] frameOffsets)
+            throws HyracksDataException {
+
+        for (int f = frames.length - 1; f >= 0; f--) {
+            reader.seek(frameOffsets[f]);
+            reader.nextFrame(readFrames[f]);
+            Assert.assertArrayEquals("Reading backwards frame[" + f + "] bytes", frames[f].getBuffer().array(),
+                    readFrames[f].getBuffer().array());
+        }
+    }
+
+    public void readMultipleFramesFowardsAndBackwards(IFrame[] framesAll, IFrame[] readFrames, long[] frameOffsets,
+            int readSession) throws HyracksDataException {
+
+        reader = writer.createReader();
+        reader.open();
+        for (int f = 0; f < MULTIPLE_FRAMES * readSession; f++) {
             reader.nextFrame(readFrames[f]);
             Assert.assertArrayEquals("Reading frame[" + f + "] bytes", framesAll[f].getBuffer().array(),
                     readFrames[f].getBuffer().array());
         }
-        for (int f = MULTIPLE_FRAMES * 2 - 1; f >= 0; f--) {
-            reader.seek(frameOffets[f]);
+        for (int f = MULTIPLE_FRAMES * readSession - 1; f >= 0; f--) {
+            reader.seek(frameOffsets[f]);
             reader.nextFrame(readFrames[f]);
             Assert.assertArrayEquals("Reading backwards frame[" + f + "] bytes", framesAll[f].getBuffer().array(),
                     readFrames[f].getBuffer().array());
         }
         reader.close();
     }
-
-    //    public void readFrames(ITypeTraits[] readFrames, IFrame[] framesAll) throws HyracksDataException {
-    //        reader = writer.createDeleteOnCloseReader();
-    //        reader.open();
-    //        for (int f = 0; f < MULTIPLE_FRAMES * 2; f++) {
-    //            reader.nextFrame(readFrames[f]);
-    //            Assert.assertArrayEquals("Reading frame[" + f + "] bytes", framesAll[f].getBuffer().array(),
-    //                    readFrames[f].getBuffer().array());
-    //        }
-    //        for (int f = MULTIPLE_FRAMES * 2 - 1; f >= 0; f--) {
-    //            reader.reset(readFrames[f]);
-    //            reader.nextFrame(readFrames[f]);
-    //            Assert.assertArrayEquals("Reading backwards frame[" + f + "] bytes", framesAll[f].getBuffer().array(),
-    //                    readFrames[f].getBuffer().array());
-    //        }
-    //        reader.close();
-    //    }
-
 }
