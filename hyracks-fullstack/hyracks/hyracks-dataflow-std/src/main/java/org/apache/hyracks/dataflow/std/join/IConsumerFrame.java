@@ -20,14 +20,14 @@ package org.apache.hyracks.dataflow.std.join;
 
 import java.nio.ByteBuffer;
 
+import org.apache.hyracks.api.comm.IFrame;
 import org.apache.hyracks.api.dataflow.value.RecordDescriptor;
+import org.apache.hyracks.api.exceptions.HyracksDataException;
 
 public interface IConsumerFrame {
 
     public RecordDescriptor getRecordDescriptor();
 
-    public ByteBuffer getFrame();
-
-    public boolean hasMoreFrames();
+    public boolean getFrame(IFrame returnFrame) throws HyracksDataException;
 
 }

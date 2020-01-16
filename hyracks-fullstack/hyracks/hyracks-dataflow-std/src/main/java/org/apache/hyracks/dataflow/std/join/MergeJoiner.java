@@ -114,11 +114,17 @@ public class MergeJoiner implements IStreamJoiner {
         if (fromFile) {
             return runFileStream.loadNextBuffer(runFileAccessor);
         } else {
-            if (consumerFrames[branch].hasMoreFrames()) {
-                setFrame(branch, consumerFrames[branch].getFrame());
+            if (consumerFrames[branch].getFrame(inputBuffer[branch])) {
+                inputAccessor[branch].reset(inputBuffer[branch].getBuffer());
+                inputAccessor[branch].next();
+                if (!inputAccessor[branch].exists()) {
+                    return false;
+                }
                 return true;
+            } else {
+                inputAccessor[branch] = null;
+                return false;
             }
-            return false;
         }
     }
 
