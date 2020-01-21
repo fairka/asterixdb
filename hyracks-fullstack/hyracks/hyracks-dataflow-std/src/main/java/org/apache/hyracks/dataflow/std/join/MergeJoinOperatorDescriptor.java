@@ -61,7 +61,8 @@ public class MergeJoinOperatorDescriptor extends AbstractOperatorDescriptor {
         this.comparatorFactories = comparatorFactories;
     }
 
-    @Override public void contributeActivities(IActivityGraphBuilder builder) {
+    @Override
+    public void contributeActivities(IActivityGraphBuilder builder) {
 
         IActivity joinerNode = new JoinerActivityNode(new ActivityId(getOperatorId(), 0));
 
@@ -79,7 +80,8 @@ public class MergeJoinOperatorDescriptor extends AbstractOperatorDescriptor {
             super(id);
         }
 
-        @Override public IOperatorNodePushable createPushRuntime(IHyracksTaskContext ctx,
+        @Override
+        public IOperatorNodePushable createPushRuntime(IHyracksTaskContext ctx,
                 IRecordDescriptorProvider recordDescProvider, int partition, int nPartitions)
                 throws HyracksDataException {
 
@@ -109,11 +111,13 @@ public class MergeJoinOperatorDescriptor extends AbstractOperatorDescriptor {
                 tupleComparators = new JoinComparator[comparatorFactories.length];
             }
 
-            @Override public int getInputArity() {
+            @Override
+            public int getInputArity() {
                 return inputArity;
             }
 
-            @Override public void initialize() throws HyracksDataException {
+            @Override
+            public void initialize() throws HyracksDataException {
                 sleepUntilStateIsReady(LEFT_INPUT_INDEX);
                 sleepUntilStateIsReady(RIGHT_INPUT_INDEX);
                 try {
@@ -122,9 +126,8 @@ public class MergeJoinOperatorDescriptor extends AbstractOperatorDescriptor {
                         tupleComparators[i] = new JoinComparator(comparator, leftKeys[i], rightKeys[i]);
                     }
                     writer.open();
-                    IStreamJoiner joiner =
-                            new MergeJoiner(ctx, inputStates[LEFT_INPUT_INDEX], inputStates[RIGHT_INPUT_INDEX], writer,
-                                    memoryForJoinInFrames, tupleComparators);
+                    IStreamJoiner joiner = new MergeJoiner(ctx, inputStates[LEFT_INPUT_INDEX],
+                            inputStates[RIGHT_INPUT_INDEX], writer, memoryForJoinInFrames, tupleComparators);
                     joiner.processJoin();
                 } catch (Exception ex) {
                     writer.fail();
@@ -145,22 +148,27 @@ public class MergeJoinOperatorDescriptor extends AbstractOperatorDescriptor {
                 } while (inputStates[stateIndex] == null);
             }
 
-            @Override public IFrameWriter getInputFrameWriter(int index) {
+            @Override
+            public IFrameWriter getInputFrameWriter(int index) {
                 return new IFrameWriter() {
-                    @Override public void open() throws HyracksDataException {
+                    @Override
+                    public void open() throws HyracksDataException {
                         inputStates[index] = new ProducerConsumerFrameState(ctx.getJobletContext().getJobId(),
                                 new TaskId(getActivityId(), partition), recordDescriptors[index]);
                     }
 
-                    @Override public void nextFrame(ByteBuffer buffer) throws HyracksDataException {
+                    @Override
+                    public void nextFrame(ByteBuffer buffer) throws HyracksDataException {
                         inputStates[index].putFrame(buffer);
                     }
 
-                    @Override public void close() throws HyracksDataException {
+                    @Override
+                    public void close() throws HyracksDataException {
                         inputStates[index].noMoreFrames();
                     }
 
-                    @Override public void fail() throws HyracksDataException {
+                    @Override
+                    public void fail() throws HyracksDataException {
                         inputStates[index].noMoreFrames();
                     }
                 };
