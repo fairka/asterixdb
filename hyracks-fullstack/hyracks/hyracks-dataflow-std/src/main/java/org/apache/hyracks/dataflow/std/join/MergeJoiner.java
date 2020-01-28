@@ -138,13 +138,6 @@ public class MergeJoiner implements IStreamJoiner {
         }
     }
 
-    private boolean getNextTupleFromFile() throws HyracksDataException {
-        if (secondaryTupleBufferAccessor.hasNext()) {
-            secondaryTupleBufferAccessor.next();
-        }
-        return secondaryTupleBufferAccessor.hasNext();
-    }
-
     // Buffer and File
 
     private void clearSavedTuples(int branch) throws HyracksDataException {
@@ -157,10 +150,6 @@ public class MergeJoiner implements IStreamJoiner {
         } else {
             throw new RuntimeException();
         }
-    }
-
-    private void clearSavedTuplesFromFile() throws HyracksDataException {
-        secondaryTupleBufferManager.clearPartition(0);
     }
 
     private boolean saveTuple(int branch, boolean clear) throws HyracksDataException {
@@ -244,10 +233,6 @@ public class MergeJoiner implements IStreamJoiner {
         return compare(inputAccessor[LEFT_PARTITION], inputAccessor[RIGHT_PARTITION]);
     }
 
-    private int compareLeftTuplesInStreamWithTupleInFile() throws HyracksDataException {
-        return compare(inputAccessor[LEFT_PARTITION], secondaryTupleBufferAccessor);
-    }
-
     private boolean compareTupleWithBuffer() throws HyracksDataException {
         if (secondaryTupleBufferManager.getNumTuples(0) <= 0) {
             return false;
@@ -329,68 +314,28 @@ public class MergeJoiner implements IStreamJoiner {
 
     private void matchStreams() throws HyracksDataException {
 
-        boolean flag = true;
-        boolean fromFile = false;
-        boolean hasNext = false;
-        boolean rightEnd = false;
-        boolean leftEnd = false;
         getNextTuple(LEFT_PARTITION, false);
         getNextTuple(RIGHT_PARTITION, false);
         int c;
 
         while (inputAccessor[LEFT_PARTITION].exists() && inputAccessor[RIGHT_PARTITION].exists()) {
+
             printTuple("Left Tuple Before : ", inputAccessor[LEFT_PARTITION],
                     inputAccessor[LEFT_PARTITION].getTupleId());
             printTuple("Right Tuple Before: ", inputAccessor[RIGHT_PARTITION],
                     inputAccessor[RIGHT_PARTITION].getTupleId());
 
-            if(!inputAccessor[LEFT_PARTITION].hasNext() && !inputAccessor[RIGHT_PARTITION].hasNext()){
-                break;
-            }
+            c = compareTuplesInStream();
 
-            if (!fromFile) {
-                c = compareTuplesInStream();
-            } else {
-                printTuple("From File Tuple: ", secondaryTupleBufferAccessor,
-                        secondaryTupleBufferAccessor.getTupleId());
-
-                c = compareLeftTuplesInStreamWithTupleInFile();
-            }
             System.out.println("c: " + c + " ");
 
             if (c > 0) {
                 getNextTuple(RIGHT_PARTITION, false);
-                clearSavedTuplesFromFile();
-                fromFile = false;
-                flag = true;
-            }else if (c < 0) {
-
-                if(flag){
-                    getNextTuple(LEFT_PARTITION, false);
-                }else{
-                    getNextTuple(LEFT_PARTITION, false);
-                    fromFile = true;
-                }
-
+            } else if (c < 0) {
+                getNextTuple(LEFT_PARTITION, false);
             } else {
-                if(!fromFile){
-                    joinFromStream();
-                    saveTuple(RIGHT_PARTITION, true);
-                    secondaryTupleBufferAccessor.reset();
-                    hasNext = getNextTupleFromFile();
-                    getNextTuple(RIGHT_PARTITION, false);
-                    flag = false;
-                }else{
-                    joinFromFile();
-                    if(hasNext){
-                        getNextTupleFromFile();
-                    }else{
-                        secondaryTupleBufferAccessor.reset();
-                        getNextTuple(LEFT_PARTITION, false);
-                    }
-
-                    break;
-                }
+                joinFromStream();
+                break;
             }
         }
     }
