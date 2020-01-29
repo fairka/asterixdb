@@ -18,8 +18,6 @@
  */
 package org.apache.hyracks.dataflow.std.join;
 
-import static org.apache.hyracks.dataflow.std.join.TuplePrinterUtil.printTuple;
-
 import java.nio.ByteBuffer;
 import java.util.BitSet;
 
@@ -39,26 +37,24 @@ import org.apache.hyracks.dataflow.std.buffermanager.TupleAccessor;
 import org.apache.hyracks.dataflow.std.buffermanager.VPartitionTupleBufferManager;
 import org.apache.hyracks.dataflow.std.structures.TuplePointer;
 
+import static org.apache.hyracks.dataflow.std.join.TuplePrinterUtil.printTuple;
+
 public class MergeJoiner implements IStreamJoiner {
-
-    private static TuplePointer tempPtr = new TuplePointer();
-    private final ITupleAccessor runFileAccessor;
-    private final RunFileStream runFileStream;
-
-    private VPartitionTupleBufferManager secondaryTupleBufferManager;
-    private ITupleAccessor secondaryTupleBufferAccessor;
-    private ITuplePairComparator[] comparators;
-    private IFrameWriter writer;
 
     private static final int JOIN_PARTITIONS = 2;
     private static final int LEFT_PARTITION = 0;
     private static final int RIGHT_PARTITION = 1;
-
+    private static TuplePointer tempPtr = new TuplePointer();
+    private final ITupleAccessor runFileAccessor;
+    private final RunFileStream runFileStream;
     private final IConsumerFrame[] consumerFrames;
     private final FrameTupleAppender resultAppender;
-
     private final IFrame[] inputBuffer;
     private final ITupleAccessor[] inputAccessor;
+    private VPartitionTupleBufferManager secondaryTupleBufferManager;
+    private ITupleAccessor secondaryTupleBufferAccessor;
+    private ITuplePairComparator[] comparators;
+    private IFrameWriter writer;
 
     public MergeJoiner(IHyracksTaskContext ctx, IConsumerFrame leftCF, IConsumerFrame rightCF, IFrameWriter writer,
             int memoryForJoinInFrames, ITuplePairComparator[] comparators) throws HyracksDataException {
@@ -135,6 +131,24 @@ public class MergeJoiner implements IStreamJoiner {
         ITupleAccessor accessor = fromFile ? runFileAccessor : inputAccessor[branch];
         if (accessor.hasNext() || !getNextFrame(branch, fromFile)) {
             accessor.next();
+        }
+    }
+
+    private void getNextRightTuple() {
+        if (inputAccessor[RIGHT_PARTITION].hasNext()) {
+            inputAccessor[RIGHT_PARTITION].next();
+        }
+    }
+
+    private void getNextLeftTuple() {
+        if (inputAccessor[LEFT_PARTITION].hasNext()) {
+            inputAccessor[LEFT_PARTITION].next();
+        }
+    }
+
+    private void getNextSecondaryTuple() {
+        if (secondaryTupleBufferAccessor.hasNext()) {
+            secondaryTupleBufferAccessor.next();
         }
     }
 
@@ -233,6 +247,10 @@ public class MergeJoiner implements IStreamJoiner {
         return compare(inputAccessor[LEFT_PARTITION], inputAccessor[RIGHT_PARTITION]);
     }
 
+    private int compareLeftTupleInStreamWithTupleInSecondary() throws HyracksDataException {
+        return compare(inputAccessor[LEFT_PARTITION], secondaryTupleBufferAccessor);
+    }
+
     private boolean compareTupleWithBuffer() throws HyracksDataException {
         if (secondaryTupleBufferManager.getNumTuples(0) <= 0) {
             return false;
@@ -320,11 +338,6 @@ public class MergeJoiner implements IStreamJoiner {
 
         while (inputAccessor[LEFT_PARTITION].exists() && inputAccessor[RIGHT_PARTITION].exists()) {
 
-            printTuple("Left Tuple Before : ", inputAccessor[LEFT_PARTITION],
-                    inputAccessor[LEFT_PARTITION].getTupleId());
-            printTuple("Right Tuple Before: ", inputAccessor[RIGHT_PARTITION],
-                    inputAccessor[RIGHT_PARTITION].getTupleId());
-
             c = compareTuplesInStream();
 
             System.out.println("c: " + c + " ");
@@ -350,7 +363,97 @@ public class MergeJoiner implements IStreamJoiner {
     // Entry Function
 
     @Override public void processJoin() throws HyracksDataException {
-        matchStreams();
+        mergeJoinCaleb();
         closeJoin();
+    }
+
+    private void joinLeftTupleWithTuplesInSecondaryBuffer() throws HyracksDataException {
+
+        secondaryTupleBufferAccessor.reset();
+        getNextSecondaryTuple();
+        while (compareLeftTupleInStreamWithTupleInSecondary() == 0) {
+            addToResult(inputAccessor[LEFT_PARTITION], inputAccessor[LEFT_PARTITION].getTupleId(),
+                    secondaryTupleBufferAccessor, secondaryTupleBufferAccessor.getTupleId(), false, writer);
+            if (secondaryTupleBufferAccessor.hasNext()) {
+                do {
+                    getNextSecondaryTuple();
+                    saveTuple(RIGHT_PARTITION, false);
+                    addToResult(inputAccessor[LEFT_PARTITION], inputAccessor[LEFT_PARTITION].getTupleId(),
+                            secondaryTupleBufferAccessor, secondaryTupleBufferAccessor.getTupleId(), false, writer);
+                    printTuple("SavedTuple First: ", inputAccessor[LEFT_PARTITION],
+                            inputAccessor[LEFT_PARTITION].getTupleId());
+                    printTuple("SavedTuple Last : ", secondaryTupleBufferAccessor,
+                            secondaryTupleBufferAccessor.getTupleId());
+                } while (secondaryTupleBufferAccessor.hasNext());
+                secondaryTupleBufferAccessor.reset();
+                getNextSecondaryTuple();
+                if (inputAccessor[LEFT_PARTITION].hasNext()) {
+                    getNextLeftTuple();
+                } else {
+                    break;
+                }
+                secondaryTupleBufferAccessor.reset();
+                getNextSecondaryTuple();
+            }
+        }
+        clearSavedTuples(RIGHT_PARTITION);
+        System.out.println("Secondary Buffer Cleared");
+        if (secondaryTupleBufferAccessor.hasNext()) {
+            System.out.println("Tuples Not Correctly Cleared From Secondary Buffer");
+        }
+    }
+
+    private void mergeJoinCaleb() throws HyracksDataException {
+
+        boolean tuplesInBuffer = false;
+
+        getNextTuple(LEFT_PARTITION, false);
+        getNextTuple(RIGHT_PARTITION, false);
+        int c;
+
+        while (inputAccessor[LEFT_PARTITION].exists() && inputAccessor[RIGHT_PARTITION].exists()) {
+
+            printTuple("Left Tuple Before : ", inputAccessor[LEFT_PARTITION],
+                    inputAccessor[LEFT_PARTITION].getTupleId());
+            printTuple("Right Tuple Before: ", inputAccessor[RIGHT_PARTITION],
+                    inputAccessor[RIGHT_PARTITION].getTupleId());
+
+            c = compareTuplesInStream();
+
+            //System.out.println("c: " + c + " ");
+
+            //Increments left Partition
+            if (c < 0) {
+                getNextLeftTuple();
+
+                if (tuplesInBuffer) {
+                    joinLeftTupleWithTuplesInSecondaryBuffer();
+                    System.out.println("Left Tuples Joined with Secondary Buffer.");
+                }
+
+                //Increments Right Partition
+            } else if (c > 0) {
+                getNextRightTuple();
+                //If Partitions are equal
+            } else {
+                do {
+                    saveTuple(RIGHT_PARTITION, false);
+                    addToResult(inputAccessor[LEFT_PARTITION], inputAccessor[LEFT_PARTITION].getTupleId(),
+                            inputAccessor[RIGHT_PARTITION], inputAccessor[RIGHT_PARTITION].getTupleId(), false, writer);
+                    printTuple("SavedTuple First: ", inputAccessor[LEFT_PARTITION],
+                            inputAccessor[LEFT_PARTITION].getTupleId());
+                    printTuple("SavedTuple Last : ", inputAccessor[RIGHT_PARTITION],
+                            inputAccessor[RIGHT_PARTITION].getTupleId());
+                    getNextRightTuple();
+
+                } while (0 == compareTuplesInStream() && inputAccessor[RIGHT_PARTITION].hasNext());
+                System.out.println("Right Tuples Joined with Left Tuples and added to Secondary.");
+                tuplesInBuffer = true;
+            }
+
+            if (!inputAccessor[LEFT_PARTITION].hasNext() && !inputAccessor[RIGHT_PARTITION].hasNext()) {
+                break;
+            }
+        }
     }
 }
