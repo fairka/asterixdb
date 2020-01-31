@@ -436,6 +436,7 @@ public class MergeJoiner implements IStreamJoiner {
                 getNextRightTuple();
                 //If Partitions are equal
             } else {
+                int IfReachedEndOfRightParition = 0;
                 do {
                     saveTuple(RIGHT_PARTITION, false);
                     addToResult(inputAccessor[LEFT_PARTITION], inputAccessor[LEFT_PARTITION].getTupleId(),
@@ -445,8 +446,11 @@ public class MergeJoiner implements IStreamJoiner {
                     printTuple("SavedTuple Last : ", inputAccessor[RIGHT_PARTITION],
                             inputAccessor[RIGHT_PARTITION].getTupleId());
                     getNextRightTuple();
+                    if (!inputAccessor[RIGHT_PARTITION].hasNext()){
+                        IfReachedEndOfRightParition++;
+                    }
 
-                } while (0 == compareTuplesInStream() && inputAccessor[RIGHT_PARTITION].hasNext());
+                } while (0 == compareTuplesInStream() && IfReachedEndOfRightParition < 2);
                 System.out.println("Right Tuples Joined with Left Tuples and added to Secondary.");
                 tuplesInBuffer = true;
             }
