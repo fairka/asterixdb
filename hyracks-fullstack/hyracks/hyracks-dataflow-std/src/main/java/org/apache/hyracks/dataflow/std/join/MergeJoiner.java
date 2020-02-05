@@ -18,7 +18,8 @@
  */
 package org.apache.hyracks.dataflow.std.join;
 
-import java.nio.ByteBuffer;
+import static org.apache.hyracks.dataflow.std.join.TuplePrinterUtil.printTuple;
+
 import java.util.BitSet;
 
 import org.apache.hyracks.api.comm.IFrame;
@@ -36,8 +37,6 @@ import org.apache.hyracks.dataflow.std.buffermanager.PreferToSpillFullyOccupiedF
 import org.apache.hyracks.dataflow.std.buffermanager.TupleAccessor;
 import org.apache.hyracks.dataflow.std.buffermanager.VPartitionTupleBufferManager;
 import org.apache.hyracks.dataflow.std.structures.TuplePointer;
-
-import static org.apache.hyracks.dataflow.std.join.TuplePrinterUtil.printTuple;
 
 public class MergeJoiner implements IStreamJoiner {
 
@@ -97,17 +96,7 @@ public class MergeJoiner implements IStreamJoiner {
         runFileAccessor = new TupleAccessor(consumerFrames[LEFT_PARTITION].getRecordDescriptor());
     }
 
-    // Tuples and Frames
 
-    private void setFrame(int branch, ByteBuffer buffer) throws HyracksDataException {
-        inputBuffer[branch].getBuffer().clear();
-        if (inputBuffer[branch].getFrameSize() < buffer.capacity()) {
-            inputBuffer[branch].resize(buffer.capacity());
-        }
-        inputBuffer[branch].getBuffer().put(buffer.array(), 0, buffer.capacity());
-        inputAccessor[branch].reset(inputBuffer[branch].getBuffer());
-        inputAccessor[branch].next();
-    }
 
     private boolean getNextFrame(int branch, boolean fromFile) throws HyracksDataException {
         if (fromFile) {
@@ -182,9 +171,8 @@ public class MergeJoiner implements IStreamJoiner {
             saveSuccessful = true;
 
         } else if (branch == RIGHT_PARTITION) {
-            saveSuccessful = secondaryTupleBufferManager
-                    .insertTuple(0, inputAccessor[RIGHT_PARTITION], inputAccessor[RIGHT_PARTITION].getTupleId(),
-                            tempPtr);
+            saveSuccessful = secondaryTupleBufferManager.insertTuple(0, inputAccessor[RIGHT_PARTITION],
+                    inputAccessor[RIGHT_PARTITION].getTupleId(), tempPtr);
             secondaryTupleBufferAccessor.reset();
             secondaryTupleBufferAccessor.next();
         } else {
@@ -193,49 +181,12 @@ public class MergeJoiner implements IStreamJoiner {
         return saveSuccessful;
     }
 
-    private void loadAllLeftIntoRunFile() throws HyracksDataException {
-        saveTuple(LEFT_PARTITION, true);
-        getNextTuple(LEFT_PARTITION, false);
-
-        boolean lastTupleAdded = true;
-        while (lastTupleAdded) {
-            if (inputAccessor[LEFT_PARTITION].exists() && secondaryTupleBufferAccessor.exists() && 0 == compare(
-                    inputAccessor[LEFT_PARTITION], secondaryTupleBufferAccessor)) {
-                saveTuple(LEFT_PARTITION, false);
-                getNextTuple(LEFT_PARTITION, false);
-            } else {
-                lastTupleAdded = false;
-            }
-        }
-
-        runFileStream.flushRunFile();
-        runFileStream.startReadingRunFile(runFileAccessor);
-    }
-
-    private boolean loadRight(ITupleAccessor leftAccessor) throws HyracksDataException {
-        boolean saveSuccessful = saveTuple(RIGHT_PARTITION, true);
-
-        while (saveSuccessful) {
-            getNextTuple(RIGHT_PARTITION, false);
-            if (!inputAccessor[RIGHT_PARTITION].exists()) {
-                return true;
-            }
-
-            int c = compare(leftAccessor, inputAccessor[RIGHT_PARTITION]);
-            if (c != 0) {
-                return true;
-            }
-            saveSuccessful = saveTuple(RIGHT_PARTITION, false);
-        }
-        return false;
-    }
-
     // Comparators
 
     private int compare(ITupleAccessor leftAccessor, ITupleAccessor rightAccessor) throws HyracksDataException {
         for (ITuplePairComparator comparator : comparators) {
-            int c = comparator
-                    .compare(leftAccessor, leftAccessor.getTupleId(), rightAccessor, rightAccessor.getTupleId());
+            int c = comparator.compare(leftAccessor, leftAccessor.getTupleId(), rightAccessor,
+                    rightAccessor.getTupleId());
             if (c != 0) {
                 return c;
             }
@@ -251,17 +202,7 @@ public class MergeJoiner implements IStreamJoiner {
         return compare(inputAccessor[LEFT_PARTITION], secondaryTupleBufferAccessor);
     }
 
-    private boolean compareTupleWithBuffer() throws HyracksDataException {
-        if (secondaryTupleBufferManager.getNumTuples(0) <= 0) {
-            return false;
-        }
 
-        if (!secondaryTupleBufferAccessor.exists()) {
-            return false;
-        }
-
-        return 0 == compare(inputAccessor[LEFT_PARTITION], secondaryTupleBufferAccessor);
-    }
 
     // Results
 
@@ -275,132 +216,56 @@ public class MergeJoiner implements IStreamJoiner {
         }
     }
 
-    private void joinWithBuffer(ITupleAccessor leftAccessor) throws HyracksDataException {
+    private void ifEqualJoinLeftTupleWithTuplesInSecondaryBuffer() throws HyracksDataException {
 
-        if (secondaryTupleBufferManager.getNumTuples(0) <= 0) {
-            return;
-        }
-
-        secondaryTupleBufferAccessor.reset();
-
-        while (secondaryTupleBufferAccessor.hasNext()) {
-            secondaryTupleBufferAccessor.next();
-            addToResult(leftAccessor, leftAccessor.getTupleId(), secondaryTupleBufferAccessor,
-                    secondaryTupleBufferAccessor.getTupleId(), false, writer);
-        }
-    }
-
-    // Main Functions
-
-    private void joinFromFile() throws HyracksDataException {
-
-        boolean loadRightSuccessful = false;
-        loadAllLeftIntoRunFile();
-
-        while (!loadRightSuccessful) {
-            while (runFileAccessor.exists() && secondaryTupleBufferAccessor.exists()) {
-                joinWithBuffer(runFileAccessor);
-                getNextTuple(LEFT_PARTITION, true);
-            }
-            runFileStream.startReadingRunFile(runFileAccessor);
-            loadRightSuccessful = loadRight(runFileAccessor);
-        }
-        while (runFileAccessor.exists() && secondaryTupleBufferAccessor.exists()) {
-            joinWithBuffer(runFileAccessor);
-            getNextTuple(LEFT_PARTITION, true);
-        }
-    }
-
-    private void joinFromStream() throws HyracksDataException {
-        while (inputAccessor[LEFT_PARTITION].exists() && secondaryTupleBufferAccessor.exists()
-                && compareTupleWithBuffer()) {
-
-            joinWithBuffer(inputAccessor[LEFT_PARTITION]);
-            getNextTuple(LEFT_PARTITION, false);
-        }
-        clearSavedTuples(RIGHT_PARTITION);
-    }
-
-    private void joinMatched() throws HyracksDataException {
-        boolean initialLoadSuccessful = loadRight(inputAccessor[LEFT_PARTITION]);
-        if (initialLoadSuccessful) {
-            joinFromStream();
-        } else {
-            joinFromFile();
-        }
-    }
-
-    private void matchStreams() throws HyracksDataException {
-
-        getNextTuple(LEFT_PARTITION, false);
-        getNextTuple(RIGHT_PARTITION, false);
-        int c;
-
-        while (inputAccessor[LEFT_PARTITION].exists() && inputAccessor[RIGHT_PARTITION].exists()) {
-
-            c = compareTuplesInStream();
-
-            System.out.println("c: " + c + " ");
-
-            if (c > 0) {
-                getNextTuple(RIGHT_PARTITION, false);
-            } else if (c < 0) {
-                getNextTuple(LEFT_PARTITION, false);
-            } else {
-                joinFromStream();
-                break;
-            }
-        }
-    }
-
-    private void closeJoin() throws HyracksDataException {
-        resultAppender.write(writer, true);
-        secondaryTupleBufferManager.close();
-        runFileStream.removeRunFile();
-        runFileStream.close();
-    }
-
-    // Entry Function
-
-    @Override public void processJoin() throws HyracksDataException {
-        mergeJoinCaleb();
-        closeJoin();
-    }
-
-    private void joinLeftTupleWithTuplesInSecondaryBuffer() throws HyracksDataException {
-
+        //Set Pointer to beginning of Stream
         secondaryTupleBufferAccessor.reset();
         getNextSecondaryTuple();
+
+        //While left tuple is equal to tuples in buffer.
         while (compareLeftTupleInStreamWithTupleInSecondary() == 0) {
-            addToResult(inputAccessor[LEFT_PARTITION], inputAccessor[LEFT_PARTITION].getTupleId(),
-                    secondaryTupleBufferAccessor, secondaryTupleBufferAccessor.getTupleId(), false, writer);
-            if (secondaryTupleBufferAccessor.hasNext()) {
-                do {
-                    getNextSecondaryTuple();
-                    saveTuple(RIGHT_PARTITION, false);
-                    addToResult(inputAccessor[LEFT_PARTITION], inputAccessor[LEFT_PARTITION].getTupleId(),
-                            secondaryTupleBufferAccessor, secondaryTupleBufferAccessor.getTupleId(), false, writer);
-                    printTuple("SavedTuple First: ", inputAccessor[LEFT_PARTITION],
-                            inputAccessor[LEFT_PARTITION].getTupleId());
-                    printTuple("SavedTuple Last : ", secondaryTupleBufferAccessor,
-                            secondaryTupleBufferAccessor.getTupleId());
-                } while (secondaryTupleBufferAccessor.hasNext());
-                secondaryTupleBufferAccessor.reset();
+            secondaryTupleBufferAccessor.reset();
+            do {
                 getNextSecondaryTuple();
-                if (inputAccessor[LEFT_PARTITION].hasNext()) {
-                    getNextLeftTuple();
-                } else {
-                    break;
-                }
-                secondaryTupleBufferAccessor.reset();
-                getNextSecondaryTuple();
+                //Join and Add to results
+                addToResult(inputAccessor[LEFT_PARTITION], inputAccessor[LEFT_PARTITION].getTupleId(),
+                        secondaryTupleBufferAccessor, secondaryTupleBufferAccessor.getTupleId(), false, writer);
+                printTuple("SavedTuple First: ", inputAccessor[LEFT_PARTITION],
+                        inputAccessor[LEFT_PARTITION].getTupleId());
+                printTuple("SavedTuple Last : ", secondaryTupleBufferAccessor,
+                        secondaryTupleBufferAccessor.getTupleId());
+
+            } while (secondaryTupleBufferAccessor.hasNext());
+            secondaryTupleBufferAccessor.reset();
+            getNextSecondaryTuple();
+            if (inputAccessor[LEFT_PARTITION].hasNext()) {
+                getNextLeftTuple();
+            } else {
+                break;
             }
+            secondaryTupleBufferAccessor.reset();
+            getNextSecondaryTuple();
         }
-        clearSavedTuples(RIGHT_PARTITION);
-        System.out.println("Secondary Buffer Cleared");
-        if (secondaryTupleBufferAccessor.hasNext()) {
-            System.out.println("Tuples Not Correctly Cleared From Secondary Buffer");
-        }
+    }
+
+    private void ifEqualJoinLeftTupleWithEqualRightTuples() throws HyracksDataException {
+        int IfReachedEndOfRightPartition = 0;
+        do {
+            //Put tuple in secondary buffer
+            saveTuple(RIGHT_PARTITION, false);
+            //Join and Add to results
+            addToResult(inputAccessor[LEFT_PARTITION], inputAccessor[LEFT_PARTITION].getTupleId(),
+                    inputAccessor[RIGHT_PARTITION], inputAccessor[RIGHT_PARTITION].getTupleId(), false, writer);
+            printTuple("SavedTuple First: ", inputAccessor[LEFT_PARTITION],
+                    inputAccessor[LEFT_PARTITION].getTupleId());
+            printTuple("SavedTuple Last : ", inputAccessor[RIGHT_PARTITION],
+                    inputAccessor[RIGHT_PARTITION].getTupleId());
+            getNextRightTuple();
+            if (!inputAccessor[RIGHT_PARTITION].hasNext()) {
+                IfReachedEndOfRightPartition++;
+            }
+
+        } while (0 == compareTuplesInStream() && IfReachedEndOfRightPartition < 2);
     }
 
     private void mergeJoinCaleb() throws HyracksDataException {
@@ -419,45 +284,199 @@ public class MergeJoiner implements IStreamJoiner {
                     inputAccessor[RIGHT_PARTITION].getTupleId());
 
             c = compareTuplesInStream();
-
-            //System.out.println("c: " + c + " ");
+            System.out.println("c: " + c + " ");
 
             //Increments left Partition
             if (c < 0) {
                 getNextLeftTuple();
-
-                if (tuplesInBuffer) {
-                    joinLeftTupleWithTuplesInSecondaryBuffer();
-                    System.out.println("Left Tuples Joined with Secondary Buffer.");
-                }
-
-                //Increments Right Partition
             } else if (c > 0) {
+                //Increments Right Partition
                 getNextRightTuple();
-                //If Partitions are equal
+
             } else {
-                int IfReachedEndOfRightParition = 0;
-                do {
-                    saveTuple(RIGHT_PARTITION, false);
-                    addToResult(inputAccessor[LEFT_PARTITION], inputAccessor[LEFT_PARTITION].getTupleId(),
-                            inputAccessor[RIGHT_PARTITION], inputAccessor[RIGHT_PARTITION].getTupleId(), false, writer);
-                    printTuple("SavedTuple First: ", inputAccessor[LEFT_PARTITION],
-                            inputAccessor[LEFT_PARTITION].getTupleId());
-                    printTuple("SavedTuple Last : ", inputAccessor[RIGHT_PARTITION],
-                            inputAccessor[RIGHT_PARTITION].getTupleId());
-                    getNextRightTuple();
-                    if (!inputAccessor[RIGHT_PARTITION].hasNext()){
-                        IfReachedEndOfRightParition++;
-                    }
-
-                } while (0 == compareTuplesInStream() && IfReachedEndOfRightParition < 2);
+                //Partitions are equal case
+                ifEqualJoinLeftTupleWithEqualRightTuples();
                 System.out.println("Right Tuples Joined with Left Tuples and added to Secondary.");
-                tuplesInBuffer = true;
+                if(inputAccessor[LEFT_PARTITION].hasNext()){
+                    getNextLeftTuple();
+                    ifEqualJoinLeftTupleWithTuplesInSecondaryBuffer();
+                    System.out.println("Left Tuples Joined with Secondary Buffer.");
+                    clearSavedTuples(RIGHT_PARTITION);
+                    System.out.println("Secondary Buffer Cleared");
+                }
             }
-
+            //Exit Loop when both Buffers are finished.
             if (!inputAccessor[LEFT_PARTITION].hasNext() && !inputAccessor[RIGHT_PARTITION].hasNext()) {
                 break;
             }
         }
     }
+
+    // Entry Function
+
+    @Override
+    public void processJoin() throws HyracksDataException {
+        mergeJoinCaleb();
+        closeJoin();
+    }
+
+    private void closeJoin() throws HyracksDataException {
+        resultAppender.write(writer, true);
+        secondaryTupleBufferManager.close();
+        runFileStream.removeRunFile();
+        runFileStream.close();
+    }
 }
+
+
+
+
+////Stephens Code that is now unused
+//
+//// Tuples and Frames
+//
+//    private void setFrame(int branch, ByteBuffer buffer) throws HyracksDataException {
+//        inputBuffer[branch].getBuffer().clear();
+//        if (inputBuffer[branch].getFrameSize() < buffer.capacity()) {
+//            inputBuffer[branch].resize(buffer.capacity());
+//        }
+//        inputBuffer[branch].getBuffer().put(buffer.array(), 0, buffer.capacity());
+//        inputAccessor[branch].reset(inputBuffer[branch].getBuffer());
+//        inputAccessor[branch].next();
+//    }
+//
+//    private boolean loadRight(ITupleAccessor leftAccessor) throws HyracksDataException {
+//        boolean saveSuccessful = saveTuple(RIGHT_PARTITION, true);
+//
+//        while (saveSuccessful) {
+//            getNextTuple(RIGHT_PARTITION, false);
+//            if (!inputAccessor[RIGHT_PARTITION].exists()) {
+//                return true;
+//            }
+//
+//            int c = compare(leftAccessor, inputAccessor[RIGHT_PARTITION]);
+//            if (c != 0) {
+//                return true;
+//            }
+//            saveSuccessful = saveTuple(RIGHT_PARTITION, false);
+//        }
+//        return false;
+//    }
+//
+////Comparators
+//    private boolean compareTupleWithBuffer() throws HyracksDataException {
+//        if (secondaryTupleBufferManager.getNumTuples(0) <= 0) {
+//            return false;
+//        }
+//
+//        if (!secondaryTupleBufferAccessor.exists()) {
+//            return false;
+//        }
+//
+//        return 0 == compare(inputAccessor[LEFT_PARTITION], secondaryTupleBufferAccessor);
+//    }
+//
+//    private void loadAllLeftIntoRunFile() throws HyracksDataException {
+//        saveTuple(LEFT_PARTITION, true);
+//        getNextTuple(LEFT_PARTITION, false);
+//
+//        boolean lastTupleAdded = true;
+//        while (lastTupleAdded) {
+//            if (inputAccessor[LEFT_PARTITION].exists() && secondaryTupleBufferAccessor.exists() && 0 == compare(
+//                    inputAccessor[LEFT_PARTITION], secondaryTupleBufferAccessor)) {
+//                saveTuple(LEFT_PARTITION, false);
+//                getNextTuple(LEFT_PARTITION, false);
+//            } else {
+//                lastTupleAdded = false;
+//            }
+//        }
+//
+//        runFileStream.flushRunFile();
+//        runFileStream.startReadingRunFile(runFileAccessor);
+//    }
+//
+////Results
+//
+//    private void joinWithBuffer(ITupleAccessor leftAccessor) throws HyracksDataException {
+//
+//        if (secondaryTupleBufferManager.getNumTuples(0) <= 0) {
+//            return;
+//        }
+//
+//        secondaryTupleBufferAccessor.reset();
+//
+//        while (secondaryTupleBufferAccessor.hasNext()) {
+//            secondaryTupleBufferAccessor.next();
+//            addToResult(leftAccessor, leftAccessor.getTupleId(), secondaryTupleBufferAccessor,
+//                    secondaryTupleBufferAccessor.getTupleId(), false, writer);
+//        }
+//    }
+//
+//// Main Functions
+//
+//    private void joinFromFile() throws HyracksDataException {
+//
+//        boolean loadRightSuccessful = false;
+//        loadAllLeftIntoRunFile();
+//
+//        while (!loadRightSuccessful) {
+//            while (runFileAccessor.exists() && secondaryTupleBufferAccessor.exists()) {
+//                joinWithBuffer(runFileAccessor);
+//                getNextTuple(LEFT_PARTITION, true);
+//            }
+//            runFileStream.startReadingRunFile(runFileAccessor);
+//            loadRightSuccessful = loadRight(runFileAccessor);
+//        }
+//        while (runFileAccessor.exists() && secondaryTupleBufferAccessor.exists()) {
+//            joinWithBuffer(runFileAccessor);
+//            getNextTuple(LEFT_PARTITION, true);
+//        }
+//    }
+//
+//    private void joinFromStream() throws HyracksDataException {
+//        while (inputAccessor[LEFT_PARTITION].exists() && secondaryTupleBufferAccessor.exists()
+//                && compareTupleWithBuffer()) {
+//
+//            joinWithBuffer(inputAccessor[LEFT_PARTITION]);
+//            getNextTuple(LEFT_PARTITION, false);
+//        }
+//        clearSavedTuples(RIGHT_PARTITION);
+//    }
+//
+//    private void joinMatched() throws HyracksDataException {
+//        boolean initialLoadSuccessful = loadRight(inputAccessor[LEFT_PARTITION]);
+//        if (initialLoadSuccessful) {
+//            joinFromStream();
+//        } else {
+//            joinFromFile();
+//        }
+//    }
+//
+//    private void matchStreams() throws HyracksDataException {
+//
+//        getNextTuple(LEFT_PARTITION, false);
+//        getNextTuple(RIGHT_PARTITION, false);
+//        int c;
+//
+//        while (inputAccessor[LEFT_PARTITION].exists() && inputAccessor[RIGHT_PARTITION].exists()) {
+//
+//            c = compareTuplesInStream();
+//
+//            System.out.println("c: " + c + " ");
+//
+//            if (c > 0) {
+//                getNextTuple(RIGHT_PARTITION, false);
+//            } else if (c < 0) {
+//                getNextTuple(LEFT_PARTITION, false);
+//            } else {
+//                joinFromStream();
+//                break;
+//            }
+//        }
+//    }
+
+
+
+
+
+
