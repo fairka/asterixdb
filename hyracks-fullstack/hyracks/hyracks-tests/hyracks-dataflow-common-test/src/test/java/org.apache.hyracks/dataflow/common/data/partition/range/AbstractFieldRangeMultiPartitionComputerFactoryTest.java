@@ -97,25 +97,25 @@ import junit.framework.TestCase;
  */
 public abstract class AbstractFieldRangeMultiPartitionComputerFactoryTest extends TestCase {
 
-    protected final Long[] EACH_PARTITION =
+    protected static final Long[] EACH_PARTITION =
             new Long[] { 20l, 45l, 70l, 95l, 120l, 145l, 170l, 195l, 220l, 245l, 270l, 295l, 320l, 345l, 370l, 395l };
-    protected final Long[] PARTITION_EDGE_CASES =
+    protected static final Long[] PARTITION_EDGE_CASES =
             new Long[] { -25l, 50l, 99l, 100l, 101l, 150l, 199l, 200l, 201l, 250l, 299l, 300l, 301l, 350l, 425l };
-    protected final Long[] MAP_POINTS =
+    protected static final Long[] MAP_POINTS =
             new Long[] { 25l, 50l, 75l, 100l, 125l, 150l, 175l, 200l, 225l, 250l, 275l, 300l, 325l, 350l, 375l };
     private final Integer64SerializerDeserializer integerSerde = Integer64SerializerDeserializer.INSTANCE;
     @SuppressWarnings("rawtypes")
-    private final ISerializerDeserializer[] TwoIntegerSerDers = new ISerializerDeserializer[] {
+    private final ISerializerDeserializer[] twoIntegerSerDers = new ISerializerDeserializer[] {
             Integer64SerializerDeserializer.INSTANCE, Integer64SerializerDeserializer.INSTANCE };
-    private final RecordDescriptor RecordIntegerDesc = new RecordDescriptor(TwoIntegerSerDers);
-    private final int FRAME_SIZE = 640;
-    private final int INTEGER_LENGTH = Long.BYTES;
-    IBinaryComparatorFactory[] BINARY_ASC_COMPARATOR_FACTORIES =
+    private final RecordDescriptor recordIntegerDesc = new RecordDescriptor(twoIntegerSerDers);
+    private static final int FRAME_SIZE = 640;
+    private static final int INTEGER_LENGTH = Long.BYTES;
+    static final IBinaryComparatorFactory[] BINARY_ASC_COMPARATOR_FACTORIES =
             new IBinaryComparatorFactory[] { LongBinaryComparatorFactory.INSTANCE };
-    IBinaryComparatorFactory[] BINARY_DESC_COMPARATOR_FACTORIES =
+    static final IBinaryComparatorFactory[] BINARY_DESC_COMPARATOR_FACTORIES =
             new IBinaryComparatorFactory[] { LongDescBinaryComparatorFactory.INSTANCE };
-    protected final int[] START_FIELD = new int[] { 0 };
-    protected final int[] END_FIELD = new int[] { 1 };
+    protected static final int[] START_FIELD = new int[] { 0 };
+    protected static final int[] END_FIELD = new int[] { 1 };
 
     private byte[] getIntegerBytes(Long[] integers) throws HyracksDataException {
         try {
@@ -144,7 +144,7 @@ public abstract class AbstractFieldRangeMultiPartitionComputerFactoryTest extend
         IFrame frame = new VSizeFrame(ctx);
 
         FrameTupleAppender appender = new FrameTupleAppender();
-        ArrayTupleBuilder tb = new ArrayTupleBuilder(RecordIntegerDesc.getFieldCount());
+        ArrayTupleBuilder tb = new ArrayTupleBuilder(recordIntegerDesc.getFieldCount());
         DataOutput dos = tb.getDataOutput();
         appender.reset(frame, true);
 
@@ -207,7 +207,7 @@ public abstract class AbstractFieldRangeMultiPartitionComputerFactoryTest extend
         ITupleMultiPartitionComputer partitioner = itmpcf.createPartitioner(ctx);
         partitioner.initialize();
 
-        IFrameTupleAccessor accessor = new FrameTupleAccessor(RecordIntegerDesc);
+        IFrameTupleAccessor accessor = new FrameTupleAccessor(recordIntegerDesc);
         ByteBuffer buffer = prepareData(ctx, integers, duration);
         accessor.reset(buffer);
 
@@ -224,7 +224,7 @@ public abstract class AbstractFieldRangeMultiPartitionComputerFactoryTest extend
         ITuplePartitionComputer partitioner = itpcf.createPartitioner(ctx);
         partitioner.initialize();
 
-        IFrameTupleAccessor accessor = new FrameTupleAccessor(RecordIntegerDesc);
+        IFrameTupleAccessor accessor = new FrameTupleAccessor(recordIntegerDesc);
         ByteBuffer buffer = prepareData(ctx, integers, duration);
         accessor.reset(buffer);
 
