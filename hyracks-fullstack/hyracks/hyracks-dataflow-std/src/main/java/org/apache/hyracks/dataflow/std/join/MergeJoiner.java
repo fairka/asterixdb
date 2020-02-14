@@ -121,36 +121,6 @@ public class MergeJoiner implements IStreamJoiner {
         }
     }
 
-    private void getNextRightTuple() {
-        if (inputAccessor[RIGHT_PARTITION].hasNext()) {
-            inputAccessor[RIGHT_PARTITION].next();
-        }
-    }
-
-    private void getNextLeftTuple() {
-        if (inputAccessor[LEFT_PARTITION].hasNext()) {
-            inputAccessor[LEFT_PARTITION].next();
-        }
-    }
-
-    private void getNextSecondaryTuple() {
-        if (secondaryTupleBufferAccessor.hasNext()) {
-            secondaryTupleBufferAccessor.next();
-        }
-    }
-
-    private void getNextRightTupleTemp() {
-        inputAccessor[RIGHT_PARTITION].next();
-    }
-
-    private void getNextLeftTupleTemp() {
-        inputAccessor[LEFT_PARTITION].next();
-    }
-
-    private void getNextSecondaryTupleTemp() {
-        secondaryTupleBufferAccessor.next();
-    }
-
     // Buffer and File
 
     private void clearSavedTuples(int branch) throws HyracksDataException {
@@ -165,15 +135,7 @@ public class MergeJoiner implements IStreamJoiner {
         }
     }
 
-    private boolean saveTuple(int branch, boolean clear) throws HyracksDataException {
-        if (clear) {
-            clearSavedTuples(branch);
-        }
-
-        if (!inputAccessor[branch].exists()) {
-            return true;
-        }
-
+    private boolean saveTuple(int branch) throws HyracksDataException {
         boolean saveSuccessful;
 
         if (branch == LEFT_PARTITION) {
@@ -205,14 +167,6 @@ public class MergeJoiner implements IStreamJoiner {
         return 0;
     }
 
-    private int compareTuplesInStream() throws HyracksDataException {
-        return compare(inputAccessor[LEFT_PARTITION], inputAccessor[RIGHT_PARTITION]);
-    }
-
-    private int compareLeftTupleInStreamWithTupleInSecondary() throws HyracksDataException {
-        return compare(inputAccessor[LEFT_PARTITION], secondaryTupleBufferAccessor);
-    }
-
     // Results
 
     private void addToResult(IFrameTupleAccessor accessor1, int index1, IFrameTupleAccessor accessor2, int index2,
@@ -235,22 +189,22 @@ public class MergeJoiner implements IStreamJoiner {
                     inputAccessor[LEFT_PARTITION].getTupleId());
             printTuple("SavedTuple Last  From Secondary: ", secondaryTupleBufferAccessor,
                     secondaryTupleBufferAccessor.getTupleId());
-            getNextSecondaryTupleTemp();
+            secondaryTupleBufferAccessor.next();
         }
     }
 
     private void joinLeftTupleWithEqualRightTuples() throws HyracksDataException {
         do {
             //Put tuple in secondary buffer
-            saveTuple(RIGHT_PARTITION, false);
+            saveTuple(RIGHT_PARTITION);
             //Join and Add to results
             addToResult(inputAccessor[LEFT_PARTITION], inputAccessor[LEFT_PARTITION].getTupleId(),
                     inputAccessor[RIGHT_PARTITION], inputAccessor[RIGHT_PARTITION].getTupleId(), false, writer);
             printTuple("SavedTuple First: ", inputAccessor[LEFT_PARTITION], inputAccessor[LEFT_PARTITION].getTupleId());
             printTuple("SavedTuple Last : ", inputAccessor[RIGHT_PARTITION],
                     inputAccessor[RIGHT_PARTITION].getTupleId());
-            getNextRightTupleTemp();
-        } while (inputAccessor[RIGHT_PARTITION].exists() && 0 == compareTuplesInStream());
+            inputAccessor[RIGHT_PARTITION].next();
+        } while (inputAccessor[RIGHT_PARTITION].exists() && 0 == compare(inputAccessor[LEFT_PARTITION], inputAccessor[RIGHT_PARTITION]));
     }
 
     private void mergeJoinCaleb() throws HyracksDataException {
@@ -260,23 +214,23 @@ public class MergeJoiner implements IStreamJoiner {
         int c;
 
         while (inputAccessor[LEFT_PARTITION].exists() && inputAccessor[RIGHT_PARTITION].exists()) {
-            c = compareTuplesInStream();
+            c = compare(inputAccessor[LEFT_PARTITION], inputAccessor[RIGHT_PARTITION]);
             if (c < 0) {
-                getNextLeftTupleTemp();
+                inputAccessor[LEFT_PARTITION].next();
             } else if (c > 0) {
-                getNextRightTupleTemp();
+                inputAccessor[RIGHT_PARTITION].next();
             } else {
                 //Join with right partition and print output.
                 joinLeftTupleWithEqualRightTuples();
-                getNextLeftTupleTemp();
+                inputAccessor[LEFT_PARTITION].next();
                 //If Equal, Join Left Tuple with buffer and print output.
                 while (inputAccessor[LEFT_PARTITION].exists()) {
                     secondaryTupleBufferAccessor.reset();
-                    getNextSecondaryTuple();
-                    if (compareLeftTupleInStreamWithTupleInSecondary() == 0){
+                    secondaryTupleBufferAccessor.next();
+                    if (compare(inputAccessor[LEFT_PARTITION], secondaryTupleBufferAccessor) == 0){
                         //Do We make it here?
                         joinLeftTupleWithTuplesInBuffer();
-                        getNextLeftTupleTemp();
+                        inputAccessor[LEFT_PARTITION].next();
                     }else{
                         break;
                     }
