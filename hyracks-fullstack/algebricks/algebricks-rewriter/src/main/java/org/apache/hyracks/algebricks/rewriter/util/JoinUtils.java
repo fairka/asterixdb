@@ -28,25 +28,21 @@ import org.apache.hyracks.algebricks.common.exceptions.AlgebricksException;
 import org.apache.hyracks.algebricks.core.algebra.base.ILogicalExpression;
 import org.apache.hyracks.algebricks.core.algebra.base.ILogicalOperator;
 import org.apache.hyracks.algebricks.core.algebra.base.IOptimizationContext;
-import org.apache.hyracks.algebricks.core.algebra.base.IPhysicalOperator;
 import org.apache.hyracks.algebricks.core.algebra.base.LogicalExpressionTag;
 import org.apache.hyracks.algebricks.core.algebra.base.LogicalVariable;
 import org.apache.hyracks.algebricks.core.algebra.expressions.AbstractFunctionCallExpression;
 import org.apache.hyracks.algebricks.core.algebra.expressions.BroadcastExpressionAnnotation;
 import org.apache.hyracks.algebricks.core.algebra.expressions.BroadcastExpressionAnnotation.BroadcastSide;
 import org.apache.hyracks.algebricks.core.algebra.expressions.IExpressionAnnotation;
-import org.apache.hyracks.algebricks.core.algebra.expressions.MergeJoinExpressionAnnotation;
 import org.apache.hyracks.algebricks.core.algebra.expressions.VariableReferenceExpression;
 import org.apache.hyracks.algebricks.core.algebra.functions.AlgebricksBuiltinFunctions;
 import org.apache.hyracks.algebricks.core.algebra.functions.AlgebricksBuiltinFunctions.ComparisonKind;
 import org.apache.hyracks.algebricks.core.algebra.functions.FunctionIdentifier;
 import org.apache.hyracks.algebricks.core.algebra.operators.logical.AbstractBinaryJoinOperator;
-import org.apache.hyracks.algebricks.core.algebra.operators.logical.AbstractBinaryJoinOperator.JoinKind;
 import org.apache.hyracks.algebricks.core.algebra.operators.logical.visitors.LogicalPropertiesVisitor;
 import org.apache.hyracks.algebricks.core.algebra.operators.physical.AbstractJoinPOperator.JoinPartitioningType;
 import org.apache.hyracks.algebricks.core.algebra.operators.physical.HybridHashJoinPOperator;
 import org.apache.hyracks.algebricks.core.algebra.operators.physical.InMemoryHashJoinPOperator;
-import org.apache.hyracks.algebricks.core.algebra.operators.physical.MergeJoinPOperator;
 import org.apache.hyracks.algebricks.core.algebra.operators.physical.NestedLoopJoinPOperator;
 import org.apache.hyracks.algebricks.core.algebra.properties.ILogicalPropertiesVector;
 import org.apache.hyracks.algebricks.core.algebra.util.OperatorPropertiesUtil;
@@ -71,20 +67,8 @@ public class JoinUtils {
         List<LogicalVariable> varsRight = op.getInputs().get(1).getValue().getSchema();
         ILogicalExpression conditionExpr = op.getCondition().getValue();
         if (isHashJoinCondition(conditionExpr, varsLeft, varsRight, sideLeft, sideRight)) {
-<<<<<<< HEAD
-            BroadcastSide side = getBroadcastJoinSide(conditionExpr, varsLeft, varsRight);
-            boolean useMergeJoin = false;
-            if (conditionExpr.getExpressionTag() == LogicalExpressionTag.FUNCTION_CALL) {
-                useMergeJoin = ((AbstractFunctionCallExpression) conditionExpr).getAnnotations()
-                        .containsKey(MergeJoinExpressionAnnotation.INSTANCE);
-            }
-            if (useMergeJoin) {
-                setMergeJoinOp(op, sideLeft, sideRight, context);
-            } else if (side == null) {
-=======
             BroadcastSide side = getBroadcastJoinSide(conditionExpr);
             if (side == null) {
->>>>>>> 6666a1c61819a908fed92175bd551b1d00a10371
                 setHashJoinOp(op, JoinPartitioningType.PAIRWISE, sideLeft, sideRight, context);
             } else {
                 switch (side) {
@@ -124,17 +108,6 @@ public class JoinUtils {
                 context.getPhysicalOptimizationConfig().getMaxFramesForJoinLeftInput(),
                 context.getPhysicalOptimizationConfig().getMaxRecordsPerFrame(),
                 context.getPhysicalOptimizationConfig().getFudgeFactor()));
-    }
-
-    private static void setMergeJoinOp(AbstractBinaryJoinOperator op, List<LogicalVariable> sideLeft,
-            List<LogicalVariable> sideRight, IOptimizationContext context) {
-
-        JoinKind joinKind = op.getJoinKind();
-        int memoryJoinSize = context.getPhysicalOptimizationConfig().getMaxFramesForJoin();
-
-        IPhysicalOperator newPhysicalOperator = new MergeJoinPOperator(joinKind, sideLeft, sideRight, memoryJoinSize);
-
-        op.setPhysicalOperator(newPhysicalOperator);
     }
 
     public static boolean hybridToInMemHashJoin(AbstractBinaryJoinOperator op, IOptimizationContext context)
