@@ -143,9 +143,8 @@ public class MergeJoiner implements IStreamJoiner {
             saveSuccessful = true;
 
         } else if (branch == RIGHT_PARTITION) {
-            saveSuccessful = secondaryTupleBufferManager
-                    .insertTuple(0, inputAccessor[RIGHT_PARTITION], inputAccessor[RIGHT_PARTITION].getTupleId(),
-                            tempPtr);
+            saveSuccessful = secondaryTupleBufferManager.insertTuple(0, inputAccessor[RIGHT_PARTITION],
+                    inputAccessor[RIGHT_PARTITION].getTupleId(), tempPtr);
             secondaryTupleBufferAccessor.reset();
             secondaryTupleBufferAccessor.next();
         } else {
@@ -158,8 +157,8 @@ public class MergeJoiner implements IStreamJoiner {
 
     private int compare(ITupleAccessor leftAccessor, ITupleAccessor rightAccessor) throws HyracksDataException {
         for (ITuplePairComparator comparator : comparators) {
-            int c = comparator
-                    .compare(leftAccessor, leftAccessor.getTupleId(), rightAccessor, rightAccessor.getTupleId());
+            int c = comparator.compare(leftAccessor, leftAccessor.getTupleId(), rightAccessor,
+                    rightAccessor.getTupleId());
             if (c != 0) {
                 return c;
             }
@@ -204,7 +203,8 @@ public class MergeJoiner implements IStreamJoiner {
             printTuple("SavedTuple Last : ", inputAccessor[RIGHT_PARTITION],
                     inputAccessor[RIGHT_PARTITION].getTupleId());
             inputAccessor[RIGHT_PARTITION].next();
-        } while (inputAccessor[RIGHT_PARTITION].exists() && 0 == compare(inputAccessor[LEFT_PARTITION], inputAccessor[RIGHT_PARTITION]));
+        } while (inputAccessor[RIGHT_PARTITION].exists()
+                && 0 == compare(inputAccessor[LEFT_PARTITION], inputAccessor[RIGHT_PARTITION]));
     }
 
     private void mergeJoinCaleb() throws HyracksDataException {
@@ -227,11 +227,11 @@ public class MergeJoiner implements IStreamJoiner {
                 while (inputAccessor[LEFT_PARTITION].exists()) {
                     secondaryTupleBufferAccessor.reset();
                     secondaryTupleBufferAccessor.next();
-                    if (compare(inputAccessor[LEFT_PARTITION], secondaryTupleBufferAccessor) == 0){
+                    if (compare(inputAccessor[LEFT_PARTITION], secondaryTupleBufferAccessor) == 0) {
                         //Do We make it here?
                         joinLeftTupleWithTuplesInBuffer();
                         inputAccessor[LEFT_PARTITION].next();
-                    }else{
+                    } else {
                         break;
                     }
                 }
@@ -242,7 +242,8 @@ public class MergeJoiner implements IStreamJoiner {
 
     // Entry Function
 
-    @Override public void processJoin() throws HyracksDataException {
+    @Override
+    public void processJoin() throws HyracksDataException {
         mergeJoinCaleb();
         closeJoin();
     }
