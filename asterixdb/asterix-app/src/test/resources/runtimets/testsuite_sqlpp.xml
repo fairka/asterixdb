@@ -17,28 +17,15 @@
  ! under the License.
  !-->
 <!DOCTYPE test-suite [
-<<<<<<< HEAD
-  <!ENTITY AsyncDeferredQueries SYSTEM "queries_sqlpp/async-deferred/AsyncDeferredQueries.xml">
-  <!ENTITY GeoQueries SYSTEM "queries_sqlpp/geojson/GeoJSONQueries.xml">
-  <!ENTITY MergeJoinQueries SYSTEM "queries_sqlpp/merge_join/MergeJoinQueries.xml">
-  <!ENTITY ObjectsQueries SYSTEM "queries_sqlpp/objects/ObjectsQueries.xml">
-  <!ENTITY TemporalQueries SYSTEM "queries_sqlpp/temporal/TemporalQueries.xml">
-]>
-=======
         <!ENTITY ObjectsQueries SYSTEM "queries_sqlpp/objects/ObjectsQueries.xml">
         <!ENTITY AsyncDeferredQueries SYSTEM "queries_sqlpp/async-deferred/AsyncDeferredQueries.xml">
         <!ENTITY GeoQueries SYSTEM "queries_sqlpp/geojson/GeoJSONQueries.xml">
         <!ENTITY TemporalQueries SYSTEM "queries_sqlpp/temporal/TemporalQueries.xml">
         ]>
->>>>>>> 6666a1c61819a908fed92175bd551b1d00a10371
 <test-suite xmlns="urn:xml.testframework.asterix.apache.org" ResultOffsetPath="results" QueryOffsetPath="queries_sqlpp" QueryFileExtension=".sqlpp" SourceLocation="true">
   &ObjectsQueries;
   &AsyncDeferredQueries;
-<<<<<<< HEAD
-  &MergeJoinQueries;
-=======
   &GeoQueries;
->>>>>>> 6666a1c61819a908fed92175bd551b1d00a10371
   &TemporalQueries;
   <test-group name="flwor">
     <test-case FilePath="api">
