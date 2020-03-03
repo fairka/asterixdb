@@ -22,15 +22,26 @@ import java.util.Collection;
 import java.util.List;
 
 import org.apache.asterix.common.exceptions.CompilationException;
+import org.apache.asterix.common.functions.FunctionSignature;
+import org.apache.asterix.lang.common.statement.FunctionDecl;
 import org.apache.hyracks.api.exceptions.Warning;
 
 public interface IParser {
 
     List<Statement> parse() throws CompilationException;
 
+    FunctionDecl parseFunctionBody(FunctionSignature signature, List<String> paramNames) throws CompilationException;
+
     /**
-     * Gets the warnings generated during parsing
+     * Gets the warnings generated during parsing up to the max number argument.
      */
-    default void getWarnings(Collection<? super Warning> outWarnings) {
+    default void getWarnings(Collection<? super Warning> outWarnings, long maxWarnings) {
+    }
+
+    /**
+     * Gets the count of all warnings generated during parsing.
+     */
+    default long getTotalWarningsCount() {
+        return 0L;
     }
 }

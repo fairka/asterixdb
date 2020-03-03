@@ -42,6 +42,9 @@ import org.apache.hyracks.api.resources.IDeallocatable;
 import org.apache.hyracks.api.result.IResultPartitionManager;
 import org.apache.hyracks.control.common.job.profiling.StatsCollector;
 import org.apache.hyracks.control.nc.io.WorkspaceFileFactory;
+import org.apache.hyracks.util.IThreadStats;
+import org.apache.hyracks.util.IThreadStatsCollector;
+import org.apache.hyracks.util.ThreadStats;
 
 public class TestTaskContext implements IHyracksTaskContext {
     private final TestJobletContext jobletContext;
@@ -50,6 +53,7 @@ public class TestTaskContext implements IHyracksTaskContext {
     private Map<Object, IStateObject> stateObjectMap = new HashMap<>();
     private Object sharedObject;
     private final IStatsCollector statsCollector = new StatsCollector();
+    private final ThreadStats threadStats = new ThreadStats();
 
     public TestTaskContext(TestJobletContext jobletContext, TaskAttemptId taskId) {
         this.jobletContext = jobletContext;
@@ -81,12 +85,12 @@ public class TestTaskContext implements IHyracksTaskContext {
 
     @Override
     public int getInitialFrameSize() {
-        return jobletContext.getFrameSize();
+        return jobletContext.getInitialFrameSize();
     }
 
     @Override
     public IIOManager getIoManager() {
-        return jobletContext.getIOManager();
+        return jobletContext.getIoManager();
     }
 
     @Override
@@ -180,5 +184,20 @@ public class TestTaskContext implements IHyracksTaskContext {
     @Override
     public IWarningCollector getWarningCollector() {
         return TestUtils.NOOP_WARNING_COLLECTOR;
+    }
+
+    @Override
+    public void subscribeThreadToStats(IThreadStatsCollector threadStatsCollector) {
+        // no op
+    }
+
+    @Override
+    public void unsubscribeThreadFromStats() {
+        // no op
+    }
+
+    @Override
+    public IThreadStats getThreadStats() {
+        return threadStats;
     }
 }

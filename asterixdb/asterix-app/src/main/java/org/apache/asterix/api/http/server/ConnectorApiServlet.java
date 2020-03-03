@@ -27,6 +27,7 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentMap;
 
 import org.apache.asterix.common.dataflow.ICcApplicationContext;
+import org.apache.asterix.common.metadata.DataverseName;
 import org.apache.asterix.metadata.MetadataManager;
 import org.apache.asterix.metadata.MetadataTransactionContext;
 import org.apache.asterix.metadata.declared.MetadataProvider;
@@ -79,7 +80,7 @@ public class ConnectorApiServlet extends AbstractServlet {
         PrintWriter out = response.writer();
         try {
             ObjectNode jsonResponse = OBJECT_MAPPER.createObjectNode();
-            String dataverseName = request.getParameter("dataverseName");
+            DataverseName dataverseName = ServletUtil.getDataverseName(request, "dataverseName");
             String datasetName = request.getParameter("datasetName");
             if (dataverseName == null || datasetName == null) {
                 jsonResponse.put("error", "Parameter dataverseName or datasetName is null,");
@@ -92,7 +93,7 @@ public class ConnectorApiServlet extends AbstractServlet {
             MetadataManager.INSTANCE.init();
             MetadataTransactionContext mdTxnCtx = MetadataManager.INSTANCE.beginTransaction();
             // Retrieves file splits of the dataset.
-            MetadataProvider metadataProvider = new MetadataProvider(appCtx, null);
+            MetadataProvider metadataProvider = MetadataProvider.create(appCtx, null);
             try {
                 metadataProvider.setMetadataTxnContext(mdTxnCtx);
                 Dataset dataset = metadataProvider.findDataset(dataverseName, datasetName);

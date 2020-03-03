@@ -18,7 +18,11 @@
  */
 package org.apache.asterix.common.config;
 
-import static org.apache.hyracks.control.common.config.OptionTypes.*;
+import static org.apache.hyracks.control.common.config.OptionTypes.BOOLEAN;
+import static org.apache.hyracks.control.common.config.OptionTypes.INTEGER;
+import static org.apache.hyracks.control.common.config.OptionTypes.INTEGER_BYTE_UNIT;
+import static org.apache.hyracks.control.common.config.OptionTypes.LONG_BYTE_UNIT;
+import static org.apache.hyracks.control.common.config.OptionTypes.POSITIVE_INTEGER;
 import static org.apache.hyracks.util.StorageUtil.StorageUnit.KILOBYTE;
 import static org.apache.hyracks.util.StorageUtil.StorageUnit.MEGABYTE;
 
@@ -45,7 +49,7 @@ public class CompilerProperties extends AbstractProperties {
                 "The memory budget (in bytes) for a group by operator instance in a partition"),
         COMPILER_WINDOWMEMORY(
                 LONG_BYTE_UNIT,
-                StorageUtil.getLongSizeInBytes(4L, MEGABYTE),
+                StorageUtil.getLongSizeInBytes(32L, MEGABYTE),
                 "The memory budget (in bytes) for a window operator instance in a partition"),
         COMPILER_TEXTSEARCHMEMORY(
                 LONG_BYTE_UNIT,
@@ -63,7 +67,6 @@ public class CompilerProperties extends AbstractProperties {
                         + "other integer values dictate the number of query execution parallel partitions. The system will "
                         + "fall back to use the number of all available CPU cores in the cluster as the degree of parallelism "
                         + "if the number set by a user is too large or too small"),
-        COMPILER_STRINGOFFSET(UNSIGNED_INTEGER, 0, "Position of a first character in a String/Binary (0 or 1)"),
         COMPILER_SORT_PARALLEL(BOOLEAN, AlgebricksConfig.SORT_PARALLEL, "Enabling/Disabling full parallel sort"),
         COMPILER_SORT_SAMPLES(
                 POSITIVE_INTEGER,
@@ -98,11 +101,6 @@ public class CompilerProperties extends AbstractProperties {
         @Override
         public Object defaultValue() {
             return defaultValue;
-        }
-
-        @Override
-        public boolean hidden() {
-            return this == COMPILER_STRINGOFFSET;
         }
     }
 
@@ -156,17 +154,11 @@ public class CompilerProperties extends AbstractProperties {
         return accessor.getInt(Option.COMPILER_PARALLELISM);
     }
 
-    public int getStringOffset() {
-        int value = accessor.getInt(Option.COMPILER_STRINGOFFSET);
-        return value > 0 ? 1 : 0;
-    }
-
     public boolean getSortParallel() {
         return accessor.getBoolean(Option.COMPILER_SORT_PARALLEL);
     }
 
     public int getSortSamples() {
-        int numSamples = accessor.getInt(Option.COMPILER_SORT_SAMPLES);
-        return numSamples > 0 ? numSamples : AlgebricksConfig.SORT_SAMPLES;
+        return accessor.getInt(Option.COMPILER_SORT_SAMPLES);
     }
 }

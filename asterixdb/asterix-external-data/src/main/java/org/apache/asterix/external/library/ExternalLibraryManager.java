@@ -21,48 +21,45 @@ package org.apache.asterix.external.library;
 import java.io.IOException;
 import java.net.URLClassLoader;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import org.apache.asterix.common.exceptions.ErrorCode;
-import org.apache.asterix.common.exceptions.RuntimeDataException;
 import org.apache.asterix.common.library.ILibraryManager;
+import org.apache.asterix.common.metadata.DataverseName;
 import org.apache.hyracks.algebricks.common.utils.Pair;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
 public class ExternalLibraryManager implements ILibraryManager {
 
-    private final Map<String, URLClassLoader> libraryClassLoaders = new HashMap<>();
-    private final Map<String, List<String>> externalFunctionParameters = new HashMap<>();
+    private final Map<Pair<DataverseName, String>, URLClassLoader> libraryClassLoaders = new HashMap<>();
     private static final Logger LOGGER = LogManager.getLogger();
 
     @Override
-    public void registerLibraryClassLoader(String dataverseName, String libraryName, URLClassLoader classLoader)
-            throws RuntimeDataException {
-        String key = getKey(dataverseName, libraryName);
+    public void registerLibraryClassLoader(DataverseName dataverseName, String libraryName,
+            URLClassLoader classLoader) {
+        Pair<DataverseName, String> key = getKey(dataverseName, libraryName);
         synchronized (libraryClassLoaders) {
             if (libraryClassLoaders.get(key) != null) {
-                throw new RuntimeDataException(ErrorCode.LIBRARY_EXTERNAL_LIBRARY_CLASS_REGISTERED);
+                return;
             }
             libraryClassLoaders.put(key, classLoader);
         }
     }
 
     @Override
-    public List<Pair<String, String>> getAllLibraries() {
-        ArrayList<Pair<String, String>> libs = new ArrayList<>();
+    public List<Pair<DataverseName, String>> getAllLibraries() {
+        ArrayList<Pair<DataverseName, String>> libs = new ArrayList<>();
         synchronized (libraryClassLoaders) {
-            libraryClassLoaders.forEach((key, value) -> libs.add(getDataverseAndLibararyName(key)));
+            libraryClassLoaders.forEach((key, value) -> libs.add(key));
         }
         return libs;
     }
 
     @Override
-    public void deregisterLibraryClassLoader(String dataverseName, String libraryName) {
-        String key = getKey(dataverseName, libraryName);
+    public void deregisterLibraryClassLoader(DataverseName dataverseName, String libraryName) {
+        Pair<DataverseName, String> key = getKey(dataverseName, libraryName);
         synchronized (libraryClassLoaders) {
             URLClassLoader cl = libraryClassLoaders.get(key);
             if (cl != null) {
@@ -77,30 +74,13 @@ public class ExternalLibraryManager implements ILibraryManager {
     }
 
     @Override
-    public ClassLoader getLibraryClassLoader(String dataverseName, String libraryName) {
-        String key = getKey(dataverseName, libraryName);
+    public ClassLoader getLibraryClassLoader(DataverseName dataverseName, String libraryName) {
+        Pair<DataverseName, String> key = getKey(dataverseName, libraryName);
         return libraryClassLoaders.get(key);
     }
 
-    @Override
-    public void addFunctionParameters(String dataverseName, String fullFunctionName, List<String> parameters) {
-        externalFunctionParameters.put(dataverseName + "." + fullFunctionName, parameters);
-    }
-
-    @Override
-    public List<String> getFunctionParameters(String dataverseName, String fullFunctionName) {
-        return externalFunctionParameters.getOrDefault(dataverseName + "." + fullFunctionName, Collections.emptyList());
-    }
-
-    private static String getKey(String dataverseName, String libraryName) {
-        return dataverseName + "." + libraryName;
-    }
-
-    private static Pair<String, String> getDataverseAndLibararyName(String key) {
-        int index = key.indexOf('.');
-        String dataverse = key.substring(0, index);
-        String library = key.substring(index + 1);
-        return new Pair<>(dataverse, library);
+    private static Pair<DataverseName, String> getKey(DataverseName dataverseName, String libraryName) {
+        return new Pair(dataverseName, libraryName);
     }
 
 }

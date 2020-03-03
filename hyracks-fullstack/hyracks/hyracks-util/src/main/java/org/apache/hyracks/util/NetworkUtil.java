@@ -27,7 +27,9 @@ import java.net.URISyntaxException;
 import java.nio.ByteBuffer;
 import java.nio.channels.SocketChannel;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
+import java.util.Objects;
 
 import javax.net.ssl.SSLEngine;
 
@@ -65,6 +67,17 @@ public class NetworkUtil {
 
     public static URI toUri(HttpHost host, String path) throws URISyntaxException {
         return builderFrom(host).setPath(path).build();
+    }
+
+    public static URI appendUriPath(URI uri, String... pathSegments) throws URISyntaxException {
+        URIBuilder builder = new URIBuilder(uri);
+        List<String> path = builder.getPathSegments();
+        if (path.isEmpty()) {
+            path = new ArrayList<>(pathSegments.length);
+        }
+        Collections.addAll(path, pathSegments);
+        builder.setPathSegments(path);
+        return builder.build();
     }
 
     public static URIBuilder builderFrom(HttpHost host) {
@@ -129,5 +142,23 @@ public class NetworkUtil {
         src.flip();
         enlargedBuffer.put(src);
         return enlargedBuffer;
+    }
+
+    public static InetSocketAddress ensureUnresolved(InetSocketAddress address) {
+        return address.isUnresolved() ? address
+                : InetSocketAddress.createUnresolved(address.getHostString(), address.getPort());
+    }
+
+    public static InetSocketAddress ensureResolved(InetSocketAddress address) {
+        return address.isUnresolved() ? new InetSocketAddress(address.getHostString(), address.getPort()) : address;
+    }
+
+    public static InetSocketAddress refresh(InetSocketAddress original) {
+        InetSocketAddress refreshed = new InetSocketAddress(original.getHostString(), original.getPort());
+        if (!Objects.equals(original.getAddress(), refreshed.getAddress())) {
+            LOGGER.warn("ip address updated on refresh (was: {}, now: {})", original.getAddress(),
+                    refreshed.getAddress());
+        }
+        return refreshed;
     }
 }

@@ -21,23 +21,23 @@ package org.apache.asterix.lang.common.statement;
 import java.util.Objects;
 
 import org.apache.asterix.common.exceptions.CompilationException;
+import org.apache.asterix.common.metadata.DataverseName;
 import org.apache.asterix.lang.common.base.AbstractStatement;
 import org.apache.asterix.lang.common.base.Expression;
 import org.apache.asterix.lang.common.base.Statement;
 import org.apache.asterix.lang.common.expression.VariableExpr;
-import org.apache.asterix.lang.common.struct.Identifier;
 import org.apache.asterix.lang.common.visitor.base.ILangVisitor;
 
 public class DeleteStatement extends AbstractStatement {
 
     private VariableExpr vars;
-    private Identifier dataverseName;
-    private Identifier datasetName;
+    private DataverseName dataverseName;
+    private String datasetName;
     private Expression condition;
     private int varCounter;
     private Query rewrittenQuery;
 
-    public DeleteStatement(VariableExpr vars, Identifier dataverseName, Identifier datasetName, Expression condition,
+    public DeleteStatement(VariableExpr vars, DataverseName dataverseName, String datasetName, Expression condition,
             int varCounter) {
         this.vars = vars;
         this.dataverseName = dataverseName;
@@ -55,12 +55,20 @@ public class DeleteStatement extends AbstractStatement {
         return vars;
     }
 
-    public Identifier getDataverseName() {
+    public DataverseName getDataverseName() {
         return dataverseName;
     }
 
-    public Identifier getDatasetName() {
+    public void setDataverseName(DataverseName dataverseName) {
+        this.dataverseName = dataverseName;
+    }
+
+    public String getDatasetName() {
         return datasetName;
+    }
+
+    public void setDatasetName(String datasetName) {
+        this.datasetName = datasetName;
     }
 
     public Expression getCondition() {

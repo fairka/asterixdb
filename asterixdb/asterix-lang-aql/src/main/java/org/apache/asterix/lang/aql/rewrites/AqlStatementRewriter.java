@@ -19,26 +19,39 @@
 package org.apache.asterix.lang.aql.rewrites;
 
 import org.apache.asterix.common.exceptions.CompilationException;
-import org.apache.asterix.lang.aql.visitor.AqlDeleteRewriteVisitor;
+import org.apache.asterix.lang.aql.visitor.AqlStatementRewriteVisitor;
 import org.apache.asterix.lang.common.base.IStatementRewriter;
 import org.apache.asterix.lang.common.base.Statement;
+import org.apache.asterix.lang.common.struct.VarIdentifier;
+import org.apache.asterix.metadata.declared.MetadataProvider;
 
 class AqlStatementRewriter implements IStatementRewriter {
 
+    private static final char VAR_PREFIX = '$';
+
     @Override
-    public void rewrite(Statement stmt) throws CompilationException {
-        rewriteDeleteStatement(stmt);
+    public boolean isRewritable(Statement.Kind kind) {
+        return kind == Statement.Kind.DELETE;
     }
 
-    private void rewriteDeleteStatement(Statement stmt) throws CompilationException {
+    @Override
+    public void rewrite(Statement stmt, MetadataProvider metadataProvider) throws CompilationException {
         if (stmt != null) {
-            AqlDeleteRewriteVisitor visitor = new AqlDeleteRewriteVisitor();
-            stmt.accept(visitor, null);
+            stmt.accept(AqlStatementRewriteVisitor.INSTANCE, metadataProvider);
         }
     }
 
     @Override
     public String toExternalVariableName(String statementParameterName) {
         return null;
+    }
+
+    @Override
+    public String toFunctionParameterName(VarIdentifier paramVar) {
+        String name = paramVar.getValue();
+        if (name.charAt(0) != VAR_PREFIX) {
+            throw new IllegalArgumentException(name);
+        }
+        return name.substring(1);
     }
 }

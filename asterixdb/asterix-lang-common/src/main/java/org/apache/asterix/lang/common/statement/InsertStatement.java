@@ -23,24 +23,24 @@ import java.util.List;
 import java.util.Objects;
 
 import org.apache.asterix.common.exceptions.CompilationException;
+import org.apache.asterix.common.metadata.DataverseName;
 import org.apache.asterix.lang.common.base.AbstractStatement;
 import org.apache.asterix.lang.common.base.Expression;
 import org.apache.asterix.lang.common.base.IReturningStatement;
 import org.apache.asterix.lang.common.base.Statement;
 import org.apache.asterix.lang.common.expression.VariableExpr;
-import org.apache.asterix.lang.common.struct.Identifier;
 import org.apache.asterix.lang.common.visitor.base.ILangVisitor;
 
 public class InsertStatement extends AbstractStatement implements IReturningStatement {
 
-    private final Identifier dataverseName;
-    private final Identifier datasetName;
+    private DataverseName dataverseName;
+    private String datasetName;
     private final Query query;
     private final VariableExpr var;
     private Expression returnExpression;
     private int varCounter;
 
-    public InsertStatement(Identifier dataverseName, Identifier datasetName, Query query, int varCounter,
+    public InsertStatement(DataverseName dataverseName, String datasetName, Query query, int varCounter,
             VariableExpr var, Expression returnExpression) {
         this.dataverseName = dataverseName;
         this.datasetName = datasetName;
@@ -55,12 +55,20 @@ public class InsertStatement extends AbstractStatement implements IReturningStat
         return Statement.Kind.INSERT;
     }
 
-    public Identifier getDataverseName() {
+    public DataverseName getDataverseName() {
         return dataverseName;
     }
 
-    public Identifier getDatasetName() {
+    public void setDataverseName(DataverseName dataverseName) {
+        this.dataverseName = dataverseName;
+    }
+
+    public String getDatasetName() {
         return datasetName;
+    }
+
+    public void setDatasetName(String datasetName) {
+        this.datasetName = datasetName;
     }
 
     public Query getQuery() {
@@ -141,10 +149,6 @@ public class InsertStatement extends AbstractStatement implements IReturningStat
 
     @Override
     public byte getCategory() {
-        if (var == null) {
-            return Category.UPDATE;
-        }
-        return Category.QUERY;
+        return Category.UPDATE;
     }
-
 }

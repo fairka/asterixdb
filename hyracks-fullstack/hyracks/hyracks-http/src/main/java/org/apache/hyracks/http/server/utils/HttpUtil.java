@@ -44,12 +44,15 @@ import io.netty.handler.codec.http.FullHttpRequest;
 import io.netty.handler.codec.http.HttpHeaderNames;
 import io.netty.handler.codec.http.HttpHeaderValues;
 import io.netty.handler.codec.http.HttpRequest;
+import io.netty.handler.codec.http.HttpScheme;
 import io.netty.util.AsciiString;
 
 public class HttpUtil {
     private static final Logger LOGGER = LogManager.getLogger();
     private static final Pattern PARENT_DIR = Pattern.compile("/[^./]+/\\.\\./");
     private static final Charset DEFAULT_RESPONSE_CHARSET = StandardCharsets.UTF_8;
+
+    public static final AsciiString X_FORWARDED_PROTO = AsciiString.cached("x-forwarded-proto");
 
     private HttpUtil() {
     }
@@ -62,11 +65,13 @@ public class HttpUtil {
     }
 
     public static class ContentType {
+        public static final String ADM = "adm";
+        public static final String JSON = "json";
+        public static final String CSV = "csv";
         public static final String APPLICATION_ADM = "application/x-adm";
         public static final String APPLICATION_JSON = "application/json";
-        public static final String JSON = "json";
         public static final String APPLICATION_X_WWW_FORM_URLENCODED = "application/x-www-form-urlencoded";
-        public static final String CSV = "text/csv";
+        public static final String TEXT_CSV = "text/csv";
         public static final String IMG_PNG = "image/png";
         public static final String TEXT_HTML = "text/html";
         public static final String TEXT_PLAIN = "text/plain";
@@ -80,10 +85,10 @@ public class HttpUtil {
         return parameter == null ? null : String.join(",", parameter);
     }
 
-    public static IServletRequest toServletRequest(ChannelHandlerContext ctx, FullHttpRequest request)
-            throws IOException {
+    public static IServletRequest toServletRequest(ChannelHandlerContext ctx, FullHttpRequest request,
+            HttpScheme scheme) {
         return ContentType.APPLICATION_X_WWW_FORM_URLENCODED.equals(getContentTypeOnly(request))
-                ? FormUrlEncodedRequest.create(ctx, request) : BaseRequest.create(ctx, request);
+                ? FormUrlEncodedRequest.create(ctx, request, scheme) : BaseRequest.create(ctx, request, scheme);
     }
 
     public static String getContentTypeOnly(IServletRequest request) {

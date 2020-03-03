@@ -31,6 +31,7 @@ import org.apache.asterix.om.functions.IExternalFunctionInfo;
 import org.apache.asterix.om.functions.IFunctionDescriptor;
 import org.apache.asterix.om.functions.IFunctionManager;
 import org.apache.asterix.om.functions.IFunctionTypeInferer;
+import org.apache.asterix.runtime.functions.FunctionTypeInferers;
 import org.apache.commons.lang3.mutable.Mutable;
 import org.apache.hyracks.algebricks.common.exceptions.AlgebricksException;
 import org.apache.hyracks.algebricks.core.algebra.base.ILogicalExpression;
@@ -52,6 +53,7 @@ import org.apache.hyracks.algebricks.runtime.base.IScalarEvaluatorFactory;
 import org.apache.hyracks.algebricks.runtime.base.ISerializedAggregateEvaluatorFactory;
 import org.apache.hyracks.algebricks.runtime.base.IUnnestingEvaluatorFactory;
 import org.apache.hyracks.algebricks.runtime.evaluators.ColumnAccessEvalFactory;
+import org.apache.hyracks.api.exceptions.SourceLocation;
 
 public class QueryLogicalExpressionJobGen implements ILogicalExpressionJobGen {
 
@@ -137,10 +139,15 @@ public class QueryLogicalExpressionJobGen implements ILogicalExpressionJobGen {
             IVariableTypeEnvironment env, IOperatorSchema[] inputSchemas, JobGenContext context)
             throws AlgebricksException {
         IScalarEvaluatorFactory[] args = codegenArguments(expr, env, inputSchemas, context);
-        IFunctionDescriptor fd = expr.getFunctionInfo() instanceof IExternalFunctionInfo
-                ? ExternalFunctionDescriptorProvider.getExternalFunctionDescriptor(
-                        (IExternalFunctionInfo) expr.getFunctionInfo(), (ICcApplicationContext) context.getAppContext())
-                : resolveFunction(expr, env, context);
+        IFunctionDescriptor fd = null;
+        if (expr.getFunctionInfo() instanceof IExternalFunctionInfo) {
+            fd = ExternalFunctionDescriptorProvider.getExternalFunctionDescriptor(
+                    (IExternalFunctionInfo) expr.getFunctionInfo(), (ICcApplicationContext) context.getAppContext());
+            CompilerProperties props = ((IApplicationContext) context.getAppContext()).getCompilerProperties();
+            FunctionTypeInferers.SET_ARGUMENTS_TYPE.infer(expr, fd, env, props);
+        } else {
+            fd = resolveFunction(expr, env, context);
+        }
         return fd.createEvaluatorFactory(args);
     }
 
@@ -197,8 +204,9 @@ public class QueryLogicalExpressionJobGen implements ILogicalExpressionJobGen {
     private IFunctionDescriptor resolveFunction(AbstractFunctionCallExpression expr, IVariableTypeEnvironment env,
             JobGenContext context) throws AlgebricksException {
         FunctionIdentifier fnId = expr.getFunctionIdentifier();
-        IFunctionDescriptor fd = functionManager.lookupFunction(fnId);
-        fd.setSourceLocation(expr.getSourceLocation());
+        SourceLocation sourceLocation = expr.getSourceLocation();
+        IFunctionDescriptor fd = functionManager.lookupFunction(fnId, sourceLocation);
+        fd.setSourceLocation(sourceLocation);
         IFunctionTypeInferer fnTypeInfer = functionManager.lookupFunctionTypeInferer(fnId);
         if (fnTypeInfer != null) {
             CompilerProperties compilerProps = ((IApplicationContext) context.getAppContext()).getCompilerProperties();

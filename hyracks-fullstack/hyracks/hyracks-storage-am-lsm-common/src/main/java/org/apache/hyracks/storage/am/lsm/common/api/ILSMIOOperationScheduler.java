@@ -23,7 +23,19 @@ import org.apache.hyracks.api.exceptions.HyracksDataException;
 /**
  * Schedules IO operations for LSM indexes
  */
-@FunctionalInterface
 public interface ILSMIOOperationScheduler {
+
+    /**
+     * Schedule an IO operation
+     * @param operation
+     * @throws HyracksDataException
+     */
     void scheduleOperation(ILSMIOOperation operation) throws HyracksDataException;
+
+    /**
+     * Notify an IO operation has completed
+     * @param operation
+     * @throws HyracksDataException
+     */
+    void completeOperation(ILSMIOOperation operation) throws HyracksDataException;
 }

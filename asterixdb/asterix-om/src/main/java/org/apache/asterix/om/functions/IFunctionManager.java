@@ -20,6 +20,7 @@ package org.apache.asterix.om.functions;
 
 import org.apache.hyracks.algebricks.common.exceptions.AlgebricksException;
 import org.apache.hyracks.algebricks.core.algebra.functions.FunctionIdentifier;
+import org.apache.hyracks.api.exceptions.SourceLocation;
 
 /**
  * A registry of {@link IFunctionDescriptor} and {@link IFunctionTypeInferer}
@@ -27,7 +28,8 @@ import org.apache.hyracks.algebricks.core.algebra.functions.FunctionIdentifier;
  */
 public interface IFunctionManager {
 
-    IFunctionDescriptor lookupFunction(FunctionIdentifier fid) throws AlgebricksException;
+    IFunctionDescriptor lookupFunction(FunctionIdentifier fid, SourceLocation sourceLocation)
+            throws AlgebricksException;
 
     IFunctionTypeInferer lookupFunctionTypeInferer(FunctionIdentifier fid);
 }

@@ -29,6 +29,7 @@ import org.apache.hyracks.api.dataflow.value.ISerializerDeserializer;
 import org.apache.hyracks.api.exceptions.ErrorCode;
 import org.apache.hyracks.api.exceptions.HyracksDataException;
 import org.apache.hyracks.api.io.FileReference;
+import org.apache.hyracks.api.util.HyracksConstants;
 import org.apache.hyracks.dataflow.common.data.accessors.ITupleReference;
 import org.apache.hyracks.storage.am.common.api.IIndexOperationContext;
 import org.apache.hyracks.storage.am.common.api.IPageManager;
@@ -53,13 +54,15 @@ import org.apache.hyracks.storage.am.rtree.tuples.RTreeTypeAwareTupleWriter;
 import org.apache.hyracks.storage.common.IIndexAccessParameters;
 import org.apache.hyracks.storage.common.IIndexBulkLoader;
 import org.apache.hyracks.storage.common.IIndexCursor;
+import org.apache.hyracks.storage.common.IIndexCursorStats;
 import org.apache.hyracks.storage.common.IModificationOperationCallback;
-import org.apache.hyracks.storage.common.ISearchOperationCallback;
 import org.apache.hyracks.storage.common.ISearchPredicate;
 import org.apache.hyracks.storage.common.MultiComparator;
+import org.apache.hyracks.storage.common.NoOpIndexCursorStats;
 import org.apache.hyracks.storage.common.buffercache.BufferCache;
 import org.apache.hyracks.storage.common.buffercache.IBufferCache;
 import org.apache.hyracks.storage.common.buffercache.ICachedPage;
+import org.apache.hyracks.storage.common.buffercache.IPageWriteCallback;
 import org.apache.hyracks.storage.common.file.BufferedFileHandle;
 
 public class RTree extends AbstractTreeIndex {
@@ -752,23 +755,24 @@ public class RTree extends AbstractTreeIndex {
 
     @Override
     public RTreeAccessor createAccessor(IIndexAccessParameters iap) {
-        return new RTreeAccessor(this, iap.getModificationCallback(), iap.getSearchOperationCallback());
+        return new RTreeAccessor(this, iap);
     }
 
     public class RTreeAccessor implements ITreeIndexAccessor {
         private RTree rtree;
         private RTreeOpContext ctx;
         private boolean destroyed = false;
+        private IIndexAccessParameters iap;
 
-        public RTreeAccessor(RTree rtree, IModificationOperationCallback modificationCallback,
-                ISearchOperationCallback searchCallback) {
+        public RTreeAccessor(RTree rtree, IIndexAccessParameters iap) {
             this.rtree = rtree;
-            this.ctx = rtree.createOpContext(modificationCallback);
+            this.ctx = rtree.createOpContext(iap.getModificationCallback());
+            this.iap = iap;
         }
 
-        public void reset(RTree rtree, IModificationOperationCallback modificationCallback) {
+        public void reset(RTree rtree, IIndexAccessParameters iap) {
             this.rtree = rtree;
-            ctx.setModificationCallback(modificationCallback);
+            ctx.setModificationCallback(iap.getModificationCallback());
             ctx.reset();
         }
 
@@ -793,7 +797,8 @@ public class RTree extends AbstractTreeIndex {
         @Override
         public RTreeSearchCursor createSearchCursor(boolean exclusive) {
             return new RTreeSearchCursor((IRTreeInteriorFrame) interiorFrameFactory.createFrame(),
-                    (IRTreeLeafFrame) leafFrameFactory.createFrame());
+                    (IRTreeLeafFrame) leafFrameFactory.createFrame(), (IIndexCursorStats) iap.getParameters()
+                            .getOrDefault(HyracksConstants.INDEX_CURSOR_STATS, NoOpIndexCursorStats.INSTANCE));
         }
 
         @Override
@@ -892,9 +897,9 @@ public class RTree extends AbstractTreeIndex {
 
     @Override
     public IIndexBulkLoader createBulkLoader(float fillFactor, boolean verifyInput, long numElementsHint,
-            boolean checkIfEmptyIndex) throws HyracksDataException {
+            boolean checkIfEmptyIndex, IPageWriteCallback callback) throws HyracksDataException {
         // TODO: verifyInput currently does nothing.
-        return new RTreeBulkLoader(fillFactor);
+        return new RTreeBulkLoader(fillFactor, callback);
     }
 
     public class RTreeBulkLoader extends AbstractTreeIndex.AbstractTreeIndexBulkLoader {
@@ -905,8 +910,8 @@ public class RTree extends AbstractTreeIndex {
         ByteBuffer mbr;
         List<Integer> prevNodeFrontierPages = new ArrayList<>();
 
-        public RTreeBulkLoader(float fillFactor) throws HyracksDataException {
-            super(fillFactor);
+        public RTreeBulkLoader(float fillFactor, IPageWriteCallback callback) throws HyracksDataException {
+            super(fillFactor, callback);
             prevInteriorFrame = interiorFrameFactory.createFrame();
         }
 
@@ -942,9 +947,9 @@ public class RTree extends AbstractTreeIndex {
 
                     leafFrontier.pageId = freePageManager.takePage(metaFrame);
 
-                    putInQueue(leafFrontier.page);
+                    write(leafFrontier.page);
                     for (ICachedPage c : pagesToWrite) {
-                        putInQueue(c);
+                        write(c);
                     }
                     pagesToWrite.clear();
                     leafFrontier.page = bufferCache
@@ -975,7 +980,7 @@ public class RTree extends AbstractTreeIndex {
             }
 
             for (ICachedPage c : pagesToWrite) {
-                putInQueue(c);
+                write(c);
             }
             finish();
             super.end();
@@ -1012,7 +1017,7 @@ public class RTree extends AbstractTreeIndex {
                     ((RTreeNSMFrame) lowerFrame).adjustMBR();
                     interiorFrameTupleWriter.writeTupleFields(((RTreeNSMFrame) lowerFrame).getMBRTuples(), 0, mbr, 0);
                 }
-                putInQueue(n.page);
+                write(n.page);
                 n.page = null;
                 prevPageId = n.pageId;
             }

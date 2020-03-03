@@ -63,6 +63,7 @@ import org.apache.asterix.common.config.DatasetConfig.DatasetType;
 import org.apache.asterix.common.config.DatasetConfig.IndexType;
 import org.apache.asterix.common.exceptions.CompilationException;
 import org.apache.asterix.common.functions.FunctionSignature;
+import org.apache.asterix.common.metadata.DataverseName;
 import org.apache.asterix.lang.aql.clause.DistinctClause;
 import org.apache.asterix.lang.aql.clause.ForClause;
 import org.apache.asterix.lang.aql.expression.FLWOGRExpression;
@@ -152,9 +153,11 @@ import org.apache.asterix.lang.common.struct.QuantifiedPair;
 import org.apache.asterix.lang.common.struct.VarIdentifier;
 import org.apache.asterix.lang.common.util.RangeMapBuilder;
 import org.apache.asterix.metadata.utils.MetadataConstants;
+import org.apache.asterix.om.types.BuiltinType;
 import org.apache.hyracks.algebricks.common.utils.Pair;
 import org.apache.hyracks.algebricks.common.utils.Triple;
 import org.apache.hyracks.algebricks.common.exceptions.AlgebricksException;
+import org.apache.hyracks.algebricks.core.algebra.expressions.BroadcastExpressionAnnotation;
 import org.apache.hyracks.algebricks.core.algebra.expressions.IExpressionAnnotation;
 import org.apache.hyracks.algebricks.core.algebra.expressions.IndexedNLJoinExpressionAnnotation;
 import org.apache.hyracks.algebricks.core.algebra.functions.FunctionIdentifier;
@@ -164,7 +167,7 @@ class AQLParser extends ScopeChecker implements IParser {
 
     // optimizer hints
     private static final String AUTO_HINT = "auto";
-    private static final String BROADCAST_JOIN_HINT = "bcast";
+    private static final String HASH_BROADCAST_JOIN_HINT = "hash-bcast";
     private static final String COMPOSE_VAL_FILES_HINT = "compose-val-files";
     private static final String DATE_BETWEEN_YEARS_HINT = "date-between-years";
     private static final String DATETIME_ADD_RAND_HOURS_HINT = "datetime-add-rand-hours";
@@ -184,6 +187,12 @@ class AQLParser extends ScopeChecker implements IParser {
     // data generator hints
     private static final String DGEN_HINT = "dgen";
 
+    private static final String INT_TYPE_NAME = "int";
+
+    private static final char VAR_PREFIX = '$';
+
+    private DataverseName defaultDataverse;
+
     private static class IndexParams {
       public IndexType type;
       public int gramLength;
@@ -195,7 +204,7 @@ class AQLParser extends ScopeChecker implements IParser {
     };
 
     private static class FunctionName {
-       public String dataverse = null;
+       public DataverseName dataverse = null;
        public String library = null;
        public String function = null;
        public String hint = null;
@@ -303,6 +312,29 @@ class AQLParser extends ScopeChecker implements IParser {
         return new AQLParser(text).parseExpression();
     }
 
+    @Override
+    public FunctionDecl parseFunctionBody(FunctionSignature signature, List<String> paramNames)
+      throws CompilationException {
+        return parseImpl(new ParseFunction<FunctionDecl>() {
+            @Override
+            public FunctionDecl parse() throws ParseException {
+                DataverseName dataverse = defaultDataverse;
+                defaultDataverse = signature.getDataverseName();
+                createNewScope();
+                List<VarIdentifier> paramVars = new ArrayList<VarIdentifier>(paramNames.size());
+                for (String paramName : paramNames) {
+                    VarIdentifier var = new VarIdentifier(VAR_PREFIX + paramName);
+                    paramVars.add(var);
+                    getCurrentScope().addNewVarSymbolToScope(var);
+                }
+                Expression functionBodyExpr = AQLParser.this.FunctionBody();
+                removeCurrentScope();
+                defaultDataverse = dataverse;
+                return new FunctionDecl(signature, paramVars, functionBodyExpr);
+            }
+        });
+    }
+
     private <T> T parseImpl(ParseFunction<T> parseFunction) throws CompilationException {
         try {
             return parseFunction.parse();
@@ -377,8 +409,8 @@ DataverseDecl DataverseDeclaration() throws ParseException:
 {
   <USE> <DATAVERSE> dvName = Identifier()
     {
-      defaultDataverse = dvName;
-      return new DataverseDecl(new Identifier(dvName));
+      defaultDataverse = DataverseName.createSinglePartName(dvName);
+      return new DataverseDecl(defaultDataverse);
     }
 }
 
@@ -413,7 +445,7 @@ Statement CreateStatement() throws ParseException:
 
 TypeDecl TypeSpecification(String hint, boolean dgen) throws ParseException:
 {
-  Pair<Identifier,Identifier> nameComponents = null;
+  Pair<DataverseName,Identifier> nameComponents = null;
   boolean ifNotExists = false;
   TypeExpression typeExpr = null;
 }
@@ -463,9 +495,9 @@ NodegroupDecl NodegroupSpecification() throws ParseException:
 
 DatasetDecl DatasetSpecification() throws ParseException:
 {
-  Pair<Identifier,Identifier> nameComponents = null;
+  Pair<DataverseName,Identifier> nameComponents = null;
   boolean ifNotExists = false;
-  Pair<Identifier,Identifier> typeComponents = null;
+  Pair<DataverseName,Identifier> typeComponents = null;
   String adapterName = null;
   Map<String,String> properties = null;
   FunctionSignature appliedFunction = null;
@@ -475,7 +507,7 @@ DatasetDecl DatasetSpecification() throws ParseException:
   DatasetDecl dsetDecl = null;
   boolean autogenerated = false;
   Pair<Integer, List<String>> filterField = null;
-  Pair<Identifier,Identifier> metaTypeComponents = new Pair<Identifier, Identifier>(null, null);
+  Pair<DataverseName,Identifier> metaTypeComponents = new Pair<DataverseName, Identifier>(null, null);
   RecordConstructor withRecord = null;
 }
 {
@@ -564,7 +596,7 @@ DatasetDecl DatasetSpecification() throws ParseException:
 RefreshExternalDatasetStatement RefreshExternalDatasetStatement() throws ParseException:
 {
   RefreshExternalDatasetStatement redss = new RefreshExternalDatasetStatement();
-  Pair<Identifier,Identifier> nameComponents = null;
+  Pair<DataverseName,Identifier> nameComponents = null;
   String datasetName = null;
 }
 {
@@ -583,7 +615,7 @@ CreateIndexStatement IndexSpecification() throws ParseException:
   CreateIndexStatement cis = new CreateIndexStatement();
   String indexName = null;
   boolean ifNotExists = false;
-  Pair<Identifier,Identifier> nameComponents = null;
+  Pair<DataverseName,Identifier> nameComponents = null;
   Pair<Integer, Pair<List<String>, IndexedTypeExpression>> fieldPair = null;
   IndexParams indexType = null;
   boolean enforced = false;
@@ -698,7 +730,7 @@ CreateDataverseStatement DataverseSpecification() throws ParseException :
   ifNotExists = IfNotExists()
   ( <WITH> <FORMAT> format = StringLiteral() )?
     {
-      return new CreateDataverseStatement(new Identifier(dvName), format, ifNotExists);
+      return new CreateDataverseStatement(DataverseName.createSinglePartName(dvName), format, ifNotExists);
     }
 }
 
@@ -706,14 +738,14 @@ CreateFunctionStatement FunctionSpecification() throws ParseException:
 {
   FunctionSignature signature;
   boolean ifNotExists = false;
-  List<VarIdentifier> paramList = new ArrayList<VarIdentifier>();
+  List<VarIdentifier> paramList;
   String functionBody;
   VarIdentifier var = null;
   Expression functionBodyExpr;
   Token beginPos;
   Token endPos;
   FunctionName fctName = null;
-
+  List<Pair<VarIdentifier,IndexedTypeExpression>> bodge = new ArrayList<Pair<VarIdentifier,IndexedTypeExpression>>();
   createNewScope();
 }
 {
@@ -724,7 +756,7 @@ CreateFunctionStatement FunctionSpecification() throws ParseException:
   {
      beginPos = token;
   }
-  functionBodyExpr = Expression() <RIGHTBRACE>
+  functionBodyExpr = FunctionBody() <RIGHTBRACE>
     {
       endPos = token;
       functionBody = extractFragment(beginPos.beginLine, beginPos.beginColumn, endPos.beginLine, endPos.beginColumn);
@@ -732,16 +764,29 @@ CreateFunctionStatement FunctionSpecification() throws ParseException:
       signature = new FunctionSignature(fctName.dataverse, fctName.function, paramList.size());
       getCurrentScope().addFunctionDescriptor(signature, false);
       removeCurrentScope();
-      return new CreateFunctionStatement(signature, paramList, functionBody, functionBodyExpr, ifNotExists);
+      for(VarIdentifier v: paramList){
+          bodge.add(new Pair<VarIdentifier,IndexedTypeExpression>(v,null));
+      }
+      return new CreateFunctionStatement(signature, bodge, null, functionBody, functionBodyExpr, ifNotExists);
     }
+}
+
+Expression FunctionBody() throws ParseException:
+{
+  Expression functionBodyExpr = null;
+}
+{
+  functionBodyExpr = Expression()
+  {
+    return functionBodyExpr;
+  }
 }
 
 CreateFeedStatement FeedSpecification() throws ParseException:
 {
-  Pair<Identifier,Identifier> nameComponents = null;
+  Pair<DataverseName,Identifier> nameComponents = null;
   boolean ifNotExists = false;
   CreateFeedStatement cfs = null;
-  Pair<Identifier,Identifier> sourceNameComponents = null;
   RecordConstructor withRecord = null;
 }
 {
@@ -797,15 +842,13 @@ List<VarIdentifier> ParameterList() throws ParseException:
 {
   <LEFTPAREN> (<VARIABLE>
     {
-      var = new VarIdentifier();
-      var.setValue(token.image);
+      var = new VarIdentifier(token.image);
       paramList.add(var);
       getCurrentScope().addNewVarSymbolToScope(var);
     }
   ( <COMMA> <VARIABLE>
     {
-      var = new VarIdentifier();
-      var.setValue(token.image);
+      var = new VarIdentifier(token.image);
       paramList.add(var);
       getCurrentScope().addNewVarSymbolToScope(var);
     }
@@ -918,8 +961,8 @@ Pair<List<Integer>, List<List<String>>> PrimaryKey() throws ParseException:
 Statement DropStatement() throws ParseException:
 {
   String id = null;
-  Pair<Identifier,Identifier> pairId = null;
-  Triple<Identifier,Identifier,Identifier> tripleId = null;
+  Pair<DataverseName,Identifier> pairId = null;
+  Triple<DataverseName,Identifier,Identifier> tripleId = null;
   FunctionSignature funcSig = null;
   boolean ifExists = false;
   Statement stmt = null;
@@ -945,7 +988,7 @@ Statement DropStatement() throws ParseException:
       }
     | <DATAVERSE> id = Identifier() ifExists = IfExists()
       {
-        stmt = new DataverseDropStatement(new Identifier(id), ifExists);
+        stmt = new DataverseDropStatement(DataverseName.createSinglePartName(id), ifExists);
       }
     | <FUNCTION> funcSig = FunctionSignature() ifExists = IfExists()
       {
@@ -983,7 +1026,7 @@ boolean IfExists() throws ParseException :
 
 InsertStatement InsertStatement() throws ParseException:
 {
-  Pair<Identifier,Identifier> nameComponents = null;
+  Pair<DataverseName,Identifier> nameComponents = null;
   VariableExpr var = null;
   Query query;
   Expression returnExpression = null;
@@ -1000,14 +1043,14 @@ InsertStatement InsertStatement() throws ParseException:
     {
       checkBindingVariable(returnExpression, var, query);
       query.setTopLevel(true);
-      return new InsertStatement(nameComponents.first, nameComponents.second, query, getVarCounter(), var,
+      return new InsertStatement(nameComponents.first, nameComponents.second.getValue(), query, getVarCounter(), var,
                                  returnExpression);
     }
 }
 
 UpsertStatement UpsertStatement() throws ParseException:
 {
-  Pair<Identifier,Identifier> nameComponents = null;
+  Pair<DataverseName,Identifier> nameComponents = null;
   VariableExpr var = null;
   Query query;
   Expression returnExpression = null;
@@ -1024,7 +1067,7 @@ UpsertStatement UpsertStatement() throws ParseException:
     {
       checkBindingVariable(returnExpression, var, query);
       query.setTopLevel(true);
-      return new UpsertStatement(nameComponents.first, nameComponents.second, query, getVarCounter(), var,
+      return new UpsertStatement(nameComponents.first, nameComponents.second.getValue(), query, getVarCounter(), var,
                                  returnExpression);
     }
 }
@@ -1033,7 +1076,7 @@ DeleteStatement DeleteStatement() throws ParseException:
 {
   VariableExpr var = null;
   Expression condition = null;
-  Pair<Identifier, Identifier> nameComponents;
+  Pair<DataverseName, Identifier> nameComponents;
 }
 {
   <DELETE> var = Variable()
@@ -1044,7 +1087,7 @@ DeleteStatement DeleteStatement() throws ParseException:
   (<WHERE> condition = Expression())?
     {
       // First we get the dataverses and datasets that we want to lock
-      return new DeleteStatement(var, nameComponents.first, nameComponents.second,
+      return new DeleteStatement(var, nameComponents.first, nameComponents.second.getValue(),
           condition, getVarCounter());
     }
 }
@@ -1129,12 +1172,12 @@ Statement WriteStatement() throws ParseException:
 
 LoadStatement LoadStatement() throws ParseException:
 {
-  Identifier dataverseName = null;
+  DataverseName dataverseName = null;
   Identifier datasetName = null;
   boolean alreadySorted = false;
   String adapterName;
   Map<String,String> properties;
-  Pair<Identifier,Identifier> nameComponents = null;
+  Pair<DataverseName,Identifier> nameComponents = null;
 }
 {
   <LOAD> <DATASET> nameComponents = QualifiedName()
@@ -1149,7 +1192,7 @@ LoadStatement LoadStatement() throws ParseException:
     }
   )?
     {
-      return new LoadStatement(dataverseName, datasetName, adapterName, properties, alreadySorted);
+      return new LoadStatement(dataverseName, datasetName.getValue(), adapterName, properties, alreadySorted);
     }
 }
 
@@ -1167,7 +1210,7 @@ String AdapterName() throws ParseException :
 
 Statement CompactStatement() throws ParseException:
 {
-  Pair<Identifier,Identifier> nameComponents = null;
+  Pair<DataverseName,Identifier> nameComponents = null;
   Statement stmt = null;
 }
 {
@@ -1182,8 +1225,8 @@ Statement CompactStatement() throws ParseException:
 
 Statement FeedStatement() throws ParseException:
 {
-  Pair<Identifier,Identifier> feedNameComponents = null;
-  Pair<Identifier,Identifier> datasetNameComponents = null;
+  Pair<DataverseName,Identifier> feedNameComponents = null;
+  Pair<DataverseName,Identifier> datasetNameComponents = null;
 
   Map<String,String> configuration = null;
   List<FunctionSignature> appliedFunctions = new ArrayList<FunctionSignature>();
@@ -1381,13 +1424,13 @@ void RecordField(RecordTypeDefinition recType) throws ParseException:
 
 TypeReferenceExpression TypeReference() throws ParseException:
 {
-  Pair<Identifier,Identifier> id = null;
+  Pair<DataverseName,Identifier> id = null;
 }
 {
  id = QualifiedName()
    {
-     if (id.first == null && id.second.getValue().equalsIgnoreCase("int")) {
-        id.second.setValue("int64");
+     if (id.first == null && id.second.getValue().equalsIgnoreCase(INT_TYPE_NAME)) {
+        id.second = new Identifier(BuiltinType.AINT64.getTypeName());
      }
 
      return new TypeReferenceExpression(id);
@@ -1446,7 +1489,7 @@ FunctionName FunctionName() throws ParseException:
         result.function = first;
       } else if (third == null) {
         if (secondAfterDot) {
-          result.dataverse = first;
+          result.dataverse = DataverseName.createSinglePartName(first);
           result.library   = null;
           result.function = second;
         } else {
@@ -1455,28 +1498,28 @@ FunctionName FunctionName() throws ParseException:
           result.function = second;
         }
       } else {
-        result.dataverse = first;
+        result.dataverse = DataverseName.createSinglePartName(first);
         result.library   = second;
         result.function  = third;
       }
 
-      if (result.function.equalsIgnoreCase("int")) {
-            result.function = "int64";
+      if (result.function.equalsIgnoreCase(INT_TYPE_NAME)) {
+        result.function = BuiltinType.AINT64.getTypeName();
       }
       return result;
     }
 }
 
 
-Pair<Identifier,Identifier> TypeName() throws ParseException:
+Pair<DataverseName,Identifier> TypeName() throws ParseException:
 {
-  Pair<Identifier,Identifier> name = null;
+  Pair<DataverseName,Identifier> name = null;
 }
 {
   name = QualifiedName()
     {
       if (name.first == null) {
-        name.first = new Identifier(defaultDataverse);
+        name.first = defaultDataverse;
       }
       return name;
     }
@@ -1562,7 +1605,7 @@ String StringLiteral() throws ParseException:
     }
 }
 
-Pair<Identifier,Identifier> QualifiedName() throws ParseException:
+Pair<DataverseName,Identifier> QualifiedName() throws ParseException:
 {
   String first = null;
   String second = null;
@@ -1570,20 +1613,20 @@ Pair<Identifier,Identifier> QualifiedName() throws ParseException:
 {
   first = Identifier() (<DOT> second = Identifier())?
   {
-    Identifier id1 = null;
+    DataverseName id1 = null;
     Identifier id2 = null;
     if (second == null) {
       id2 = new Identifier(first);
     } else
     {
-      id1 = new Identifier(first);
+      id1 = DataverseName.createSinglePartName(first);
       id2 = new Identifier(second);
     }
-    return new Pair<Identifier,Identifier>(id1, id2);
+    return new Pair<DataverseName,Identifier>(id1, id2);
   }
 }
 
-Triple<Identifier,Identifier,Identifier> DoubleQualifiedName() throws ParseException:
+Triple<DataverseName,Identifier,Identifier> DoubleQualifiedName() throws ParseException:
 {
   String first = null;
   String second = null;
@@ -1592,18 +1635,18 @@ Triple<Identifier,Identifier,Identifier> DoubleQualifiedName() throws ParseExcep
 {
   first = Identifier() <DOT> second = Identifier() (<DOT> third = Identifier())?
   {
-    Identifier id1 = null;
+    DataverseName id1 = null;
     Identifier id2 = null;
     Identifier id3 = null;
     if (third == null) {
       id2 = new Identifier(first);
       id3 = new Identifier(second);
     } else {
-      id1 = new Identifier(first);
+      id1 = DataverseName.createSinglePartName(first);
       id2 = new Identifier(second);
       id3 = new Identifier(third);
     }
-    return new Triple<Identifier,Identifier,Identifier>(id1, id2, id3);
+    return new Triple<DataverseName,Identifier,Identifier>(id1, id2, id3);
   }
 }
 
@@ -1612,15 +1655,20 @@ FunctionDecl FunctionDeclaration() throws ParseException:
   FunctionDecl funcDecl;
   FunctionSignature signature;
   String functionName;
+  List<VarIdentifier> paramList_typ = new ArrayList<VarIdentifier>();
   List<VarIdentifier> paramList = new ArrayList<VarIdentifier>();
   Expression funcBody;
   createNewScope();
 }
 {
   <DECLARE> <FUNCTION> functionName = Identifier()
-  paramList = ParameterList()
+
+  paramList_typ = ParameterList()
   <LEFTBRACE> funcBody = Expression() <RIGHTBRACE>
     {
+      for(VarIdentifier v: paramList_typ){
+            paramList.add(v);
+      }
       signature = new FunctionSignature(defaultDataverse, functionName, paramList.size());
       getCurrentScope().addFunctionDescriptor(signature, false);
       funcDecl = new FunctionDecl(signature, paramList, funcBody);
@@ -1745,19 +1793,10 @@ Expression RelExpr()throws ParseException:
 {
   OperatorExpr op = null;
   Expression operand = null;
-  boolean broadcast = false;
   IExpressionAnnotation annotation = null;
 }
 {
     operand = AddExpr()
-    {
-      if (operand instanceof VariableExpr) {
-        String hint = getHint(token);
-        if (hint != null && hint.equals(BROADCAST_JOIN_HINT)) {
-          broadcast = true;
-        }
-      }
-    }
 
     (
       LOOKAHEAD(2)( <LT> | <GT> | <LE> | <GE> | <EQ> | <NE> |<SIMILAR>)
@@ -1772,9 +1811,8 @@ Expression RelExpr()throws ParseException:
         }
           if (op == null) {
             op = new OperatorExpr();
-            op.addOperand(operand, broadcast);
+            op.addOperand(operand);
           op.setCurrentop(true);
-          broadcast = false;
           }
          try{
            op.addOperator(token.image);
@@ -1785,14 +1823,14 @@ Expression RelExpr()throws ParseException:
 
        operand = AddExpr()
       {
-         broadcast = false;
          if (operand instanceof VariableExpr) {
            String hint = getHint(token);
-           if (hint != null && hint.equals(BROADCAST_JOIN_HINT)) {
-             broadcast = true;
+           if (hint != null && hint.equals(HASH_BROADCAST_JOIN_HINT)) {
+             annotation = new BroadcastExpressionAnnotation();
+             annotation.setObject(BroadcastExpressionAnnotation.BroadcastSide.RIGHT);
            }
          }
-         op.addOperand(operand, broadcast);
+         op.addOperand(operand);
       }
     )?
 
@@ -2086,8 +2124,6 @@ Expression Literal() throws ParseException:
 
 VariableExpr VariableRef() throws ParseException:
 {
-    VariableExpr varExp = new VariableExpr();
-    VarIdentifier var = new VarIdentifier();
 }
 {
   <VARIABLE>
@@ -2097,13 +2133,13 @@ VariableExpr VariableRef() throws ParseException:
      if (isInForbiddenScopes(varName)) {
        throw new ParseException("Inside limit clauses, it is disallowed to reference a variable having the same name as any variable bound in the same scope as the limit clause.");
      }
+     VariableExpr varExp;
      if(ident != null) { // exist such ident
+       varExp = new VariableExpr((VarIdentifier)ident);
        varExp.setIsNewVar(false);
-       varExp.setVar((VarIdentifier)ident);
      } else {
-       varExp.setVar(var);
+       varExp = new VariableExpr(new VarIdentifier(varName));
      }
-     var.setValue(varName);
      return varExp;
     }
 }
@@ -2111,18 +2147,16 @@ VariableExpr VariableRef() throws ParseException:
 
 VariableExpr Variable() throws ParseException:
 {
-    VariableExpr varExp = new VariableExpr();
-    VarIdentifier var = new VarIdentifier();
 }
 {
   <VARIABLE>
     {
-     Identifier ident = lookupSymbol(token.image);
+     String varName = token.image;
+     Identifier ident = lookupSymbol(varName);
+     VariableExpr varExp = new VariableExpr(new VarIdentifier(varName));
      if(ident != null) { // exist such ident
        varExp.setIsNewVar(false);
      }
-     varExp.setVar(var);
-     var.setValue(token.image);
      return varExp;
     }
 }
@@ -2290,7 +2324,7 @@ Expression DatasetAccessExpression() throws ParseException:
     }
   | ( <LEFTPAREN> nameArg = Expression() <RIGHTPAREN> ) )
     {
-      String dataverse = MetadataConstants.METADATA_DATAVERSE_NAME;
+      DataverseName dataverse = MetadataConstants.METADATA_DATAVERSE_NAME;
       FunctionSignature signature = lookupFunctionSignature(dataverse, funcName, 1);
       if (signature == null) {
         signature = new FunctionSignature(dataverse, funcName, 1);

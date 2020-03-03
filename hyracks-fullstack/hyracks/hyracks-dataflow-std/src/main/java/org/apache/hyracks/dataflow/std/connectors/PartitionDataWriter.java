@@ -18,167 +18,31 @@
  */
 package org.apache.hyracks.dataflow.std.connectors;
 
-import java.io.IOException;
-import java.nio.ByteBuffer;
-
-import org.apache.hyracks.api.comm.IFrameWriter;
 import org.apache.hyracks.api.comm.IPartitionWriterFactory;
-import org.apache.hyracks.api.comm.VSizeFrame;
 import org.apache.hyracks.api.context.IHyracksTaskContext;
 import org.apache.hyracks.api.dataflow.value.ITuplePartitionComputer;
 import org.apache.hyracks.api.dataflow.value.RecordDescriptor;
 import org.apache.hyracks.api.exceptions.HyracksDataException;
-import org.apache.hyracks.dataflow.common.comm.io.FrameTupleAccessor;
-import org.apache.hyracks.dataflow.common.comm.io.FrameTupleAppender;
-import org.apache.hyracks.dataflow.common.comm.util.FrameUtils;
-import org.apache.hyracks.util.trace.ITracer;
 
-public class PartitionDataWriter implements IFrameWriter {
-    private final int consumerPartitionCount;
-    private final IFrameWriter[] pWriters;
-    private final boolean[] isOpen;
-    private final FrameTupleAppender[] appenders;
-    private final FrameTupleAccessor tupleAccessor;
+public class PartitionDataWriter extends AbstractPartitionDataWriter {
+
     private final ITuplePartitionComputer tpc;
-    private final IHyracksTaskContext ctx;
-    private boolean[] allocatedFrames;
-    private boolean failed = false;
 
     public PartitionDataWriter(IHyracksTaskContext ctx, int consumerPartitionCount, IPartitionWriterFactory pwFactory,
             RecordDescriptor recordDescriptor, ITuplePartitionComputer tpc) throws HyracksDataException {
-        this.ctx = ctx;
+        super(ctx, consumerPartitionCount, pwFactory, recordDescriptor);
         this.tpc = tpc;
-        this.consumerPartitionCount = consumerPartitionCount;
-        pWriters = new IFrameWriter[consumerPartitionCount];
-        isOpen = new boolean[consumerPartitionCount];
-        allocatedFrames = new boolean[consumerPartitionCount];
-        appenders = new FrameTupleAppender[consumerPartitionCount];
-        tupleAccessor = new FrameTupleAccessor(recordDescriptor);
-        initializeAppenders(pwFactory);
-    }
-
-    protected void initializeAppenders(IPartitionWriterFactory pwFactory) throws HyracksDataException {
-        for (int i = 0; i < consumerPartitionCount; ++i) {
-            try {
-                pWriters[i] = pwFactory.createFrameWriter(i);
-                appenders[i] = createTupleAppender(ctx);
-            } catch (IOException e) {
-                throw HyracksDataException.create(e);
-            }
-        }
-    }
-
-    protected FrameTupleAppender createTupleAppender(IHyracksTaskContext ctx) {
-        return new FrameTupleAppender();
-    }
-
-    @Override
-    public void close() throws HyracksDataException {
-        HyracksDataException closeException = null;
-        if (!failed) {
-            boolean newFailure = false;
-            for (int i = 0; i < pWriters.length; ++i) {
-                try {
-                    if (isOpen[i] && allocatedFrames[i] && appenders[i].getTupleCount() > 0) {
-                        appenders[i].write(pWriters[i], true);
-                    }
-                } catch (Exception e) {
-                    newFailure = true;
-                    closeException = wrapException(closeException, e);
-                    break;
-                }
-            }
-            if (newFailure) {
-                try {
-                    fail(); // Fail all writers if any new failure happens.
-                } catch (Exception e) {
-                    closeException = wrapException(closeException, e);
-                }
-            }
-        }
-        for (int i = 0; i < pWriters.length; ++i) {
-            if (isOpen[i]) {
-                // The try-block make sures that every writer is closed.
-                try {
-                    pWriters[i].close();
-                } catch (Exception e) {
-                    closeException = wrapException(closeException, e);
-                }
-            }
-        }
-        if (closeException != null) {
-            throw closeException;
-        }
     }
 
     @Override
     public void open() throws HyracksDataException {
+        super.open();
         tpc.initialize();
-        for (int i = 0; i < pWriters.length; ++i) {
-            isOpen[i] = true;
-            pWriters[i].open();
-        }
     }
 
     @Override
-    public void nextFrame(ByteBuffer buffer) throws HyracksDataException {
-        tupleAccessor.reset(buffer);
-        int tupleCount = tupleAccessor.getTupleCount();
-        for (int i = 0; i < tupleCount; ++i) {
-            int h = tpc.partition(tupleAccessor, i, consumerPartitionCount);
-            if (!allocatedFrames[h]) {
-                allocateFrames(h);
-            }
-            FrameUtils.appendToWriter(pWriters[h], appenders[h], tupleAccessor, i);
-        }
-    }
-
-    protected void allocateFrames(int i) throws HyracksDataException {
-        appenders[i].reset(new VSizeFrame(ctx), true);
-        allocatedFrames[i] = true;
-    }
-
-    @Override
-    public void fail() throws HyracksDataException {
-        failed = true;
-        HyracksDataException failException = null;
-        for (int i = 0; i < appenders.length; ++i) {
-            if (isOpen[i]) {
-                try {
-                    pWriters[i].fail();
-                } catch (Exception e) {
-                    failException = wrapException(failException, e);
-                }
-            }
-        }
-        if (failException != null) {
-            throw failException;
-        }
-    }
-
-    @Override
-    public void flush() throws HyracksDataException {
-        for (int i = 0; i < consumerPartitionCount; i++) {
-            if (allocatedFrames[i]) {
-                appenders[i].flush(pWriters[i]);
-            }
-        }
-    }
-
-    public void flush(ITracer tracer, String name, long cat, String args) throws HyracksDataException {
-        for (int i = 0; i < consumerPartitionCount; i++) {
-            if (allocatedFrames[i]) {
-                appenders[i].flush(pWriters[i], tracer, name, cat, args);
-            }
-        }
-    }
-
-    // Wraps the current encountered exception into the final exception.
-    private HyracksDataException wrapException(HyracksDataException finalException, Exception currentException) {
-        if (finalException == null) {
-            return HyracksDataException.create(currentException);
-        }
-        finalException.addSuppressed(currentException);
-        return finalException;
+    protected void processTuple(int tupleIndex) throws HyracksDataException {
+        int p = tpc.partition(tupleAccessor, tupleIndex, consumerPartitionCount);
+        appendToPartitionWriter(tupleIndex, p);
     }
 }

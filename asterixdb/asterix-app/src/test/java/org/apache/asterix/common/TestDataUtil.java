@@ -30,6 +30,7 @@ import org.apache.asterix.api.common.AsterixHyracksIntegrationUtil;
 import org.apache.asterix.app.active.ActiveNotificationHandler;
 import org.apache.asterix.common.api.IMetadataLockManager;
 import org.apache.asterix.common.dataflow.ICcApplicationContext;
+import org.apache.asterix.common.metadata.DataverseName;
 import org.apache.asterix.common.utils.Servlets;
 import org.apache.asterix.metadata.MetadataManager;
 import org.apache.asterix.metadata.MetadataTransactionContext;
@@ -153,19 +154,19 @@ public class TestDataUtil {
      * @param targetNodes
      * @throws Exception
      */
-    public static void rebalanceDataset(AsterixHyracksIntegrationUtil integrationUtil, String dataverseName,
+    public static void rebalanceDataset(AsterixHyracksIntegrationUtil integrationUtil, DataverseName dataverseName,
             String datasetName, String[] targetNodes) throws Exception {
         ICcApplicationContext ccAppCtx =
                 (ICcApplicationContext) integrationUtil.getClusterControllerService().getApplicationContext();
-        MetadataProvider metadataProvider = new MetadataProvider(ccAppCtx, null);
+        MetadataProvider metadataProvider = MetadataProvider.create(ccAppCtx, null);
         try {
             ActiveNotificationHandler activeNotificationHandler =
                     (ActiveNotificationHandler) ccAppCtx.getActiveNotificationHandler();
             activeNotificationHandler.suspend(metadataProvider);
             try {
                 IMetadataLockManager lockManager = ccAppCtx.getMetadataLockManager();
-                lockManager.acquireDatasetExclusiveModificationLock(metadataProvider.getLocks(),
-                        dataverseName + '.' + datasetName);
+                lockManager.acquireDatasetExclusiveModificationLock(metadataProvider.getLocks(), dataverseName,
+                        datasetName);
                 RebalanceUtil.rebalance(dataverseName, datasetName, new LinkedHashSet<>(Arrays.asList(targetNodes)),
                         metadataProvider, ccAppCtx.getHcc(), NoOpDatasetRebalanceCallback.INSTANCE);
             } finally {
@@ -189,7 +190,7 @@ public class TestDataUtil {
             throws AlgebricksException, RemoteException {
         final ICcApplicationContext appCtx =
                 (ICcApplicationContext) integrationUtil.getClusterControllerService().getApplicationContext();
-        final MetadataProvider metadataProvider = new MetadataProvider(appCtx, null);
+        final MetadataProvider metadataProvider = MetadataProvider.create(appCtx, null);
         final MetadataTransactionContext mdTxnCtx = MetadataManager.INSTANCE.beginTransaction();
         metadataProvider.setMetadataTxnContext(mdTxnCtx);
         Dataset dataset;

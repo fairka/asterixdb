@@ -47,11 +47,13 @@ import org.apache.hyracks.api.util.IoUtil;
 import org.apache.hyracks.storage.common.compression.file.ICompressedPageWriter;
 import org.apache.hyracks.storage.common.file.BufferedFileHandle;
 import org.apache.hyracks.storage.common.file.IFileMapManager;
+import org.apache.hyracks.util.IThreadStats;
+import org.apache.hyracks.util.IThreadStatsCollector;
 import org.apache.logging.log4j.Level;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
-public class BufferCache implements IBufferCacheInternal, ILifeCycleComponent {
+public class BufferCache implements IBufferCacheInternal, ILifeCycleComponent, IThreadStatsCollector {
 
     private static final Logger LOGGER = LogManager.getLogger();
     private static final int MAP_FACTOR = 3;
@@ -73,12 +75,12 @@ public class BufferCache implements IBufferCacheInternal, ILifeCycleComponent {
     private final IFileMapManager fileMapManager;
     private final CleanerThread cleanerThread;
     private final Map<Integer, BufferedFileHandle> fileInfoMap;
-    private final AsyncFIFOPageQueueManager fifoWriter;
     private final BlockingQueue<BufferCacheHeaderHelper> headerPageCache;
 
     private IIOReplicationManager ioReplicationManager;
     private final List<ICachedPageInternal> cachedPages = new ArrayList<>();
     private final AtomicLong masterPinCount = new AtomicLong();
+    private final Map<Thread, IThreadStats> statsSubscribers = new ConcurrentHashMap<>();
 
     private boolean closed;
 
@@ -111,7 +113,6 @@ public class BufferCache implements IBufferCacheInternal, ILifeCycleComponent {
         executor.execute(cleanerThread);
         closed = false;
 
-        fifoWriter = new AsyncFIFOPageQueueManager(this);
         if (DEBUG) {
             confiscatedPages = new ArrayList<>();
             confiscatedPagesOwner = new HashMap<>();
@@ -169,6 +170,10 @@ public class BufferCache implements IBufferCacheInternal, ILifeCycleComponent {
         // the synchronized block over the fileInfoMap is a hot spot.
         if (DEBUG) {
             pinSanityCheck(dpid);
+        }
+        final IThreadStats threadStats = statsSubscribers.get(Thread.currentThread());
+        if (threadStats != null) {
+            threadStats.pagePinned();
         }
         CachedPage cPage = findPage(dpid);
         if (!newPage) {
@@ -578,6 +583,16 @@ public class BufferCache implements IBufferCacheInternal, ILifeCycleComponent {
         }
     }
 
+    @Override
+    public void subscribe(IThreadStats stats) {
+        statsSubscribers.put(Thread.currentThread(), stats);
+    }
+
+    @Override
+    public void unsubscribe() {
+        statsSubscribers.remove(Thread.currentThread());
+    }
+
     private int hash(long dpid) {
         int hashValue = (int) dpid ^ (Integer.reverse((int) (dpid >>> 32)) >>> 1);
         return hashValue % pageMap.length;
@@ -699,7 +714,6 @@ public class BufferCache implements IBufferCacheInternal, ILifeCycleComponent {
     @Override
     public void close() {
         closed = true;
-        fifoWriter.destroyQueue();
         try {
             synchronized (cleanerThread.threadLock) {
                 cleanerThread.shutdownStart = true;
@@ -1285,7 +1299,6 @@ public class BufferCache implements IBufferCacheInternal, ILifeCycleComponent {
                         Thread.currentThread().interrupt();
                     }
                 }
-                finishQueue();
                 if (cycleCount > MAX_PIN_ATTEMPT_CYCLES) {
                     cycleCount = 0; // suppress warning below
                     throw new HyracksDataException("Unable to find free page in buffer cache after "
@@ -1361,13 +1374,8 @@ public class BufferCache implements IBufferCacheInternal, ILifeCycleComponent {
     }
 
     @Override
-    public IFIFOPageQueue createFIFOQueue() {
-        return fifoWriter.createQueue(FIFOLocalWriter.INSTANCE);
-    }
-
-    @Override
-    public void finishQueue() throws HyracksDataException {
-        fifoWriter.finishQueue();
+    public IFIFOPageWriter createFIFOWriter(IPageWriteCallback callback, IPageWriteFailureCallback failureCallback) {
+        return new FIFOLocalWriter(this, callback, failureCallback);
     }
 
     @Override

@@ -48,6 +48,7 @@ import org.apache.hyracks.storage.am.lsm.common.api.ILSMIndexFileManager;
 import org.apache.hyracks.storage.am.lsm.common.api.ILSMIndexOperationContext;
 import org.apache.hyracks.storage.am.lsm.common.api.ILSMMergePolicy;
 import org.apache.hyracks.storage.am.lsm.common.api.ILSMOperationTracker;
+import org.apache.hyracks.storage.am.lsm.common.api.ILSMPageWriteCallbackFactory;
 import org.apache.hyracks.storage.am.lsm.common.api.ITwoPCIndex;
 import org.apache.hyracks.storage.am.lsm.common.impls.ExternalIndexHarness;
 import org.apache.hyracks.storage.am.lsm.common.impls.LSMComponentFileReferences;
@@ -57,10 +58,13 @@ import org.apache.hyracks.storage.am.lsm.common.impls.LoadOperation;
 import org.apache.hyracks.storage.common.IIndexAccessParameters;
 import org.apache.hyracks.storage.common.IIndexBulkLoader;
 import org.apache.hyracks.storage.common.IIndexCursor;
+import org.apache.hyracks.storage.common.IIndexCursorStats;
 import org.apache.hyracks.storage.common.ISearchOperationCallback;
 import org.apache.hyracks.storage.common.ISearchPredicate;
+import org.apache.hyracks.storage.common.IndexCursorStats;
 import org.apache.hyracks.storage.common.buffercache.IBufferCache;
 import org.apache.hyracks.storage.common.buffercache.ICachedPage;
+import org.apache.hyracks.storage.common.buffercache.IPageWriteCallback;
 import org.apache.hyracks.util.trace.ITracer;
 
 /**
@@ -94,11 +98,11 @@ public class ExternalBTree extends LSMBTree implements ITwoPCIndex {
             ILSMDiskComponentFactory bulkLoadComponentFactory, ILSMDiskComponentFactory transactionComponentFactory,
             double bloomFilterFalsePositiveRate, IBinaryComparatorFactory[] cmpFactories, ILSMMergePolicy mergePolicy,
             ILSMOperationTracker opTracker, ILSMIOOperationScheduler ioScheduler,
-            ILSMIOOperationCallbackFactory ioOpCallbackFactory, boolean durable, ITracer tracer)
-            throws HyracksDataException {
+            ILSMIOOperationCallbackFactory ioOpCallbackFactory, ILSMPageWriteCallbackFactory pageWriteCallbackFactory,
+            boolean durable, ITracer tracer) throws HyracksDataException {
         super(ioManager, insertLeafFrameFactory, deleteLeafFrameFactory, bufferCache, fileManager, componentFactory,
                 bulkLoadComponentFactory, bloomFilterFalsePositiveRate, cmpFactories, mergePolicy, opTracker,
-                ioScheduler, ioOpCallbackFactory, false, durable, tracer);
+                ioScheduler, ioOpCallbackFactory, pageWriteCallbackFactory, false, durable, tracer);
         this.transactionComponentFactory = transactionComponentFactory;
         this.secondDiskComponents = new LinkedList<>();
         this.interiorFrameFactory = interiorFrameFactory;
@@ -187,7 +191,8 @@ public class ExternalBTree extends LSMBTree implements ITwoPCIndex {
                 returnDeletedTuples = true;
             }
         }
-        LSMBTreeRangeSearchCursor cursor = new LSMBTreeRangeSearchCursor(opCtx, returnDeletedTuples);
+        IIndexCursorStats stats = new IndexCursorStats();
+        LSMBTreeRangeSearchCursor cursor = new LSMBTreeRangeSearchCursor(opCtx, returnDeletedTuples, stats);
         BTree lastBTree = ((LSMBTreeDiskComponent) mergingComponents.get(0)).getIndex();
         BTree firstBTree = ((LSMBTreeDiskComponent) mergingComponents.get(mergingComponents.size() - 1)).getIndex();
         FileReference firstFile = firstBTree.getFileReference();
@@ -195,7 +200,7 @@ public class ExternalBTree extends LSMBTree implements ITwoPCIndex {
         LSMComponentFileReferences relMergeFileRefs =
                 fileManager.getRelMergeFileReference(firstFile.getFile().getName(), lastFile.getFile().getName());
         ILSMIndexAccessor accessor = new LSMTreeIndexAccessor(getHarness(), opCtx, cursorFactory);
-        LSMBTreeMergeOperation mergeOp = new LSMBTreeMergeOperation(accessor, cursor,
+        LSMBTreeMergeOperation mergeOp = new LSMBTreeMergeOperation(accessor, cursor, stats,
                 relMergeFileRefs.getInsertIndexFileReference(), relMergeFileRefs.getBloomFilterFileReference(),
                 ioOpCallback, fileManager.getBaseDir().getAbsolutePath());
         ioOpCallback.scheduled(mergeOp);
@@ -443,8 +448,9 @@ public class ExternalBTree extends LSMBTree implements ITwoPCIndex {
             loadOp.setNewComponent(component);
             ioOpCallback.scheduled(loadOp);
             ioOpCallback.beforeOperation(loadOp);
-            componentBulkLoader =
-                    component.createBulkLoader(loadOp, fillFactor, verifyInput, numElementsHint, false, true, true);
+            IPageWriteCallback pageWriteCallback = pageWriteCallbackFactory.createPageWriteCallback();
+            componentBulkLoader = component.createBulkLoader(loadOp, fillFactor, verifyInput, numElementsHint, false,
+                    true, true, pageWriteCallback);
         }
 
         // It is expected that the mode was set to insert operation before
@@ -508,6 +514,11 @@ public class ExternalBTree extends LSMBTree implements ITwoPCIndex {
         @Override
         public Throwable getFailure() {
             return componentBulkLoader.getFailure();
+        }
+
+        @Override
+        public void force() throws HyracksDataException {
+            componentBulkLoader.force();
         }
     }
 

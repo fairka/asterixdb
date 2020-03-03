@@ -24,7 +24,6 @@ package org.apache.asterix.runtime.evaluators.functions;
 
 import org.apache.asterix.common.annotations.MissingNullInOutFunction;
 import org.apache.asterix.om.functions.BuiltinFunctions;
-import org.apache.asterix.om.functions.IFunctionDescriptor;
 import org.apache.asterix.om.functions.IFunctionDescriptorFactory;
 import org.apache.asterix.runtime.evaluators.base.AbstractScalarFunctionDynamicDescriptor;
 import org.apache.asterix.runtime.evaluators.functions.utils.RegExpMatcher;
@@ -39,12 +38,7 @@ import org.apache.hyracks.data.std.primitive.UTF8StringPointable;
 public class StringRegExpContainsWithFlagDescriptor extends AbstractScalarFunctionDynamicDescriptor {
 
     private static final long serialVersionUID = 1L;
-    public static final IFunctionDescriptorFactory FACTORY = new IFunctionDescriptorFactory() {
-        @Override
-        public IFunctionDescriptor createFunctionDescriptor() {
-            return new StringRegExpContainsWithFlagDescriptor();
-        }
-    };
+    public static final IFunctionDescriptorFactory FACTORY = StringRegExpContainsWithFlagDescriptor::new;
 
     @Override
     public IScalarEvaluatorFactory createEvaluatorFactory(final IScalarEvaluatorFactory[] args) {
@@ -59,7 +53,7 @@ public class StringRegExpContainsWithFlagDescriptor extends AbstractScalarFuncti
 
                     @Override
                     protected boolean compute(UTF8StringPointable srcPtr, UTF8StringPointable patternPtr,
-                            UTF8StringPointable flagPtr) {
+                            UTF8StringPointable flagPtr) throws HyracksDataException {
                         matcher.build(srcPtr, patternPtr, flagPtr);
                         return matcher.find();
                     }

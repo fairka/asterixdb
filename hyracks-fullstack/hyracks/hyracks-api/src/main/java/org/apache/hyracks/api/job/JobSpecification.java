@@ -77,6 +77,8 @@ public class JobSpecification implements Serializable, IOperatorDescriptorRegist
 
     private int maxReattempts;
 
+    private long maxWarnings;
+
     private IJobletEventListenerFactory jobletEventListenerFactory;
 
     private IGlobalJobDataFactory globalJobDataFactory;
@@ -258,6 +260,14 @@ public class JobSpecification implements Serializable, IOperatorDescriptorRegist
 
     public int getFrameSize() {
         return frameSize;
+    }
+
+    public void setMaxWarnings(long maxWarnings) {
+        this.maxWarnings = maxWarnings;
+    }
+
+    public long getMaxWarnings() {
+        return maxWarnings;
     }
 
     public void setMaxReattempts(int maxReattempts) {

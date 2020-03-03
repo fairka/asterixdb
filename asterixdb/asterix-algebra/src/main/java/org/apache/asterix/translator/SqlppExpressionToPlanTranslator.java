@@ -311,16 +311,17 @@ public class SqlppExpressionToPlanTranslator extends LangExpressionToPlanTransla
         LogicalVariable fromVar = context.newVarFromExpression(fromTerm.getLeftVariable());
         Expression fromExpr = fromTerm.getLeftExpression();
         Pair<ILogicalExpression, Mutable<ILogicalOperator>> eo = langExprToAlgExpression(fromExpr, tupSource);
+        Pair<ILogicalExpression, Mutable<ILogicalOperator>> pUnnestExpr = makeUnnestExpression(eo.first, eo.second);
         UnnestOperator unnestOp;
         if (fromTerm.hasPositionalVariable()) {
             LogicalVariable pVar = context.newVarFromExpression(fromTerm.getPositionalVariable());
             // We set the positional variable type as BIGINT type.
-            unnestOp = new UnnestOperator(fromVar, new MutableObject<>(makeUnnestExpression(eo.first)), pVar,
-                    BuiltinType.AINT64, new PositionWriter());
+            unnestOp = new UnnestOperator(fromVar, new MutableObject<>(pUnnestExpr.first), pVar, BuiltinType.AINT64,
+                    new PositionWriter());
         } else {
-            unnestOp = new UnnestOperator(fromVar, new MutableObject<>(makeUnnestExpression(eo.first)));
+            unnestOp = new UnnestOperator(fromVar, new MutableObject<>(pUnnestExpr.first));
         }
-        unnestOp.getInputs().add(eo.second);
+        unnestOp.getInputs().add(pUnnestExpr.second);
         unnestOp.setSourceLocation(sourceLoc);
 
         // Processes joins, unnests, and nests.
@@ -445,9 +446,11 @@ public class SqlppExpressionToPlanTranslator extends LangExpressionToPlanTransla
             LogicalVariable outerUnnestVar = context.newVar();
             VariableReferenceExpression aggVarRefExpr = new VariableReferenceExpression(aggVar);
             aggVarRefExpr.setSourceLocation(aggOp.getSourceLocation());
-            LeftOuterUnnestOperator outerUnnestOp = new LeftOuterUnnestOperator(outerUnnestVar,
-                    new MutableObject<>(makeUnnestExpression(aggVarRefExpr)));
-            outerUnnestOp.getInputs().add(new MutableObject<>(subplanOp));
+            Pair<ILogicalExpression, Mutable<ILogicalOperator>> pUnnestExpr =
+                    makeUnnestExpression(aggVarRefExpr, new MutableObject<>(subplanOp));
+            LeftOuterUnnestOperator outerUnnestOp =
+                    new LeftOuterUnnestOperator(outerUnnestVar, new MutableObject<>(pUnnestExpr.first));
+            outerUnnestOp.getInputs().add(pUnnestExpr.second);
             outerUnnestOp.setSourceLocation(aggOp.getSourceLocation());
             currentTopOp = outerUnnestOp;
 
@@ -528,20 +531,21 @@ public class SqlppExpressionToPlanTranslator extends LangExpressionToPlanTransla
         LogicalVariable rightVar = context.newVarFromExpression(binaryCorrelate.getRightVariable());
         Expression rightExpr = binaryCorrelate.getRightExpression();
         Pair<ILogicalExpression, Mutable<ILogicalOperator>> eo = langExprToAlgExpression(rightExpr, inputOpRef);
+        Pair<ILogicalExpression, Mutable<ILogicalOperator>> pUnnestExpr = makeUnnestExpression(eo.first, eo.second);
         AbstractUnnestOperator unnestOp;
         if (binaryCorrelate.hasPositionalVariable()) {
             LogicalVariable pVar = context.newVarFromExpression(binaryCorrelate.getPositionalVariable());
             // We set the positional variable type as BIGINT type.
             unnestOp = innerUnnest
-                    ? new UnnestOperator(rightVar, new MutableObject<>(makeUnnestExpression(eo.first)), pVar,
-                            BuiltinType.AINT64, new PositionWriter())
-                    : new LeftOuterUnnestOperator(rightVar, new MutableObject<>(makeUnnestExpression(eo.first)), pVar,
+                    ? new UnnestOperator(rightVar, new MutableObject<>(pUnnestExpr.first), pVar, BuiltinType.AINT64,
+                            new PositionWriter())
+                    : new LeftOuterUnnestOperator(rightVar, new MutableObject<>(pUnnestExpr.first), pVar,
                             BuiltinType.AINT64, new PositionWriter());
         } else {
-            unnestOp = innerUnnest ? new UnnestOperator(rightVar, new MutableObject<>(makeUnnestExpression(eo.first)))
-                    : new LeftOuterUnnestOperator(rightVar, new MutableObject<>(makeUnnestExpression(eo.first)));
+            unnestOp = innerUnnest ? new UnnestOperator(rightVar, new MutableObject<>(pUnnestExpr.first))
+                    : new LeftOuterUnnestOperator(rightVar, new MutableObject<>(pUnnestExpr.first));
         }
-        unnestOp.getInputs().add(eo.second);
+        unnestOp.getInputs().add(pUnnestExpr.second);
         unnestOp.setSourceLocation(binaryCorrelate.getRightVariable().getSourceLocation());
         return new Pair<>(unnestOp, rightVar);
     }
@@ -1235,8 +1239,16 @@ public class SqlppExpressionToPlanTranslator extends LangExpressionToPlanTransla
             } else if (BuiltinFunctions.NTH_VALUE_IMPL.equals(fi)) {
                 nestedAggFunc = BuiltinFunctions.SCALAR_FIRST_ELEMENT;
                 if (fromLast) {
-                    // reverse order if FROM LAST modifier is present
+                    // if FROM LAST modifier is present
+                    // 1. reverse order
                     reverseOrder(orderExprListOut);
+                    // 2. reverse frame specification
+                    WindowExpression.FrameBoundaryKind tmpFrameStartKind = winFrameStartKind;
+                    Expression tmpFrameStartExpr = winFrameStartExpr;
+                    winFrameStartKind = reverseFrameBoundaryKind(winFrameEndKind);
+                    winFrameStartExpr = winFrameEndExpr;
+                    winFrameEndKind = reverseFrameBoundaryKind(tmpFrameStartKind);
+                    winFrameEndExpr = tmpFrameStartExpr;
                 }
                 if (respectNulls) {
                     winFrameMaxOjbects = 1;
@@ -1729,6 +1741,24 @@ public class SqlppExpressionToPlanTranslator extends LangExpressionToPlanTransla
                 return OrderOperator.DESC_ORDER;
             case DESC:
                 return OrderOperator.ASC_ORDER;
+            default:
+                throw new CompilationException(ErrorCode.COMPILATION_ERROR);
+        }
+    }
+
+    private WindowExpression.FrameBoundaryKind reverseFrameBoundaryKind(
+            WindowExpression.FrameBoundaryKind frameBoundaryKind) throws CompilationException {
+        switch (frameBoundaryKind) {
+            case UNBOUNDED_PRECEDING:
+                return WindowExpression.FrameBoundaryKind.UNBOUNDED_FOLLOWING;
+            case BOUNDED_PRECEDING:
+                return WindowExpression.FrameBoundaryKind.BOUNDED_FOLLOWING;
+            case CURRENT_ROW:
+                return WindowExpression.FrameBoundaryKind.CURRENT_ROW;
+            case BOUNDED_FOLLOWING:
+                return WindowExpression.FrameBoundaryKind.BOUNDED_PRECEDING;
+            case UNBOUNDED_FOLLOWING:
+                return WindowExpression.FrameBoundaryKind.UNBOUNDED_PRECEDING;
             default:
                 throw new CompilationException(ErrorCode.COMPILATION_ERROR);
         }

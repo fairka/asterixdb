@@ -43,22 +43,10 @@ public class ConcatTypeComputer extends AbstractResultTypeComputer {
     protected IAType getResultType(ILogicalExpression expr, IAType... strippedInputTypes) throws AlgebricksException {
         IAType argType = strippedInputTypes[0];
         IAType outputType = resultType;
-        if (!argType.getTypeTag().isListType() || isUnknownable(((AbstractCollectionType) argType).getItemType())) {
+        if (!argType.getTypeTag().isListType()
+                || ((AbstractCollectionType) argType).getItemType().getTypeTag() != outputType.getTypeTag()) {
             outputType = AUnionType.createUnknownableType(outputType);
         }
         return outputType;
-    }
-
-    private boolean isUnknownable(IAType type) {
-        switch (type.getTypeTag()) {
-            case ANY:
-            case MISSING:
-            case NULL:
-                return true;
-            case UNION:
-                return ((AUnionType) type).isUnknownableType();
-            default:
-                return false;
-        }
     }
 }

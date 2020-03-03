@@ -19,11 +19,20 @@
 
 package org.apache.hyracks.api.exceptions;
 
-@FunctionalInterface
 public interface IWarningCollector {
     /**
      * Adds a warning
      * @param warning
      */
     void warn(Warning warning);
+
+    /**
+     * @return {@code true} to indicate that the user can issue a warning through {@link #warn(Warning)} method.
+     */
+    boolean shouldWarn();
+
+    /**
+     * @return Total warnings count (reported and unreported ones).
+     */
+    long getTotalWarningsCount();
 }

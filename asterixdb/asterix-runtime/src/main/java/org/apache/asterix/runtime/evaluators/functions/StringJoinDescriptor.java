@@ -18,44 +18,38 @@
  */
 package org.apache.asterix.runtime.evaluators.functions;
 
-import java.io.DataOutput;
-import java.io.IOException;
-
 import org.apache.asterix.common.annotations.MissingNullInOutFunction;
-import org.apache.asterix.formats.nontagged.SerializerDeserializerProvider;
-import org.apache.asterix.om.base.AMissing;
-import org.apache.asterix.om.base.ANull;
 import org.apache.asterix.om.functions.BuiltinFunctions;
-import org.apache.asterix.om.functions.IFunctionDescriptor;
 import org.apache.asterix.om.functions.IFunctionDescriptorFactory;
 import org.apache.asterix.om.types.ATypeTag;
-import org.apache.asterix.om.types.BuiltinType;
 import org.apache.asterix.runtime.evaluators.base.AbstractScalarFunctionDynamicDescriptor;
-import org.apache.asterix.runtime.evaluators.common.ListAccessor;
-import org.apache.asterix.runtime.exceptions.TypeMismatchException;
-import org.apache.asterix.runtime.exceptions.UnsupportedItemTypeException;
 import org.apache.hyracks.algebricks.core.algebra.functions.FunctionIdentifier;
 import org.apache.hyracks.algebricks.runtime.base.IEvaluatorContext;
 import org.apache.hyracks.algebricks.runtime.base.IScalarEvaluator;
 import org.apache.hyracks.algebricks.runtime.base.IScalarEvaluatorFactory;
-import org.apache.hyracks.api.dataflow.value.ISerializerDeserializer;
 import org.apache.hyracks.api.exceptions.HyracksDataException;
-import org.apache.hyracks.data.std.api.IPointable;
-import org.apache.hyracks.data.std.primitive.VoidPointable;
-import org.apache.hyracks.data.std.util.ArrayBackedValueStorage;
-import org.apache.hyracks.dataflow.common.data.accessors.IFrameTupleReference;
-import org.apache.hyracks.util.string.UTF8StringUtil;
 
+/**
+ * This function takes 2 arguments, first argument is a list of strings, and second argument is a string separator,
+ * the function concatenates the strings in the first list argument together and returns that as a result.
+ *
+ * If only a single string is passed in the list, the separator is not added to the result.
+ *
+ * The behavior is as follows:
+ * - If the first argument is a list of strings, and the second argument is a string, concatenated string is returned.
+ * - If any argument is missing, missing is returned.
+ * - If any argument is null, null is returned.
+ * - If any item is not a string, or the array is containing non-strings, null is returned.
+ *
+ * Examples:
+ * string_join(["1", "2"], "-") -> "1-2"
+ * string_join(["1"], "-") -> "1"
+ */
 @MissingNullInOutFunction
 public class StringJoinDescriptor extends AbstractScalarFunctionDynamicDescriptor {
 
     private static final long serialVersionUID = 1L;
-    public static final IFunctionDescriptorFactory FACTORY = new IFunctionDescriptorFactory() {
-        @Override
-        public IFunctionDescriptor createFunctionDescriptor() {
-            return new StringJoinDescriptor();
-        }
-    };
+    public static final IFunctionDescriptorFactory FACTORY = StringJoinDescriptor::new;
 
     @Override
     public IScalarEvaluatorFactory createEvaluatorFactory(final IScalarEvaluatorFactory[] args) {
@@ -64,104 +58,19 @@ public class StringJoinDescriptor extends AbstractScalarFunctionDynamicDescripto
 
             @Override
             public IScalarEvaluator createScalarEvaluator(final IEvaluatorContext ctx) throws HyracksDataException {
-                return new IScalarEvaluator() {
-                    private final ArrayBackedValueStorage resultStorage = new ArrayBackedValueStorage();
-                    private final ListAccessor listAccessor = new ListAccessor();
-                    private final DataOutput out = resultStorage.getDataOutput();
-                    private final IScalarEvaluatorFactory listEvalFactory = args[0];
-                    private final IScalarEvaluatorFactory sepEvalFactory = args[1];
-                    private final IPointable inputArgList = new VoidPointable();
-                    private final IPointable inputArgSep = new VoidPointable();
-                    private final IScalarEvaluator evalList = listEvalFactory.createScalarEvaluator(ctx);
-                    private final IScalarEvaluator evalSep = sepEvalFactory.createScalarEvaluator(ctx);
-                    @SuppressWarnings("unchecked")
-                    private ISerializerDeserializer<ANull> nullSerde =
-                            SerializerDeserializerProvider.INSTANCE.getSerializerDeserializer(BuiltinType.ANULL);
-                    @SuppressWarnings("unchecked")
-                    private ISerializerDeserializer<AMissing> missingSerde =
-                            SerializerDeserializerProvider.INSTANCE.getSerializerDeserializer(BuiltinType.AMISSING);
-                    private final byte[] tempLengthArray = new byte[5];
+                return new AbstractConcatStringEval(args, ctx, sourceLoc, getIdentifier(), 1) {
+
+                    // TODO Need a way to report array of strings is the expected type
+                    private final byte[] ARRAY_TYPE = new byte[] { ATypeTag.SERIALIZED_ORDEREDLIST_TYPE_TAG };
 
                     @Override
-                    public void evaluate(IFrameTupleReference tuple, IPointable result) throws HyracksDataException {
-                        resultStorage.reset();
-                        evalList.evaluate(tuple, inputArgList);
-                        evalSep.evaluate(tuple, inputArgSep);
+                    protected boolean isAcceptedType(ATypeTag typeTag) {
+                        return typeTag.isListType();
+                    }
 
-                        if (PointableHelper.checkAndSetMissingOrNull(result, inputArgList, inputArgSep)) {
-                            return;
-                        }
-
-                        byte[] listBytes = inputArgList.getByteArray();
-                        int listOffset = inputArgList.getStartOffset();
-                        if (listBytes[listOffset] != ATypeTag.SERIALIZED_ORDEREDLIST_TYPE_TAG
-                                && listBytes[listOffset] != ATypeTag.SERIALIZED_UNORDEREDLIST_TYPE_TAG) {
-                            throw new TypeMismatchException(sourceLoc, getIdentifier(), 0, listBytes[listOffset],
-                                    ATypeTag.SERIALIZED_ORDEREDLIST_TYPE_TAG,
-                                    ATypeTag.SERIALIZED_UNORDEREDLIST_TYPE_TAG);
-                        }
-                        byte[] sepBytes = inputArgSep.getByteArray();
-                        int sepOffset = inputArgSep.getStartOffset();
-                        if (sepBytes[sepOffset] != ATypeTag.SERIALIZED_STRING_TYPE_TAG) {
-                            throw new TypeMismatchException(sourceLoc, getIdentifier(), 1, sepBytes[sepOffset],
-                                    ATypeTag.SERIALIZED_STRING_TYPE_TAG);
-                        }
-                        int sepLen = UTF8StringUtil.getUTFLength(sepBytes, sepOffset + 1);
-                        int sepMetaLen = UTF8StringUtil.getNumBytesToStoreLength(sepLen);
-
-                        listAccessor.reset(listBytes, listOffset);
-                        try {
-                            // calculate length first
-                            int utf8Len = 0;
-                            int size = listAccessor.size();
-                            for (int i = 0; i < size; i++) {
-                                int itemOffset = listAccessor.getItemOffset(i);
-                                ATypeTag itemType = listAccessor.getItemType(itemOffset);
-                                // Increase the offset by 1 if the give list has heterogeneous elements,
-                                // since the item itself has a typetag.
-                                if (listAccessor.itemsAreSelfDescribing()) {
-                                    itemOffset += 1;
-                                }
-                                if (itemType != ATypeTag.STRING) {
-                                    if (itemType == ATypeTag.NULL) {
-                                        nullSerde.serialize(ANull.NULL, out);
-                                        result.set(resultStorage);
-                                        return;
-                                    }
-                                    if (itemType == ATypeTag.MISSING) {
-                                        missingSerde.serialize(AMissing.MISSING, out);
-                                        result.set(resultStorage);
-                                        return;
-                                    }
-                                    throw new UnsupportedItemTypeException(sourceLoc, getIdentifier(),
-                                            itemType.serialize());
-                                }
-                                int currentSize = UTF8StringUtil.getUTFLength(listBytes, itemOffset);
-                                if (i != size - 1 && currentSize != 0) {
-                                    utf8Len += sepLen;
-                                }
-                                utf8Len += currentSize;
-                            }
-
-                            out.writeByte(ATypeTag.SERIALIZED_STRING_TYPE_TAG);
-                            int cbytes = UTF8StringUtil.encodeUTF8Length(utf8Len, tempLengthArray, 0);
-                            out.write(tempLengthArray, 0, cbytes);
-                            for (int i = 0; i < listAccessor.size(); i++) {
-                                int itemOffset = listAccessor.getItemOffset(i);
-                                if (listAccessor.itemsAreSelfDescribing()) {
-                                    itemOffset += 1;
-                                }
-                                utf8Len = UTF8StringUtil.getUTFLength(listBytes, itemOffset);
-                                out.write(listBytes, UTF8StringUtil.getNumBytesToStoreLength(utf8Len) + itemOffset,
-                                        utf8Len);
-                                for (int j = 0; j < sepLen; j++) {
-                                    out.writeByte(sepBytes[sepOffset + 1 + sepMetaLen + j]);
-                                }
-                            }
-                        } catch (IOException ex) {
-                            throw HyracksDataException.create(ex);
-                        }
-                        result.set(resultStorage);
+                    @Override
+                    protected byte[] getExpectedType() {
+                        return ARRAY_TYPE;
                     }
                 };
             }

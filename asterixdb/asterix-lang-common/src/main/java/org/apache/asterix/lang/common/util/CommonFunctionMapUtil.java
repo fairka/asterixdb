@@ -37,7 +37,6 @@ public class CommonFunctionMapUtil {
         addFunctionMapping("substr", "substring"); // substr,  internal: substring
         addFunctionMapping("upper", "uppercase"); // upper, internal: uppercase
         addFunctionMapping("title", "initcap"); // title, internal: initcap
-        addFunctionMapping("regexp_contains", "matches"); // regexp_contains, internal: matches
         addFunctionMapping("int", "integer"); // int, internal: integer
 
         // The "mapped-to" names are to be deprecated.
@@ -46,7 +45,36 @@ public class CommonFunctionMapUtil {
         addFunctionMapping("integer", "int32"); // integer, internal: int32
         addFunctionMapping("bigint", "int64"); // bigint, internal: int64
 
+        // String functions
+        addFunctionMapping("pos", "position");
+        addFunctionMapping("pos0", "position");
+        addFunctionMapping("position0", "position");
+        addFunctionMapping("pos1", "position1");
+        addFunctionMapping("substr", "substring");
+        addFunctionMapping("substr0", "substring");
+        addFunctionMapping("substring0", "substring");
+        addFunctionMapping("substr1", "substring1");
+        addFunctionMapping("regex_contains", "matches");
+        addFunctionMapping("contains_regex", "matches");
+        addFunctionMapping("regexp_contains", "matches");
+        addFunctionMapping("contains_regexp", "matches");
+        addFunctionMapping("regex_like", "regexp-like");
+        addFunctionMapping("regex_pos", "regexp-position");
+        addFunctionMapping("regex_position", "regexp-position");
+        addFunctionMapping("regex_pos0", "regexp-position");
+        addFunctionMapping("regex_position0", "regexp-position");
+        addFunctionMapping("regexp_pos", "regexp-position");
+        addFunctionMapping("regexp_pos0", "regexp-position");
+        addFunctionMapping("regexp_position0", "regexp-position");
+        addFunctionMapping("regex_pos1", "regexp-position1");
+        addFunctionMapping("regex_position1", "regexp-position1");
+        addFunctionMapping("regexp_pos1", "regexp-position1");
+        addFunctionMapping("regex_replace", "regexp-replace");
+        addFunctionMapping("regex_matches", "regexp-matches");
+        addFunctionMapping("regex_split", "regexp-split");
+
         // Type functions.
+        addFunctionMapping("gettype", "get-type"); // istype, internal: is-type
         addFunctionMapping("isnull", "is-null"); // isnull, internal: is-null
         addFunctionMapping("ismissing", "is-missing"); // ismissing, internal: is-missing
         addFunctionMapping("isunknown", "is-unknown"); // isunknown, internal: is-unknown
@@ -56,6 +84,24 @@ public class CommonFunctionMapUtil {
         addFunctionMapping("isboolean", "is-boolean"); // isboolean, internal: is-boolean
         addFunctionMapping("isbool", "is-boolean"); // isbool, internal: is-boolean
         addFunctionMapping("is_bool", "is-boolean"); // is_bool, internal: is-boolean
+        addFunctionMapping("isbinary", "is-binary"); // isbinary, internal: is-binary
+        addFunctionMapping("isbin", "is-binary"); // isbin, internal: is-binary
+        addFunctionMapping("is_bin", "is-binary"); // is_bin, internal: is-binary
+        addFunctionMapping("ispoint", "is-point"); // ispoint, internal: is-point
+        addFunctionMapping("isline", "is-line"); // isline, internal: is-line
+        addFunctionMapping("isrectangle", "is-rectangle"); // isrectangle, internal: is-rectangle
+        addFunctionMapping("iscircle", "is-circle"); // iscircle, internal: is-circle
+        addFunctionMapping("ispolygon", "is-polygon"); // ispolygon, internal: is-polygon
+        addFunctionMapping("isspatial", "is-spatial"); // isspatial, internal: is-spatial
+        addFunctionMapping("isdate", "is-date"); // isdate, internal: is-date
+        addFunctionMapping("isdatetime", "is-datetime"); // isdatetime, internal: is-datetime
+        addFunctionMapping("istimestamp", "is-datetime"); // istimestamp, internal: is-datetime
+        addFunctionMapping("is_timestamp", "is-datetime"); // is_timestamp, internal: is-datetime
+        addFunctionMapping("istime", "is-time"); // istime, internal: is-time
+        addFunctionMapping("isduration", "is-duration"); // isduration, internal: is-duration
+        addFunctionMapping("isinterval", "is-interval"); // isinterval, internal: is-interval
+        addFunctionMapping("istemporal", "is-temporal"); // istemporal, internal: is-temporal
+        addFunctionMapping("isuuid", "is-uuid"); // isuuid, internal: is-uuid
         addFunctionMapping("isnumber", "is-number"); // isnumber, internal: is-number
         addFunctionMapping("isnum", "is-number"); // isnum, internal: is-number
         addFunctionMapping("is_num", "is-number"); // is_num, internal: is-number
@@ -63,6 +109,7 @@ public class CommonFunctionMapUtil {
         addFunctionMapping("isstr", "is-string"); // isstr, internal: is-string
         addFunctionMapping("is_str", "is-string"); // is_str, internal: is-string
         addFunctionMapping("isarray", "is-array"); // isarray, internal: is-array
+        addFunctionMapping("ismultiset", "is-multiset"); // ismultiset, internal: is-multiset
         addFunctionMapping("isobject", "is-object"); // isobject, internal: is-object
         addFunctionMapping("isobj", "is-object"); // isobj, internal: is-object
         addFunctionMapping("is_obj", "is-object"); // is_obj, internal: is-object
@@ -140,10 +187,10 @@ public class CommonFunctionMapUtil {
         String lowerCaseName = name.toLowerCase();
         String mappedName = getFunctionMapping(lowerCaseName);
         if (mappedName != null) {
-            return new FunctionSignature(fs.getNamespace(), mappedName, fs.getArity());
+            return new FunctionSignature(fs.getDataverseName(), mappedName, fs.getArity());
         }
         String understoreName = lowerCaseName.replace('_', '-');
-        FunctionSignature newFs = new FunctionSignature(fs.getNamespace(), understoreName, fs.getArity());
+        FunctionSignature newFs = new FunctionSignature(fs.getDataverseName(), understoreName, fs.getArity());
         return BuiltinFunctions.isBuiltinCompilerFunction(newFs, true) ? newFs : fs;
     }
 

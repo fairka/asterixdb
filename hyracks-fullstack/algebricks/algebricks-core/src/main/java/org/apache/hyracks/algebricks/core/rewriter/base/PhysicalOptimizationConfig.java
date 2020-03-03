@@ -178,10 +178,7 @@ public class PhysicalOptimizationConfig {
 
     private int getInt(String property, int defaultValue) {
         String value = properties.getProperty(property);
-        if (value == null)
-            return defaultValue;
-        else
-            return Integer.parseInt(value);
+        return value == null ? defaultValue : Integer.parseInt(value);
     }
 
     private void setDouble(String property, double value) {
@@ -190,10 +187,7 @@ public class PhysicalOptimizationConfig {
 
     private double getDouble(String property, double defaultValue) {
         String value = properties.getProperty(property);
-        if (value == null)
-            return defaultValue;
-        else
-            return Double.parseDouble(value);
+        return value == null ? defaultValue : Double.parseDouble(value);
     }
 
     private void setBoolean(String property, boolean value) {
@@ -202,10 +196,6 @@ public class PhysicalOptimizationConfig {
 
     private boolean getBoolean(String property, boolean defaultValue) {
         String value = properties.getProperty(property);
-        if (value == null) {
-            return defaultValue;
-        } else {
-            return Boolean.parseBoolean(value);
-        }
+        return value == null ? defaultValue : Boolean.parseBoolean(value);
     }
 }

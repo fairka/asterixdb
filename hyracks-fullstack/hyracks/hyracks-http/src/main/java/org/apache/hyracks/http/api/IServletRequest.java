@@ -19,10 +19,12 @@
 package org.apache.hyracks.http.api;
 
 import java.net.InetSocketAddress;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
 import io.netty.handler.codec.http.FullHttpRequest;
+import io.netty.handler.codec.http.HttpScheme;
 
 /**
  * An Http Request instance
@@ -40,6 +42,14 @@ public interface IServletRequest {
      * @return the parameter or null if not found
      */
     String getParameter(CharSequence name);
+
+    /**
+     * Get all values of a request parameter
+     *
+     * @param name
+     * @return the parameter values or null if not found
+     */
+    List<String> getParameterValues(CharSequence name);
 
     /**
      * Get the names of all request parameters
@@ -81,4 +91,9 @@ public interface IServletRequest {
      * @return the remote address
      */
     InetSocketAddress getRemoteAddress();
+
+    /**
+     * Indicates which scheme the client used making this request
+     */
+    HttpScheme getScheme();
 }

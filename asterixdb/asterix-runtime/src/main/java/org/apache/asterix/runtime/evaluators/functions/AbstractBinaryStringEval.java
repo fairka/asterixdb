@@ -22,8 +22,8 @@ package org.apache.asterix.runtime.evaluators.functions;
 import java.io.DataOutput;
 import java.io.IOException;
 
+import org.apache.asterix.om.exceptions.ExceptionUtil;
 import org.apache.asterix.om.types.ATypeTag;
-import org.apache.asterix.runtime.exceptions.TypeMismatchException;
 import org.apache.hyracks.algebricks.core.algebra.functions.FunctionIdentifier;
 import org.apache.hyracks.algebricks.runtime.base.IEvaluatorContext;
 import org.apache.hyracks.algebricks.runtime.base.IScalarEvaluator;
@@ -38,23 +38,24 @@ import org.apache.hyracks.dataflow.common.data.accessors.IFrameTupleReference;
 
 public abstract class AbstractBinaryStringEval implements IScalarEvaluator {
 
+    private final IEvaluatorContext ctx;
     // Argument evaluators.
-    private IScalarEvaluator evalLeft;
-    private IScalarEvaluator evalRight;
+    private final IScalarEvaluator evalLeft;
+    private final IScalarEvaluator evalRight;
 
     // Argument pointables.
-    private IPointable argPtrLeft = new VoidPointable();
-    private IPointable argPtrSecond = new VoidPointable();
-    private final UTF8StringPointable leftPtr = new UTF8StringPointable();
-    private final UTF8StringPointable rightPtr = new UTF8StringPointable();
+    private final IPointable argPtrLeft = new VoidPointable();
+    private final IPointable argPtrSecond = new VoidPointable();
+    private final UTF8StringPointable leftStringPointable = new UTF8StringPointable();
+    private final UTF8StringPointable rightStringPointable = new UTF8StringPointable();
 
     // For results.
-    protected ArrayBackedValueStorage resultStorage = new ArrayBackedValueStorage();
-    protected DataOutput dataOutput = resultStorage.getDataOutput();
+    protected final ArrayBackedValueStorage resultStorage = new ArrayBackedValueStorage();
+    protected final DataOutput dataOutput = resultStorage.getDataOutput();
 
     // Function ID, for error reporting.
     private final FunctionIdentifier funcID;
-    private final SourceLocation sourceLoc;
+    protected final SourceLocation sourceLoc;
 
     public AbstractBinaryStringEval(IEvaluatorContext context, IScalarEvaluatorFactory evalLeftFactory,
             IScalarEvaluatorFactory evalRightFactory, FunctionIdentifier funcID, SourceLocation sourceLoc)
@@ -63,6 +64,7 @@ public abstract class AbstractBinaryStringEval implements IScalarEvaluator {
         this.evalLeft = evalLeftFactory.createScalarEvaluator(context);
         this.evalRight = evalRightFactory.createScalarEvaluator(context);
         this.funcID = funcID;
+        this.ctx = context;
     }
 
     @SuppressWarnings("unchecked")
@@ -87,19 +89,23 @@ public abstract class AbstractBinaryStringEval implements IScalarEvaluator {
 
         // Type check.
         if (bytes0[offset0] != ATypeTag.SERIALIZED_STRING_TYPE_TAG) {
-            throw new TypeMismatchException(sourceLoc, funcID, 0, bytes0[offset0], ATypeTag.SERIALIZED_STRING_TYPE_TAG);
+            PointableHelper.setNull(resultPointable);
+            ExceptionUtil.warnTypeMismatch(ctx, sourceLoc, funcID, bytes0[offset0], 0, ATypeTag.STRING);
+            return;
         }
         if (bytes1[offset1] != ATypeTag.SERIALIZED_STRING_TYPE_TAG) {
-            throw new TypeMismatchException(sourceLoc, funcID, 1, bytes1[offset1], ATypeTag.SERIALIZED_STRING_TYPE_TAG);
+            PointableHelper.setNull(resultPointable);
+            ExceptionUtil.warnTypeMismatch(ctx, sourceLoc, funcID, bytes1[offset1], 1, ATypeTag.STRING);
+            return;
         }
 
         // Sets StringUTF8Pointables.
-        leftPtr.set(bytes0, offset0 + 1, len0 - 1);
-        rightPtr.set(bytes1, offset1 + 1, len1 - 1);
+        leftStringPointable.set(bytes0, offset0 + 1, len0 - 1);
+        rightStringPointable.set(bytes1, offset1 + 1, len1 - 1);
 
         // The actual processing.
         try {
-            process(leftPtr, rightPtr, resultPointable);
+            process(leftStringPointable, rightStringPointable, resultPointable);
         } catch (IOException e) {
             throw HyracksDataException.create(e);
         }

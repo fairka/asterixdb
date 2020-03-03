@@ -17,6 +17,8 @@
  * under the License.
  */
 
+/* Test that a metadata-only query gets assigned a minimal memory budget */
+
 -- param job:string=true
 
 SET `compiler.parallelism` "1";

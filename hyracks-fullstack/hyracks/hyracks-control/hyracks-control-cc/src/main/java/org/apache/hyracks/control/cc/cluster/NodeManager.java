@@ -147,9 +147,11 @@ public class NodeManager implements INodeManager {
     @Override
     public Map<String, NodeControllerInfo> getNodeControllerInfoMap() {
         Map<String, NodeControllerInfo> result = new LinkedHashMap<>();
-        nodeRegistry.forEach(
-                (key, ncState) -> result.put(key, new NodeControllerInfo(key, NodeStatus.ACTIVE, ncState.getDataPort(),
-                        ncState.getResultPort(), ncState.getMessagingPort(), ncState.getCapacity().getCores())));
+        nodeRegistry
+                .forEach((key, ncState) -> result.put(key,
+                        new NodeControllerInfo(key, NodeStatus.ACTIVE, ncState.getDataAddress(),
+                                ncState.getResultAddress(), ncState.getMessagingAddress(),
+                                ncState.getCapacity().getCores())));
         return result;
     }
 
@@ -206,8 +208,19 @@ public class NodeManager implements INodeManager {
         nodeRegistry.forEach(nodeFunction::apply);
     }
 
-    private void removeNodeFromIpAddressMap(String nodeId, NodeControllerState ncState) throws HyracksException {
-        InetAddress ipAddress = getIpAddress(ncState);
+    private void removeNodeFromIpAddressMap(String nodeId, NodeControllerState ncState) {
+        InetAddress ipAddress;
+        try {
+            ipAddress = getIpAddress(ncState);
+        } catch (Exception e) {
+            LOGGER.warn("failed to get ip address of node {}; attempting to find it on existing nodes lists", nodeId,
+                    e);
+            ipAddress = findNodeIpById(nodeId);
+        }
+        if (ipAddress == null) {
+            LOGGER.warn("failed to get ip address of node {}", nodeId);
+            return;
+        }
         Set<String> nodes = ipAddressNodeNameMap.get(ipAddress);
         if (nodes != null) {
             nodes.remove(nodeId);
@@ -242,5 +255,14 @@ public class NodeManager implements INodeManager {
                 LOGGER.debug(() -> "Ignoring failure on ensuring node " + nodeId + " has failed", ex);
             }
         });
+    }
+
+    private InetAddress findNodeIpById(String nodeId) {
+        for (Map.Entry<InetAddress, Set<String>> ipToNodesEntry : ipAddressNodeNameMap.entrySet()) {
+            if (ipToNodesEntry.getValue().contains(nodeId)) {
+                return ipToNodesEntry.getKey();
+            }
+        }
+        return null;
     }
 }

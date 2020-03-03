@@ -20,9 +20,7 @@ package org.apache.asterix.metadata.api;
 
 import org.apache.asterix.metadata.entitytupletranslators.MetadataTupleTranslatorProvider;
 
-@FunctionalInterface
 public interface INCExtensionManager {
-
     /**
      * @return the metadata tuple translator provider
      */

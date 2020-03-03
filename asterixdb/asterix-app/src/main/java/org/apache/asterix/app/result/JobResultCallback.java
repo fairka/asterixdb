@@ -20,11 +20,13 @@ package org.apache.asterix.app.result;
 
 import java.util.Collection;
 import java.util.HashSet;
+import java.util.Iterator;
 import java.util.Set;
 
 import org.apache.asterix.api.common.ResultMetadata;
 import org.apache.asterix.common.dataflow.ICcApplicationContext;
 import org.apache.hyracks.api.exceptions.Warning;
+import org.apache.hyracks.api.job.JobFlag;
 import org.apache.hyracks.api.job.JobId;
 import org.apache.hyracks.api.result.IJobResultCallback;
 import org.apache.hyracks.api.result.ResultJobRecord;
@@ -68,22 +70,37 @@ public class JobResultCallback implements IJobResultCallback {
 
     private void aggregateJobStats(JobId jobId, ResultMetadata metadata) {
         long processedObjects = 0;
-        Set<Warning> warnings = new HashSet<>();
+        long aggregateTotalWarningsCount = 0;
+        Set<Warning> AggregateWarnings = new HashSet<>();
         IJobManager jobManager =
                 ((ClusterControllerService) appCtx.getServiceContext().getControllerService()).getJobManager();
         final JobRun run = jobManager.get(jobId);
         if (run != null) {
             final JobProfile jobProfile = run.getJobProfile();
             final Collection<JobletProfile> jobletProfiles = jobProfile.getJobletProfiles().values();
+            final long maxWarnings = run.getJobSpecification().getMaxWarnings();
             for (JobletProfile jp : jobletProfiles) {
                 final Collection<TaskProfile> jobletTasksProfile = jp.getTaskProfiles().values();
                 for (TaskProfile tp : jobletTasksProfile) {
                     processedObjects += tp.getStatsCollector().getAggregatedStats().getTupleCounter().get();
-                    warnings.addAll(tp.getWarnings());
+                    aggregateTotalWarningsCount += tp.getTotalWarningsCount();
+                    Set<Warning> taskWarnings = tp.getWarnings();
+                    if (AggregateWarnings.size() < maxWarnings && !taskWarnings.isEmpty()) {
+                        Iterator<Warning> taskWarningsIt = taskWarnings.iterator();
+                        while (AggregateWarnings.size() < maxWarnings && taskWarningsIt.hasNext()) {
+                            AggregateWarnings.add(taskWarningsIt.next());
+                        }
+                    }
                 }
             }
         }
         metadata.setProcessedObjects(processedObjects);
-        metadata.setWarnings(warnings);
+        metadata.setWarnings(AggregateWarnings);
+        metadata.setTotalWarningsCount(aggregateTotalWarningsCount);
+        if (run != null && run.getFlags() != null && run.getFlags().contains(JobFlag.PROFILE_RUNTIME)) {
+            metadata.setJobProfile(run.getJobProfile().toJSON());
+        } else {
+            metadata.setJobProfile(null);
+        }
     }
 }

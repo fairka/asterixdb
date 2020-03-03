@@ -18,6 +18,8 @@
  */
 package org.apache.asterix.test.sqlpp;
 
+import static org.apache.hyracks.util.file.FileUtil.canonicalize;
+import static org.mockito.Matchers.any;
 import static org.mockito.Matchers.anyString;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
@@ -32,6 +34,7 @@ import java.util.Map;
 
 import org.apache.asterix.common.config.GlobalConfig;
 import org.apache.asterix.common.exceptions.AsterixException;
+import org.apache.asterix.common.metadata.DataverseName;
 import org.apache.asterix.lang.common.base.IParser;
 import org.apache.asterix.lang.common.base.IParserFactory;
 import org.apache.asterix.lang.common.base.IQueryRewriter;
@@ -46,6 +49,7 @@ import org.apache.asterix.lang.sqlpp.parser.SqlppParserFactory;
 import org.apache.asterix.lang.sqlpp.rewrites.SqlppRewriterFactory;
 import org.apache.asterix.lang.sqlpp.util.SqlppAstPrintUtil;
 import org.apache.asterix.lang.sqlpp.util.SqlppRewriteUtil;
+import org.apache.asterix.metadata.bootstrap.MetadataBuiltinEntities;
 import org.apache.asterix.metadata.declared.MetadataProvider;
 import org.apache.asterix.metadata.entities.Dataset;
 import org.apache.asterix.test.common.ComparisonException;
@@ -55,6 +59,7 @@ import org.apache.asterix.testframework.context.TestFileContext;
 import org.apache.asterix.testframework.xml.ComparisonEnum;
 import org.apache.asterix.testframework.xml.TestCase.CompilationUnit;
 import org.apache.asterix.testframework.xml.TestGroup;
+import org.apache.hyracks.test.support.TestUtils;
 import org.junit.Assert;
 import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
@@ -64,7 +69,7 @@ import junit.extensions.PA;
 public class ParserTestExecutor extends TestExecutor {
 
     private IParserFactory sqlppParserFactory = new SqlppParserFactory();
-    private IRewriterFactory sqlppRewriterFactory = new SqlppRewriterFactory();
+    private IRewriterFactory sqlppRewriterFactory = new SqlppRewriterFactory(sqlppParserFactory);
 
     @Override
     public void executeTest(String actualPath, TestCaseContext testCaseCtx, ProcessBuilder pb,
@@ -81,7 +86,7 @@ public class ParserTestExecutor extends TestExecutor {
                 try {
                     if (queryCount >= expectedResultFileCtxs.size()
                             && !cUnit.getOutputDir().getValue().equals("none")) {
-                        throw new ComparisonException("no result file for " + testFile.toString() + "; queryCount: "
+                        throw new ComparisonException("no result file for " + canonicalize(testFile) + "; queryCount: "
                                 + queryCount + ", filectxs.size: " + expectedResultFileCtxs.size());
                     }
 
@@ -95,21 +100,21 @@ public class ParserTestExecutor extends TestExecutor {
                             "[TEST]: " + testCaseCtx.getTestCase().getFilePath() + "/" + cUnit.getName() + " PASSED ");
                     queryCount++;
                 } catch (Exception e) {
-                    System.err.println("testFile " + testFile.toString() + " raised an exception: " + e);
+                    System.err.println("testFile " + canonicalize(testFile) + " raised an exception: " + e);
                     if (cUnit.getExpectedError().isEmpty()) {
                         e.printStackTrace();
                         System.err.println("...Unexpected!");
                         if (failedGroup != null) {
                             failedGroup.getTestCase().add(testCaseCtx.getTestCase());
                         }
-                        throw new Exception("Test \"" + testFile + "\" FAILED!", e);
+                        throw new Exception("Test \"" + canonicalize(testFile) + "\" FAILED!", e);
                     } else {
                         // must compare with the expected failure message
                         if (e instanceof ComparisonException) {
                             throw e;
                         }
-                        LOGGER.info("[TEST]: " + testCaseCtx.getTestCase().getFilePath() + "/" + cUnit.getName()
-                                + " failed as expected: " + e.getMessage());
+                        LOGGER.info("[TEST]: " + canonicalize(testCaseCtx.getTestCase().getFilePath()) + "/"
+                                + cUnit.getName() + " failed as expected: " + e.getMessage());
                         System.err.println("...but that was expected.");
                     }
                 }
@@ -126,7 +131,7 @@ public class ParserTestExecutor extends TestExecutor {
         try {
             List<Statement> statements = parser.parse();
             List<FunctionDecl> functions = getDeclaredFunctions(statements);
-            String dvName = getDefaultDataverse(statements);
+            DataverseName dvName = getDefaultDataverse(statements);
             MetadataProvider metadataProvider = mock(MetadataProvider.class);
 
             @SuppressWarnings("unchecked")
@@ -134,13 +139,13 @@ public class ParserTestExecutor extends TestExecutor {
             when(metadataProvider.getDefaultDataverseName()).thenReturn(dvName);
             when(metadataProvider.getConfig()).thenReturn(config);
             when(config.get(FunctionUtil.IMPORT_PRIVATE_FUNCTIONS)).thenReturn("true");
-            when(metadataProvider.findDataset(anyString(), anyString())).thenAnswer(new Answer<Dataset>() {
+            when(metadataProvider.findDataset(any(DataverseName.class), anyString())).thenAnswer(new Answer<Dataset>() {
                 @Override
                 public Dataset answer(InvocationOnMock invocation) {
                     Object[] args = invocation.getArguments();
                     final Dataset mockDataset = mock(Dataset.class);
-                    String fullyQualifiedName = args[0] != null ? args[0] + "." + args[1] : (String) args[1];
-                    when(mockDataset.getFullyQualifiedName()).thenReturn(fullyQualifiedName);
+                    when(mockDataset.getDataverseName()).thenReturn((DataverseName) args[0]);
+                    when(mockDataset.getDatasetName()).thenReturn((String) args[1]);
                     return mockDataset;
                 }
             });
@@ -150,8 +155,7 @@ public class ParserTestExecutor extends TestExecutor {
                     Query query = (Query) st;
                     IQueryRewriter rewriter = sqlppRewriterFactory.createQueryRewriter();
                     rewrite(rewriter, functions, query, metadataProvider,
-                            new LangRewritingContext(query.getVarCounter(), w -> {
-                            }));
+                            new LangRewritingContext(query.getVarCounter(), TestUtils.NOOP_WARNING_COLLECTOR));
 
                     // Tests deep copy and deep equality.
                     Query copiedQuery = (Query) SqlppRewriteUtil.deepCopy(query);
@@ -163,9 +167,9 @@ public class ParserTestExecutor extends TestExecutor {
             writer.close();
             // Compares the actual result and the expected result.
             runScriptAndCompareWithResult(queryFile, expectedFile, actualResultFile, ComparisonEnum.TEXT,
-                    StandardCharsets.UTF_8);
+                    StandardCharsets.UTF_8, null);
         } catch (Exception e) {
-            GlobalConfig.ASTERIX_LOGGER.warn("Failed while testing file " + queryFile);
+            GlobalConfig.ASTERIX_LOGGER.warn("Failed while testing file " + canonicalize(queryFile));
             throw e;
         } finally {
             writer.close();
@@ -184,14 +188,14 @@ public class ParserTestExecutor extends TestExecutor {
     }
 
     // Gets the default dataverse for the input statements.
-    private String getDefaultDataverse(List<Statement> statements) {
+    private DataverseName getDefaultDataverse(List<Statement> statements) {
         for (Statement st : statements) {
             if (st.getKind() == Statement.Kind.DATAVERSE_DECL) {
                 DataverseDecl dv = (DataverseDecl) st;
-                return dv.getDataverseName().getValue();
+                return dv.getDataverseName();
             }
         }
-        return null;
+        return MetadataBuiltinEntities.DEFAULT_DATAVERSE_NAME;
     }
 
     // Rewrite queries.

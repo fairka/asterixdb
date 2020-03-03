@@ -21,10 +21,10 @@ package org.apache.asterix.metadata.functions;
 import java.util.LinkedList;
 
 import org.apache.asterix.common.functions.FunctionSignature;
+import org.apache.asterix.common.metadata.DataverseName;
 import org.apache.asterix.common.transactions.TxnId;
 import org.apache.asterix.metadata.MetadataTransactionContext;
 import org.apache.asterix.metadata.entities.Function;
-import org.apache.asterix.om.types.AUnorderedListType;
 import org.apache.asterix.om.types.BuiltinType;
 import org.apache.asterix.om.types.IAType;
 import org.apache.hyracks.algebricks.common.exceptions.AlgebricksException;
@@ -36,15 +36,16 @@ public class ExternalFunctionCompilerUtilTest {
     public void test() throws AlgebricksException {
         // given
         MetadataTransactionContext txnCtx = new MetadataTransactionContext(new TxnId(1));
-        FunctionSignature signature = new FunctionSignature("test", "test", 0);
-        Function function = new Function(signature, new LinkedList<>(), "{{ASTRING}}", "", "JAVA", "SCALAR", null);
+        FunctionSignature signature = new FunctionSignature(DataverseName.createSinglePartName("test"), "test", 0);
+        Function function = new Function(signature, new LinkedList<>(), new LinkedList<>(), BuiltinType.ASTRING, "",
+                "SCALAR", Function.FunctionLanguage.JAVA, "", false, false, null, null);
 
         // when
         ExternalScalarFunctionInfo info =
                 (ExternalScalarFunctionInfo) ExternalFunctionCompilerUtil.getExternalFunctionInfo(txnCtx, function);
 
         // then
-        IAType expectedType = new AUnorderedListType(BuiltinType.ASTRING, "AUnorderedList");
+        IAType expectedType = BuiltinType.ASTRING;
         Assert.assertEquals(expectedType, info.getReturnType());
     }
 }

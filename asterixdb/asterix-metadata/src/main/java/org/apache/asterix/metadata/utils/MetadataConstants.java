@@ -19,13 +19,15 @@
 
 package org.apache.asterix.metadata.utils;
 
+import org.apache.asterix.common.metadata.DataverseName;
+
 /**
  * Contains metadata constants
  */
 public class MetadataConstants {
 
     // Name of the dataverse the metadata lives in.
-    public static final String METADATA_DATAVERSE_NAME = "Metadata";
+    public static final DataverseName METADATA_DATAVERSE_NAME = DataverseName.createBuiltinDataverseName("Metadata");
     // Name of the node group where metadata is stored on.
     public static final String METADATA_NODEGROUP_NAME = "MetadataGroup";
 
@@ -43,6 +45,7 @@ public class MetadataConstants {
     public static final String FEED_POLICY_DATASET_NAME = "FeedPolicy";
     public static final String COMPACTION_POLICY_DATASET_NAME = "CompactionPolicy";
     public static final String EXTERNAL_FILE_DATASET_NAME = "ExternalFile";
+    public static final String SYNONYM_DATASET_NAME = "Synonym";
 
     private MetadataConstants() {
     }

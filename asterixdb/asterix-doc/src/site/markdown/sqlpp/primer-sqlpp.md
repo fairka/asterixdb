@@ -45,7 +45,7 @@ You will use the AsterixDB web interface to do this, and for SQL++ you will need
 Once you have reached the end of this tutorial, you will be fully armed and dangerous, with all the basic AsterixDB knowledge
 that you'll need to start down the path of modeling, storing, and querying your own semistructured data.
 
-## ADM: Modeling Semistructed Data in AsterixDB ##
+## ADM: Modeling Semistructured Data in AsterixDB ##
 In this section you will learn all about modeling Big Data using
 ADM, the data model of the AsterixDB BDMS.
 
@@ -581,7 +581,7 @@ for each user, it constructs a result object containing a "uname" field with the
 name and a "messages" field with a nested collection of all messages for that user.
 The nested collection for each user is specified by using a correlated subquery.
 (Note: While it looks like nested loops could be involved in computing the result,
-AsterixDB recogizes the equivalence of such a query to an outerjoin, and it will
+AsterixDB recognizes the equivalence of such a query to an outerjoin, and it will
 use an efficient hash-based strategy when actually computing the query's result.)
 
 Here is this example query's expected output:

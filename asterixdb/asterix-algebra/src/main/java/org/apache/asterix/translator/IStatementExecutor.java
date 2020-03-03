@@ -18,16 +18,24 @@
  */
 package org.apache.asterix.translator;
 
+import java.io.IOException;
+import java.io.ObjectInputStream;
+import java.io.ObjectOutputStream;
 import java.io.Serializable;
 import java.rmi.RemoteException;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 
 import org.apache.asterix.common.api.IResponsePrinter;
 import org.apache.asterix.common.exceptions.ACIDException;
 import org.apache.asterix.common.exceptions.AsterixException;
+import org.apache.asterix.common.metadata.DataverseName;
 import org.apache.asterix.lang.common.base.IStatementRewriter;
 import org.apache.asterix.lang.common.statement.Query;
 import org.apache.asterix.metadata.declared.MetadataProvider;
@@ -43,6 +51,10 @@ import org.apache.hyracks.api.job.JobId;
 import org.apache.hyracks.api.job.JobSpecification;
 import org.apache.hyracks.api.result.ResultSetId;
 
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.ObjectNode;
+
 /**
  * An interface that takes care of executing a list of statements that are submitted through an Asterix API
  */
@@ -55,15 +67,32 @@ public interface IStatementExecutor {
         /**
          * Results are returned with the first response
          */
-        IMMEDIATE,
+        IMMEDIATE("immediate"),
         /**
          * Results are produced completely, but only a result handle is returned
          */
-        DEFERRED,
+        DEFERRED("deferred"),
         /**
          * A result handle is returned before the resutlts are complete
          */
-        ASYNC
+        ASYNC("async");
+
+        private static final Map<String, ResultDelivery> deliveryNames =
+                Collections.unmodifiableMap(Arrays.stream(ResultDelivery.values())
+                        .collect(Collectors.toMap(ResultDelivery::getName, Function.identity())));
+        private final String name;
+
+        ResultDelivery(String name) {
+            this.name = name;
+        }
+
+        public String getName() {
+            return name;
+        }
+
+        public static ResultDelivery fromName(String name) {
+            return deliveryNames.get(name);
+        }
     }
 
     class ResultMetadata implements Serializable {
@@ -78,11 +107,36 @@ public interface IStatementExecutor {
     }
 
     class Stats implements Serializable {
-        private static final long serialVersionUID = 5885273238208454610L;
+        private static final long serialVersionUID = 5885273238208454611L;
+
+        public enum ProfileType {
+            COUNTS("counts"),
+            FULL("timings"),
+            NONE("off");
+
+            private static final Map<String, ProfileType> profileNames = Collections.unmodifiableMap(Arrays
+                    .stream(ProfileType.values()).collect(Collectors.toMap(ProfileType::getName, Function.identity())));
+            private final String name;
+
+            ProfileType(String name) {
+                this.name = name;
+            }
+
+            public String getName() {
+                return name;
+            }
+
+            public static ProfileType fromName(String name) {
+                return profileNames.get(name);
+            }
+        }
 
         private long count;
         private long size;
         private long processedObjects;
+        private Profile profile;
+        private ProfileType profileType;
+        private long totalWarningsCount;
 
         public long getCount() {
             return count;
@@ -106,6 +160,60 @@ public interface IStatementExecutor {
 
         public void setProcessedObjects(long processedObjects) {
             this.processedObjects = processedObjects;
+        }
+
+        public long getTotalWarningsCount() {
+            return totalWarningsCount;
+        }
+
+        public void updateTotalWarningsCount(long delta) {
+            if (delta <= Long.MAX_VALUE - totalWarningsCount) {
+                totalWarningsCount += delta;
+            }
+        }
+
+        public void setJobProfile(ObjectNode profile) {
+            this.profile = new Profile(profile);
+        }
+
+        public ObjectNode getJobProfile() {
+            return profile != null ? profile.getProfile() : null;
+        }
+
+        public ProfileType getProfileType() {
+            return profileType;
+        }
+
+        public void setProfileType(ProfileType profileType) {
+            this.profileType = profileType;
+        }
+    }
+
+    class Profile implements Serializable {
+        private static final long serialVersionUID = 4813321148252768375L;
+
+        private transient ObjectNode profile;
+
+        public Profile(ObjectNode profile) {
+            this.profile = profile;
+        }
+
+        private void writeObject(ObjectOutputStream out) throws IOException {
+            ObjectMapper om = new ObjectMapper();
+            out.writeUTF(om.writeValueAsString(profile));
+        }
+
+        private void readObject(ObjectInputStream in) throws IOException, ClassNotFoundException {
+            ObjectMapper om = new ObjectMapper();
+            JsonNode inNode = om.readTree(in.readUTF());
+            if (!inNode.isObject()) {
+                throw new IOException("Deserialization error");
+            }
+            profile = (ObjectNode) inNode;
+        }
+
+        public ObjectNode getProfile() {
+            return profile;
         }
     }
 
@@ -145,12 +253,12 @@ public interface IStatementExecutor {
     /**
      * returns the active dataverse for an entity or a statement
      *
-     * @param dataverse:
+     * @param dataverseName:
      *            the entity or statement dataverse
      * @return
      *         returns the passed dataverse if not null, the active dataverse otherwise
      */
-    String getActiveDataverseName(String dataverse);
+    DataverseName getActiveDataverseName(DataverseName dataverseName);
 
     /**
      * Gets the execution plans that are generated during query compilation
@@ -167,7 +275,7 @@ public interface IStatementExecutor {
     IResponsePrinter getResponsePrinter();
 
     /**
-     * Gets the warnings generated during compiling and executing a request
+     * Gets the warnings generated during compiling and executing a request up to the max number argument.
      */
-    void getWarnings(Collection<? super Warning> outWarnings);
+    void getWarnings(Collection<? super Warning> outWarnings, long maxWarnings);
 }

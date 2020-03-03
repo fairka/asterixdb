@@ -19,6 +19,7 @@
 package org.apache.asterix.om.typecomputer.impl;
 
 import org.apache.asterix.om.typecomputer.base.AbstractResultTypeComputer;
+import org.apache.asterix.om.types.AUnionType;
 import org.apache.asterix.om.types.BuiltinType;
 import org.apache.asterix.om.types.IAType;
 import org.apache.hyracks.algebricks.common.exceptions.AlgebricksException;
@@ -26,14 +27,18 @@ import org.apache.hyracks.algebricks.core.algebra.base.ILogicalExpression;
 
 public class AStringTypeComputer extends AbstractResultTypeComputer {
 
-    public static final AStringTypeComputer INSTANCE = new AStringTypeComputer();
+    public static final AStringTypeComputer INSTANCE = new AStringTypeComputer(BuiltinType.ASTRING);
+    public static final AStringTypeComputer INSTANCE_NULLABLE =
+            new AStringTypeComputer(AUnionType.createNullableType(BuiltinType.ASTRING));
 
-    private AStringTypeComputer() {
+    private final IAType outputType;
+
+    private AStringTypeComputer(IAType outputType) {
+        this.outputType = outputType;
     }
 
     @Override
     protected IAType getResultType(ILogicalExpression expr, IAType... strippedInputTypes) throws AlgebricksException {
-        return BuiltinType.ASTRING;
+        return outputType;
     }
-
 }

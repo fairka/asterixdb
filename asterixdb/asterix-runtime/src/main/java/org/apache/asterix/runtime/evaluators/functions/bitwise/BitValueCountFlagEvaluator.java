@@ -19,18 +19,16 @@
 
 package org.apache.asterix.runtime.evaluators.functions.bitwise;
 
-import org.apache.asterix.common.exceptions.ErrorCode;
-import org.apache.asterix.common.exceptions.WarningUtil;
 import org.apache.asterix.dataflow.data.nontagged.serde.ABooleanSerializerDeserializer;
 import org.apache.asterix.formats.nontagged.SerializerDeserializerProvider;
 import org.apache.asterix.om.base.AMutableInt64;
+import org.apache.asterix.om.exceptions.ExceptionUtil;
 import org.apache.asterix.om.types.ATypeTag;
 import org.apache.asterix.om.types.BuiltinType;
 import org.apache.asterix.om.types.EnumDeserializer;
 import org.apache.asterix.om.types.hierachy.ATypeHierarchy;
 import org.apache.asterix.runtime.evaluators.functions.AbstractScalarEval;
 import org.apache.asterix.runtime.evaluators.functions.PointableHelper;
-import org.apache.asterix.runtime.exceptions.ExceptionUtil;
 import org.apache.hyracks.algebricks.core.algebra.functions.FunctionIdentifier;
 import org.apache.hyracks.algebricks.runtime.base.IEvaluatorContext;
 import org.apache.hyracks.algebricks.runtime.base.IScalarEvaluator;
@@ -118,7 +116,7 @@ class BitValueCountFlagEvaluator extends AbstractScalarEval {
 
         // Type and value validity check
         if (!PointableHelper.isValidLongValue(valueBytes, valueStartOffset, true)) {
-            handleTypeMismatchInput(0, ATypeTag.BIGINT, valueBytes, valueStartOffset);
+            ExceptionUtil.warnTypeMismatch(context, srcLoc, funID, valueBytes[valueStartOffset], 0, ATypeTag.BIGINT);
             PointableHelper.setNull(result);
             return;
         }
@@ -129,7 +127,7 @@ class BitValueCountFlagEvaluator extends AbstractScalarEval {
 
         // Type and Value validity check
         if (!PointableHelper.isValidLongValue(countBytes, countStartOffset, true)) {
-            handleTypeMismatchInput(1, ATypeTag.BIGINT, countBytes, countStartOffset);
+            ExceptionUtil.warnTypeMismatch(context, srcLoc, funID, countBytes[countStartOffset], 1, ATypeTag.BIGINT);
             PointableHelper.setNull(result);
             return;
         }
@@ -142,7 +140,7 @@ class BitValueCountFlagEvaluator extends AbstractScalarEval {
             ATypeTag flagTypeTag = EnumDeserializer.ATYPETAGDESERIALIZER.deserialize(flagBytes[flagStartOffset]);
 
             if (flagTypeTag != ATypeTag.BOOLEAN) {
-                handleTypeMismatchInput(2, ATypeTag.BOOLEAN, flagBytes, flagStartOffset);
+                ExceptionUtil.warnTypeMismatch(context, srcLoc, funID, flagBytes[flagStartOffset], 2, ATypeTag.BOOLEAN);
                 PointableHelper.setNull(result);
                 return;
             }
@@ -151,8 +149,8 @@ class BitValueCountFlagEvaluator extends AbstractScalarEval {
         }
 
         // Result holder and count
-        long longValue = ATypeHierarchy.getLongValue(functionIdentifier.getName(), 0, valueBytes, valueStartOffset);
-        long count = ATypeHierarchy.getLongValue(functionIdentifier.getName(), 1, countBytes, countStartOffset);
+        long longValue = ATypeHierarchy.getLongValue(funID.getName(), 0, valueBytes, valueStartOffset);
+        long count = ATypeHierarchy.getLongValue(funID.getName(), 1, countBytes, countStartOffset);
 
         // Positive value is left shifting, negative value is right shifting, rotate if needed, do nothing on 0 count
         // Note, when rotating, for each 64 bits, the rotation is repeated, so rotating by 1 is same as rotating by 65,
@@ -177,11 +175,5 @@ class BitValueCountFlagEvaluator extends AbstractScalarEval {
         resultMutableInt64.setValue(longValue);
         aInt64Serde.serialize(resultMutableInt64, resultStorage.getDataOutput());
         result.set(resultStorage);
-    }
-
-    private void handleTypeMismatchInput(int inputPosition, ATypeTag expected, byte[] bytes, int startOffset) {
-        ATypeTag actual = EnumDeserializer.ATYPETAGDESERIALIZER.deserialize(bytes[startOffset]);
-        context.getWarningCollector().warn(WarningUtil.forAsterix(sourceLoc, ErrorCode.TYPE_MISMATCH_FUNCTION,
-                functionIdentifier, ExceptionUtil.indexToPosition(inputPosition), expected, actual));
     }
 }

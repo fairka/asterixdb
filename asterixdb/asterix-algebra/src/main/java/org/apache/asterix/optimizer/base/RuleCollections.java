@@ -74,6 +74,7 @@ import org.apache.asterix.optimizer.rules.PushLimitIntoOrderByRule;
 import org.apache.asterix.optimizer.rules.PushLimitIntoPrimarySearchRule;
 import org.apache.asterix.optimizer.rules.PushProperJoinThroughProduct;
 import org.apache.asterix.optimizer.rules.PushSimilarityFunctionsBelowJoin;
+import org.apache.asterix.optimizer.rules.RemoveDuplicateFieldsRule;
 import org.apache.asterix.optimizer.rules.RemoveLeftOuterUnnestForLeftOuterJoinRule;
 import org.apache.asterix.optimizer.rules.RemoveRedundantListifyRule;
 import org.apache.asterix.optimizer.rules.RemoveRedundantSelectRule;
@@ -151,10 +152,11 @@ public final class RuleCollections {
     private RuleCollections() {
     }
 
-    public static final List<IAlgebraicRewriteRule> buildInitialTranslationRuleCollection() {
+    public static List<IAlgebraicRewriteRule> buildInitialTranslationRuleCollection() {
         List<IAlgebraicRewriteRule> translationRules = new LinkedList<>();
         translationRules.add(new TranslateIntervalExpressionRule());
         translationRules.add(new ExtractGroupByDecorVariablesRule());
+        translationRules.add(new RemoveDuplicateFieldsRule());
         return translationRules;
     }
 
@@ -253,7 +255,6 @@ public final class RuleCollections {
         // The following rule should be fired after PushAggregateIntoNestedSubplanRule because
         // pulling invariants out of a subplan will make PushAggregateIntoGroupby harder.
         condPushDownAndJoinInference.add(new AsterixMoveFreeVariableOperatorOutOfSubplanRule());
-        // once meta() is replaced before logical plan generation, this can be removed
         condPushDownAndJoinInference.add(new MetaFunctionToMetaVariableRule());
         return condPushDownAndJoinInference;
     }

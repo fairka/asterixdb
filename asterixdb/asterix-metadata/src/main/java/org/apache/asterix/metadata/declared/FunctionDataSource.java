@@ -27,6 +27,7 @@ import java.util.Set;
 import org.apache.asterix.common.cluster.IClusterStateManager;
 import org.apache.asterix.common.exceptions.CompilationException;
 import org.apache.asterix.common.exceptions.ErrorCode;
+import org.apache.asterix.common.functions.FunctionSignature;
 import org.apache.asterix.external.adapter.factory.GenericAdapterFactory;
 import org.apache.asterix.metadata.api.IDatasourceFunction;
 import org.apache.asterix.om.types.IAType;
@@ -37,6 +38,7 @@ import org.apache.hyracks.algebricks.common.exceptions.AlgebricksException;
 import org.apache.hyracks.algebricks.common.utils.Pair;
 import org.apache.hyracks.algebricks.core.algebra.base.LogicalVariable;
 import org.apache.hyracks.algebricks.core.algebra.expressions.IVariableTypeEnvironment;
+import org.apache.hyracks.algebricks.core.algebra.functions.FunctionIdentifier;
 import org.apache.hyracks.algebricks.core.algebra.metadata.IDataSource;
 import org.apache.hyracks.algebricks.core.algebra.metadata.IDataSourcePropertiesProvider;
 import org.apache.hyracks.algebricks.core.algebra.operators.logical.IOperatorSchema;
@@ -95,5 +97,9 @@ public abstract class FunctionDataSource extends DataSource {
         String[] allPartitions = csm.getClusterLocations().getLocations();
         Set<String> ncs = new HashSet<>(Arrays.asList(allPartitions));
         return new AlgebricksAbsolutePartitionConstraint(ncs.toArray(new String[ncs.size()]));
+    }
+
+    protected static DataSourceId createDataSourceId(FunctionIdentifier fid, String... parameters) {
+        return new DataSourceId(FunctionSignature.getDataverseName(fid), fid.getName(), parameters);
     }
 }

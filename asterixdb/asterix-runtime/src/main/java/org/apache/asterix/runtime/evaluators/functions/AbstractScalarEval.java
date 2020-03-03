@@ -24,11 +24,11 @@ import org.apache.hyracks.algebricks.runtime.base.IScalarEvaluator;
 import org.apache.hyracks.api.exceptions.SourceLocation;
 
 public abstract class AbstractScalarEval implements IScalarEvaluator {
-    protected final SourceLocation sourceLoc;
-    protected final FunctionIdentifier functionIdentifier;
+    protected final SourceLocation srcLoc;
+    protected final FunctionIdentifier funID;
 
     public AbstractScalarEval(SourceLocation sourceLoc, FunctionIdentifier functionIdentifier) {
-        this.sourceLoc = sourceLoc;
-        this.functionIdentifier = functionIdentifier;
+        this.srcLoc = sourceLoc;
+        this.funID = functionIdentifier;
     }
 }

@@ -20,20 +20,20 @@ package org.apache.hyracks.algebricks.core.algebra.prettyprint;
 
 import org.apache.hyracks.algebricks.common.exceptions.AlgebricksException;
 import org.apache.hyracks.algebricks.core.algebra.base.ILogicalPlan;
-import org.apache.hyracks.algebricks.core.algebra.operators.logical.AbstractLogicalOperator;
 
 public class PlanPrettyPrinter {
-    public static void printOperator(AbstractLogicalOperator op, AbstractLogicalOperatorPrettyPrintVisitor pvisitor,
-            int indent) throws AlgebricksException {
-        pvisitor.printOperator(op, indent);
+
+    public static final int INIT_SIZE = 256;
+
+    public static IPlanPrettyPrinter createJsonPlanPrettyPrinter() {
+        return new LogicalOperatorPrettyPrintVisitorJson();
     }
 
-    public static void printPlan(ILogicalPlan plan, AbstractLogicalOperatorPrettyPrintVisitor pvisitor, int indent)
-            throws AlgebricksException {
-        pvisitor.printPlan(plan, indent);
+    public static IPlanPrettyPrinter createStringPlanPrettyPrinter() {
+        return new LogicalOperatorPrettyPrintVisitor();
     }
 
-    public static void printPhysicalOps(ILogicalPlan plan, AlgebricksAppendable out, int indent)
+    public static void printPhysicalOps(ILogicalPlan plan, AlgebricksStringBuilderWriter out, int indent)
             throws AlgebricksException {
         AbstractLogicalOperatorPrettyPrintVisitor.printPhysicalOps(plan, out, indent);
     }

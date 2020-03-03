@@ -32,7 +32,6 @@ import org.apache.asterix.app.message.ExecuteStatementRequestMessage;
 import org.apache.asterix.app.message.ExecuteStatementResponseMessage;
 import org.apache.asterix.app.result.ResponsePrinter;
 import org.apache.asterix.app.result.fields.NcResultPrinter;
-import org.apache.asterix.common.api.Duration;
 import org.apache.asterix.common.api.IApplicationContext;
 import org.apache.asterix.common.api.IRequestReference;
 import org.apache.asterix.common.config.GlobalConfig;
@@ -82,14 +81,14 @@ public class NCQueryServiceServlet extends QueryServiceServlet {
         MessageFuture responseFuture = ncMb.registerMessageFuture();
         final String handleUrl = getHandleUrl(param.getHost(), param.getPath(), delivery);
         try {
-            long timeout = ExecuteStatementRequestMessage.DEFAULT_NC_TIMEOUT_MILLIS;
-            if (param.getTimeout() != null && !param.getTimeout().trim().isEmpty()) {
-                timeout = TimeUnit.NANOSECONDS.toMillis(Duration.parseDurationStringToNanos(param.getTimeout()));
-            }
+            long timeout = param.getTimeout();
+            int stmtCategoryRestrictionMask = org.apache.asterix.app.translator.RequestParameters
+                    .getStatementCategoryRestrictionMask(param.isReadOnly());
             ExecuteStatementRequestMessage requestMsg = new ExecuteStatementRequestMessage(ncCtx.getNodeId(),
                     responseFuture.getFutureId(), queryLanguage, statementsText, sessionOutput.config(),
                     resultProperties.getNcToCcResultProperties(), param.getClientContextID(), handleUrl,
-                    optionalParameters, statementParameters, param.isMultiStatement(), requestReference);
+                    optionalParameters, statementParameters, param.isMultiStatement(), param.getProfileType(),
+                    stmtCategoryRestrictionMask, requestReference);
             execution.start();
             ncMb.sendMessageToPrimaryCC(requestMsg);
             try {
@@ -119,6 +118,7 @@ public class NCQueryServiceServlet extends QueryServiceServlet {
                 throw new Exception(err.toString(), err);
             }
         }
+        updateStatsFromCC(stats, responseMsg);
         if (hasResult(responseMsg)) {
             responsePrinter.addResultPrinter(
                     new NcResultPrinter(appCtx, responseMsg, getResultSet(), delivery, sessionOutput, stats));
@@ -169,5 +169,12 @@ public class NCQueryServiceServlet extends QueryServiceServlet {
 
     private static boolean hasResult(ExecuteStatementResponseMessage responseMsg) {
         return !responseMsg.getMetadata().getResultSets().isEmpty() || !responseMsg.getResult().isEmpty();
+    }
+
+    private static void updateStatsFromCC(IStatementExecutor.Stats stats, ExecuteStatementResponseMessage responseMsg) {
+        IStatementExecutor.Stats responseStats = responseMsg.getStats();
+        stats.setJobProfile(responseStats.getJobProfile());
+        stats.setProcessedObjects(responseStats.getProcessedObjects());
+        stats.updateTotalWarningsCount(responseStats.getTotalWarningsCount());
     }
 }

@@ -19,17 +19,14 @@
 
 package org.apache.asterix.runtime.evaluators.functions.bitwise;
 
-import org.apache.asterix.common.exceptions.ErrorCode;
-import org.apache.asterix.common.exceptions.WarningUtil;
 import org.apache.asterix.formats.nontagged.SerializerDeserializerProvider;
 import org.apache.asterix.om.base.AMutableInt64;
+import org.apache.asterix.om.exceptions.ExceptionUtil;
 import org.apache.asterix.om.types.ATypeTag;
 import org.apache.asterix.om.types.BuiltinType;
-import org.apache.asterix.om.types.EnumDeserializer;
 import org.apache.asterix.om.types.hierachy.ATypeHierarchy;
 import org.apache.asterix.runtime.evaluators.functions.AbstractScalarEval;
 import org.apache.asterix.runtime.evaluators.functions.PointableHelper;
-import org.apache.asterix.runtime.exceptions.ExceptionUtil;
 import org.apache.hyracks.algebricks.core.algebra.functions.FunctionIdentifier;
 import org.apache.hyracks.algebricks.runtime.base.IEvaluatorContext;
 import org.apache.hyracks.algebricks.runtime.base.IScalarEvaluator;
@@ -119,13 +116,13 @@ abstract class AbstractBitMultipleValuesEvaluator extends AbstractScalarEval {
 
         // Type and value validity check
         if (!PointableHelper.isValidLongValue(bytes, startOffset, true)) {
-            handleTypeMismatchInput(0, ATypeTag.BIGINT, bytes, startOffset);
+            ExceptionUtil.warnTypeMismatch(context, srcLoc, funID, bytes[startOffset], 0, ATypeTag.BIGINT);
             PointableHelper.setNull(result);
             return;
         }
 
         // Result holder
-        long longResult = ATypeHierarchy.getLongValue(functionIdentifier.getName(), 0, bytes, startOffset);
+        long longResult = ATypeHierarchy.getLongValue(funID.getName(), 0, bytes, startOffset);
 
         // Loop and do the bitwise operation for all the arguments (start from index 1, we did first argument above)
         for (int i = 1; i < argPointables.length; i++) {
@@ -134,12 +131,12 @@ abstract class AbstractBitMultipleValuesEvaluator extends AbstractScalarEval {
 
             // Type and value validity check
             if (!PointableHelper.isValidLongValue(bytes, startOffset, true)) {
-                handleTypeMismatchInput(i, ATypeTag.BIGINT, bytes, startOffset);
+                ExceptionUtil.warnTypeMismatch(context, srcLoc, funID, bytes[startOffset], i, ATypeTag.BIGINT);
                 PointableHelper.setNull(result);
                 return;
             }
 
-            long nextValue = ATypeHierarchy.getLongValue(functionIdentifier.getName(), i, bytes, startOffset);
+            long nextValue = ATypeHierarchy.getLongValue(funID.getName(), i, bytes, startOffset);
             longResult = applyBitwiseOperation(longResult, nextValue);
         }
 
@@ -148,11 +145,5 @@ abstract class AbstractBitMultipleValuesEvaluator extends AbstractScalarEval {
         resultMutableInt64.setValue(longResult);
         aInt64Serde.serialize(resultMutableInt64, resultStorage.getDataOutput());
         result.set(resultStorage);
-    }
-
-    private void handleTypeMismatchInput(int inputPosition, ATypeTag expected, byte[] bytes, int startOffset) {
-        ATypeTag actual = EnumDeserializer.ATYPETAGDESERIALIZER.deserialize(bytes[startOffset]);
-        context.getWarningCollector().warn(WarningUtil.forAsterix(sourceLoc, ErrorCode.TYPE_MISMATCH_FUNCTION,
-                functionIdentifier, ExceptionUtil.indexToPosition(inputPosition), expected, actual));
     }
 }

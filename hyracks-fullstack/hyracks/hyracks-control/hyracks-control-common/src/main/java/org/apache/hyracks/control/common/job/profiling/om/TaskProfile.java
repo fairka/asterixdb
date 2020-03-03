@@ -21,6 +21,7 @@ package org.apache.hyracks.control.common.job.profiling.om;
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
+import java.text.DecimalFormat;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
@@ -29,6 +30,7 @@ import java.util.Set;
 
 import org.apache.hyracks.api.dataflow.TaskAttemptId;
 import org.apache.hyracks.api.exceptions.Warning;
+import org.apache.hyracks.api.job.profiling.IOperatorStats;
 import org.apache.hyracks.api.job.profiling.IStatsCollector;
 import org.apache.hyracks.api.partitions.PartitionId;
 import org.apache.hyracks.control.common.job.profiling.StatsCollector;
@@ -49,6 +51,8 @@ public class TaskProfile extends AbstractProfile {
 
     private Set<Warning> warnings;
 
+    private long totalWarningsCount;
+
     public static TaskProfile create(DataInput dis) throws IOException {
         TaskProfile taskProfile = new TaskProfile();
         taskProfile.readFields(dis);
@@ -60,11 +64,12 @@ public class TaskProfile extends AbstractProfile {
     }
 
     public TaskProfile(TaskAttemptId taskAttemptId, Map<PartitionId, PartitionProfile> partitionSendProfile,
-            IStatsCollector statsCollector, Set<Warning> warnings) {
+            IStatsCollector statsCollector, Set<Warning> warnings, long totalWarningsCount) {
         this.taskAttemptId = taskAttemptId;
         this.partitionSendProfile = new HashMap<>(partitionSendProfile);
         this.statsCollector = statsCollector;
         this.warnings = warnings;
+        this.totalWarningsCount = totalWarningsCount;
     }
 
     public TaskAttemptId getTaskId() {
@@ -77,7 +82,6 @@ public class TaskProfile extends AbstractProfile {
 
     @Override
     public ObjectNode toJSON() {
-
         ObjectMapper om = new ObjectMapper();
         ObjectNode json = om.createObjectNode();
 
@@ -113,8 +117,23 @@ public class TaskProfile extends AbstractProfile {
             json.set("partition-send-profile", pspArray);
         }
         populateCounters(json);
-
         return json;
+    }
+
+    @Override
+    protected void populateCounters(ObjectNode json) {
+        ObjectMapper om = new ObjectMapper();
+        Map<String, IOperatorStats> opTimes = statsCollector.getAllOperatorStats();
+        ArrayNode countersObj = om.createArrayNode();
+        opTimes.forEach((key, value) -> {
+            ObjectNode jpe = om.createObjectNode();
+            jpe.put("name", key);
+            jpe.put("time", Double
+                    .parseDouble(new DecimalFormat("#.####").format((double) value.getTimeCounter().get() / 1000000)));
+            jpe.put("disk-io", value.getDiskIoCounter().get());
+            countersObj.add(jpe);
+        });
+        json.set("counters", countersObj);
     }
 
     public IStatsCollector getStatsCollector() {
@@ -123,6 +142,10 @@ public class TaskProfile extends AbstractProfile {
 
     public Set<Warning> getWarnings() {
         return warnings;
+    }
+
+    public long getTotalWarningsCount() {
+        return totalWarningsCount;
     }
 
     @Override
@@ -139,6 +162,7 @@ public class TaskProfile extends AbstractProfile {
         statsCollector = StatsCollector.create(input);
         warnings = new HashSet<>();
         deserializeWarnings(input, warnings);
+        totalWarningsCount = input.readLong();
     }
 
     @Override
@@ -152,6 +176,7 @@ public class TaskProfile extends AbstractProfile {
         }
         statsCollector.writeFields(output);
         serializeWarnings(output);
+        output.writeLong(totalWarningsCount);
     }
 
     private void serializeWarnings(DataOutput output) throws IOException {

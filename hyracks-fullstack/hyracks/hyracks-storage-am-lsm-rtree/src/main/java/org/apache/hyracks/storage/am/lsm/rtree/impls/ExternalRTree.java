@@ -38,6 +38,7 @@ import org.apache.hyracks.storage.am.common.impls.NoOpOperationCallback;
 import org.apache.hyracks.storage.am.common.ophelpers.IndexOperation;
 import org.apache.hyracks.storage.am.lsm.common.api.ILSMComponent;
 import org.apache.hyracks.storage.am.lsm.common.api.ILSMDiskComponent;
+import org.apache.hyracks.storage.am.lsm.common.api.ILSMDiskComponentBulkLoader;
 import org.apache.hyracks.storage.am.lsm.common.api.ILSMDiskComponentFactory;
 import org.apache.hyracks.storage.am.lsm.common.api.ILSMIOOperation;
 import org.apache.hyracks.storage.am.lsm.common.api.ILSMIOOperationCallbackFactory;
@@ -47,8 +48,8 @@ import org.apache.hyracks.storage.am.lsm.common.api.ILSMIndexFileManager;
 import org.apache.hyracks.storage.am.lsm.common.api.ILSMIndexOperationContext;
 import org.apache.hyracks.storage.am.lsm.common.api.ILSMMergePolicy;
 import org.apache.hyracks.storage.am.lsm.common.api.ILSMOperationTracker;
+import org.apache.hyracks.storage.am.lsm.common.api.ILSMPageWriteCallbackFactory;
 import org.apache.hyracks.storage.am.lsm.common.api.ITwoPCIndex;
-import org.apache.hyracks.storage.am.lsm.common.impls.ChainedLSMDiskComponentBulkLoader;
 import org.apache.hyracks.storage.am.lsm.common.impls.ExternalIndexHarness;
 import org.apache.hyracks.storage.am.lsm.common.impls.LSMComponentFileReferences;
 import org.apache.hyracks.storage.am.lsm.common.impls.LoadOperation;
@@ -56,10 +57,13 @@ import org.apache.hyracks.storage.am.rtree.impls.SearchPredicate;
 import org.apache.hyracks.storage.common.IIndexAccessParameters;
 import org.apache.hyracks.storage.common.IIndexBulkLoader;
 import org.apache.hyracks.storage.common.IIndexCursor;
+import org.apache.hyracks.storage.common.IIndexCursorStats;
 import org.apache.hyracks.storage.common.ISearchOperationCallback;
 import org.apache.hyracks.storage.common.ISearchPredicate;
+import org.apache.hyracks.storage.common.IndexCursorStats;
 import org.apache.hyracks.storage.common.buffercache.IBufferCache;
 import org.apache.hyracks.storage.common.buffercache.ICachedPage;
+import org.apache.hyracks.storage.common.buffercache.IPageWriteCallback;
 import org.apache.hyracks.util.trace.ITracer;
 
 /**
@@ -86,12 +90,13 @@ public class ExternalRTree extends LSMRTree implements ITwoPCIndex {
             IBinaryComparatorFactory[] btreeCmpFactories, ILinearizeComparatorFactory linearizer,
             int[] comparatorFields, IBinaryComparatorFactory[] linearizerArray, ILSMMergePolicy mergePolicy,
             ILSMOperationTracker opTracker, ILSMIOOperationScheduler ioScheduler,
-            ILSMIOOperationCallbackFactory ioOpCallbackFactory, int[] buddyBTreeFields, boolean durable,
-            boolean isPointMBR, ITracer tracer) throws HyracksDataException {
+            ILSMIOOperationCallbackFactory ioOpCallbackFactory, ILSMPageWriteCallbackFactory pageWriteCallbackFactory,
+            int[] buddyBTreeFields, boolean durable, boolean isPointMBR, ITracer tracer) throws HyracksDataException {
         super(ioManager, rtreeInteriorFrameFactory, rtreeLeafFrameFactory, btreeInteriorFrameFactory,
                 btreeLeafFrameFactory, diskBufferCache, fileNameManager, componentFactory, bloomFilterFalsePositiveRate,
                 rtreeCmpFactories, btreeCmpFactories, linearizer, comparatorFields, linearizerArray, mergePolicy,
-                opTracker, ioScheduler, ioOpCallbackFactory, buddyBTreeFields, durable, isPointMBR, tracer);
+                opTracker, ioScheduler, ioOpCallbackFactory, pageWriteCallbackFactory, buddyBTreeFields, durable,
+                isPointMBR, tracer);
         this.secondDiskComponents = new LinkedList<>();
         this.fieldCount = fieldCount;
     }
@@ -268,15 +273,17 @@ public class ExternalRTree extends LSMRTree implements ITwoPCIndex {
                     .get(mergeOp.getMergingComponents().size() - 1) != secondDiskComponents
                             .get(secondDiskComponents.size() - 1);
         }
+        IPageWriteCallback pageWriteCallback = pageWriteCallbackFactory.createPageWriteCallback();
         if (keepDeleteTuples) {
             // Keep the deleted tuples since the oldest disk component is not
             // included in the merge operation
 
-            LSMRTreeDeletedKeysBTreeMergeCursor btreeCursor = new LSMRTreeDeletedKeysBTreeMergeCursor(opCtx);
+            LSMRTreeDeletedKeysBTreeMergeCursor btreeCursor =
+                    new LSMRTreeDeletedKeysBTreeMergeCursor(opCtx, mergeOp.getCursorStats());
             search(opCtx, btreeCursor, rtreeSearchPred);
 
             BTree btree = mergedComponent.getBuddyIndex();
-            IIndexBulkLoader btreeBulkLoader = btree.createBulkLoader(1.0f, true, 0L, false);
+            IIndexBulkLoader btreeBulkLoader = btree.createBulkLoader(1.0f, true, 0L, false, pageWriteCallback);
 
             long numElements = 0L;
             for (int i = 0; i < mergeOp.getMergingComponents().size(); ++i) {
@@ -288,7 +295,7 @@ public class ExternalRTree extends LSMRTree implements ITwoPCIndex {
             BloomFilterSpecification bloomFilterSpec =
                     BloomCalculations.computeBloomSpec(maxBucketsPerElement, bloomFilterFalsePositiveRate);
             IIndexBulkLoader builder = mergedComponent.getBloomFilter().createBuilder(numElements,
-                    bloomFilterSpec.getNumHashes(), bloomFilterSpec.getNumBucketsPerElements());
+                    bloomFilterSpec.getNumHashes(), bloomFilterSpec.getNumBucketsPerElements(), pageWriteCallback);
 
             try {
                 while (btreeCursor.hasNext()) {
@@ -304,7 +311,8 @@ public class ExternalRTree extends LSMRTree implements ITwoPCIndex {
             btreeBulkLoader.end();
         }
 
-        IIndexBulkLoader bulkLoader = mergedComponent.getIndex().createBulkLoader(1.0f, false, 0L, false);
+        IIndexBulkLoader bulkLoader =
+                mergedComponent.getIndex().createBulkLoader(1.0f, false, 0L, false, pageWriteCallback);
         try {
             while (cursor.hasNext()) {
                 cursor.next();
@@ -454,7 +462,7 @@ public class ExternalRTree extends LSMRTree implements ITwoPCIndex {
         private final ILSMDiskComponent component;
         private final boolean isTransaction;
         private final LoadOperation loadOp;
-        private final ChainedLSMDiskComponentBulkLoader componentBulkLoader;
+        private final ILSMDiskComponentBulkLoader componentBulkLoader;
 
         public LSMTwoPCRTreeBulkLoader(float fillFactor, boolean verifyInput, long numElementsHint,
                 boolean isTransaction, Map<String, Object> parameters) throws HyracksDataException {
@@ -482,8 +490,8 @@ public class ExternalRTree extends LSMRTree implements ITwoPCIndex {
             loadOp.setNewComponent(component);
             ioOpCallback.scheduled(loadOp);
             ioOpCallback.beforeOperation(loadOp);
-            componentBulkLoader =
-                    component.createBulkLoader(loadOp, fillFactor, verifyInput, numElementsHint, false, true, false);
+            componentBulkLoader = component.createBulkLoader(loadOp, fillFactor, verifyInput, numElementsHint, false,
+                    true, false, pageWriteCallbackFactory.createPageWriteCallback());
         }
 
         @Override
@@ -548,6 +556,11 @@ public class ExternalRTree extends LSMRTree implements ITwoPCIndex {
         public Throwable getFailure() {
             return loadOp.getFailure();
         }
+
+        @Override
+        public void force() throws HyracksDataException {
+            componentBulkLoader.force();
+        }
     }
 
     // The only change the the schedule merge is the method used to create the
@@ -557,14 +570,15 @@ public class ExternalRTree extends LSMRTree implements ITwoPCIndex {
         ILSMIndexOperationContext rctx = createOpContext(NoOpOperationCallback.INSTANCE, -1);
         rctx.setOperation(IndexOperation.MERGE);
         List<ILSMComponent> mergingComponents = ctx.getComponentHolder();
-        LSMRTreeSortedCursor cursor = new LSMRTreeSortedCursor(rctx, linearizer, buddyBTreeFields);
+        IIndexCursorStats stats = new IndexCursorStats();
+        LSMRTreeSortedCursor cursor = new LSMRTreeSortedCursor(rctx, linearizer, buddyBTreeFields, stats);
         LSMComponentFileReferences relMergeFileRefs =
                 getMergeFileReferences((ILSMDiskComponent) mergingComponents.get(mergingComponents.size() - 1),
                         (ILSMDiskComponent) mergingComponents.get(0));
         ILSMIndexAccessor accessor = new LSMRTreeAccessor(getHarness(), rctx, buddyBTreeFields);
         // create the merge operation.
         LSMRTreeMergeOperation mergeOp =
-                new LSMRTreeMergeOperation(accessor, cursor, relMergeFileRefs.getInsertIndexFileReference(),
+                new LSMRTreeMergeOperation(accessor, cursor, stats, relMergeFileRefs.getInsertIndexFileReference(),
                         relMergeFileRefs.getDeleteIndexFileReference(), relMergeFileRefs.getBloomFilterFileReference(),
                         ioOpCallback, fileManager.getBaseDir().getAbsolutePath());
         ioOpCallback.scheduled(mergeOp);

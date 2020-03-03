@@ -23,11 +23,14 @@ import java.io.IOException;
 import org.apache.asterix.common.api.IApplicationContext;
 import org.apache.asterix.common.exceptions.ErrorCode;
 import org.apache.asterix.common.exceptions.RuntimeDataException;
+import org.apache.asterix.common.functions.FunctionSignature;
 import org.apache.asterix.common.library.ILibraryManager;
+import org.apache.asterix.common.metadata.DataverseName;
 import org.apache.asterix.external.api.IExternalFunction;
 import org.apache.asterix.external.api.IFunctionFactory;
 import org.apache.asterix.external.api.IFunctionHelper;
 import org.apache.asterix.om.functions.IExternalFunctionInfo;
+import org.apache.asterix.om.types.IAType;
 import org.apache.hyracks.algebricks.common.exceptions.AlgebricksException;
 import org.apache.hyracks.algebricks.runtime.base.IEvaluatorContext;
 import org.apache.hyracks.algebricks.runtime.base.IScalarEvaluator;
@@ -48,23 +51,23 @@ public abstract class ExternalFunction implements IExternalFunction {
     protected final ArrayBackedValueStorage resultBuffer = new ArrayBackedValueStorage();
     protected final IScalarEvaluator[] argumentEvaluators;
     protected final JavaFunctionHelper functionHelper;
+    protected final IAType[] argTypes;
 
-    public ExternalFunction(IExternalFunctionInfo finfo, IScalarEvaluatorFactory[] args, IEvaluatorContext context,
-            IApplicationContext appCtx) throws HyracksDataException {
+    public ExternalFunction(IExternalFunctionInfo finfo, IScalarEvaluatorFactory args[], IAType[] argTypes,
+            IEvaluatorContext context, IApplicationContext appCtx) throws HyracksDataException {
         this.finfo = finfo;
         this.evaluatorFactories = args;
+        this.argTypes = argTypes;
         argumentEvaluators = new IScalarEvaluator[args.length];
         for (int i = 0; i < args.length; i++) {
             argumentEvaluators[i] = args[i].createScalarEvaluator(context);
         }
 
         ILibraryManager libraryManager = appCtx.getLibraryManager();
-        String[] fnameComponents = finfo.getFunctionIdentifier().getName().split("#");
-        String functionLibary = fnameComponents[0];
-        String dataverse = finfo.getFunctionIdentifier().getNamespace();
+        String functionLibary = finfo.getLibrary();
+        DataverseName dataverse = FunctionSignature.getDataverseName(finfo.getFunctionIdentifier());
 
-        functionHelper = new JavaFunctionHelper(finfo, resultBuffer,
-                libraryManager.getFunctionParameters(dataverse, finfo.getFunctionIdentifier().getName()));
+        functionHelper = new JavaFunctionHelper(finfo, argTypes, resultBuffer);
         ClassLoader libraryClassLoader = libraryManager.getLibraryClassLoader(dataverse, functionLibary);
         String classname = finfo.getFunctionBody().trim();
         Class<?> clazz;

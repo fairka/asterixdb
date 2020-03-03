@@ -25,6 +25,7 @@ import static org.apache.hyracks.control.common.config.OptionTypes.POSITIVE_INTE
 import static org.apache.hyracks.control.common.config.OptionTypes.STRING;
 import static org.apache.hyracks.control.common.config.OptionTypes.UNSIGNED_INTEGER;
 import static org.apache.hyracks.util.StorageUtil.StorageUnit.KILOBYTE;
+import static org.apache.hyracks.util.StorageUtil.StorageUnit.MEGABYTE;
 
 import java.util.function.Function;
 
@@ -49,7 +50,9 @@ public class StorageProperties extends AbstractProperties {
         STORAGE_METADATA_MEMORYCOMPONENT_NUMPAGES(POSITIVE_INTEGER, 8),
         STORAGE_LSM_BLOOMFILTER_FALSEPOSITIVERATE(DOUBLE, 0.01d),
         STORAGE_MAX_ACTIVE_WRITABLE_DATASETS(UNSIGNED_INTEGER, 8),
-        STORAGE_COMPRESSION_BLOCK(STRING, "none");
+        STORAGE_COMPRESSION_BLOCK(STRING, "snappy"),
+        STORAGE_DISK_FORCE_BYTES(LONG_BYTE_UNIT, StorageUtil.getLongSizeInBytes(16, MEGABYTE)),
+        STORAGE_IO_SCHEDULER(STRING, "greedy");
 
         private final IOptionType interpreter;
         private final Object defaultValue;
@@ -92,6 +95,10 @@ public class StorageProperties extends AbstractProperties {
                     return "The maximum number of datasets that can be concurrently modified";
                 case STORAGE_COMPRESSION_BLOCK:
                     return "The default compression scheme for the storage";
+                case STORAGE_DISK_FORCE_BYTES:
+                    return "The number of bytes before each disk force (fsync)";
+                case STORAGE_IO_SCHEDULER:
+                    return "The I/O scheduler for LSM flush and merge operations";
                 default:
                     throw new IllegalStateException("NYI: " + this);
             }
@@ -187,6 +194,10 @@ public class StorageProperties extends AbstractProperties {
         return accessor.getString(Option.STORAGE_COMPRESSION_BLOCK);
     }
 
+    public String getIoScheduler() {
+        return accessor.getString(Option.STORAGE_IO_SCHEDULER);
+    }
+
     protected int getMetadataDatasets() {
         return MetadataIndexImmutableProperties.METADATA_DATASETS_COUNT;
     }
@@ -197,5 +208,9 @@ public class StorageProperties extends AbstractProperties {
 
     private long getMetadataReservedMemory() {
         return (getMetadataMemoryComponentNumPages() * (long) getMemoryComponentPageSize()) * getMetadataDatasets();
+    }
+
+    public int getDiskForcePages() {
+        return (int) (accessor.getLong(Option.STORAGE_DISK_FORCE_BYTES) / getBufferCachePageSize());
     }
 }

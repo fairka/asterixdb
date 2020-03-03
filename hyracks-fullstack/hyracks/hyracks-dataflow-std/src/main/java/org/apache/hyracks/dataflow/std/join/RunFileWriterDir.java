@@ -18,7 +18,6 @@
  */
 package org.apache.hyracks.dataflow.std.join;
 
-import java.io.IOException;
 import java.nio.ByteBuffer;
 
 import org.apache.hyracks.api.comm.IFrameWriter;

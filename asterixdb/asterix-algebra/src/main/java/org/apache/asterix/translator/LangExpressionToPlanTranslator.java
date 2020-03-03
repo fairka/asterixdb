@@ -38,6 +38,7 @@ import org.apache.asterix.common.exceptions.CompilationException;
 import org.apache.asterix.common.exceptions.ErrorCode;
 import org.apache.asterix.common.functions.FunctionConstants;
 import org.apache.asterix.common.functions.FunctionSignature;
+import org.apache.asterix.common.metadata.DataverseName;
 import org.apache.asterix.lang.common.base.Expression;
 import org.apache.asterix.lang.common.base.Expression.Kind;
 import org.apache.asterix.lang.common.base.ILangExpression;
@@ -116,8 +117,6 @@ import org.apache.hyracks.algebricks.core.algebra.base.OperatorAnnotations;
 import org.apache.hyracks.algebricks.core.algebra.expressions.AbstractFunctionCallExpression;
 import org.apache.hyracks.algebricks.core.algebra.expressions.AbstractFunctionCallExpression.FunctionKind;
 import org.apache.hyracks.algebricks.core.algebra.expressions.AggregateFunctionCallExpression;
-import org.apache.hyracks.algebricks.core.algebra.expressions.BroadcastExpressionAnnotation;
-import org.apache.hyracks.algebricks.core.algebra.expressions.BroadcastExpressionAnnotation.BroadcastSide;
 import org.apache.hyracks.algebricks.core.algebra.expressions.ConstantExpression;
 import org.apache.hyracks.algebricks.core.algebra.expressions.IExpressionAnnotation;
 import org.apache.hyracks.algebricks.core.algebra.expressions.ScalarFunctionCallExpression;
@@ -653,7 +652,7 @@ class LangExpressionToPlanTranslator
         return distResultOperator;
     }
 
-    private DatasetDataSource validateDatasetInfo(MetadataProvider metadataProvider, String dataverseName,
+    private DatasetDataSource validateDatasetInfo(MetadataProvider metadataProvider, DataverseName dataverseName,
             String datasetName, SourceLocation sourceLoc) throws AlgebricksException {
         Dataset dataset = metadataProvider.findDataset(dataverseName, datasetName);
         if (dataset == null) {
@@ -889,7 +888,7 @@ class LangExpressionToPlanTranslator
     private AbstractFunctionCallExpression lookupUserDefinedFunction(FunctionSignature signature,
             List<Mutable<ILogicalExpression>> args, SourceLocation sourceLoc) throws CompilationException {
         try {
-            if (signature.getNamespace() == null) {
+            if (signature.getDataverseName() == null) {
                 return null;
             }
             Function function =
@@ -897,21 +896,13 @@ class LangExpressionToPlanTranslator
             if (function == null) {
                 return null;
             }
-            AbstractFunctionCallExpression f;
-            if (function.getLanguage().equalsIgnoreCase(Function.LANGUAGE_JAVA)) {
-                IFunctionInfo finfo = ExternalFunctionCompilerUtil
-                        .getExternalFunctionInfo(metadataProvider.getMetadataTxnContext(), function);
-                f = new ScalarFunctionCallExpression(finfo, args);
-                f.setSourceLocation(sourceLoc);
-            } else if (function.getLanguage().equalsIgnoreCase(Function.LANGUAGE_AQL)
-                    || function.getLanguage().equalsIgnoreCase(Function.LANGUAGE_SQLPP)) {
-                IFunctionInfo finfo = FunctionUtil.getFunctionInfo(signature);
-                f = new ScalarFunctionCallExpression(finfo, args);
-                f.setSourceLocation(sourceLoc);
-            } else {
-                throw new CompilationException(ErrorCode.COMPILATION_ERROR, sourceLoc,
-                        " User defined functions written in " + function.getLanguage() + " are not supported");
-            }
+            IFunctionInfo finfo =
+                    function.getLanguage().isExternal()
+                            ? ExternalFunctionCompilerUtil
+                                    .getExternalFunctionInfo(metadataProvider.getMetadataTxnContext(), function)
+                            : FunctionUtil.getFunctionInfo(signature);
+            AbstractFunctionCallExpression f = new ScalarFunctionCallExpression(finfo, args);
+            f.setSourceLocation(sourceLoc);
             return f;
         } catch (AlgebricksException e) {
             throw new CompilationException(ErrorCode.COMPILATION_ERROR, sourceLoc, e.getMessage(), e);
@@ -1181,35 +1172,18 @@ class LangExpressionToPlanTranslator
             // now look at the operator
             if (i < nOps) {
                 OperatorType opType = ops.get(i);
-                boolean isCmpOp = OperatorExpr.opIsComparison(opType);
                 AbstractFunctionCallExpression f = createFunctionCallExpressionForBuiltinOperator(opType, sourceLoc);
-
                 // chain the operators
                 if (i == 0) {
                     f.getArguments().add(new MutableObject<>(e));
                     currExpr = f;
-                    if (isCmpOp && op.isBroadcastOperand(i)) {
-                        BroadcastExpressionAnnotation bcast = new BroadcastExpressionAnnotation();
-                        bcast.setObject(BroadcastSide.LEFT);
-                        f.getAnnotations().put(BroadcastExpressionAnnotation.BROADCAST_ANNOTATION_KEY, bcast);
-                    }
                 } else {
                     currExpr.getArguments().add(new MutableObject<>(e));
                     f.getArguments().add(new MutableObject<>(currExpr));
                     currExpr = f;
-                    if (isCmpOp && i == 1 && op.isBroadcastOperand(i)) {
-                        BroadcastExpressionAnnotation bcast = new BroadcastExpressionAnnotation();
-                        bcast.setObject(BroadcastSide.RIGHT);
-                        f.getAnnotations().put(BroadcastExpressionAnnotation.BROADCAST_ANNOTATION_KEY, bcast);
-                    }
                 }
             } else { // don't forget the last expression...
                 currExpr.getArguments().add(new MutableObject<>(e));
-                if (i == 1 && op.isBroadcastOperand(i)) {
-                    BroadcastExpressionAnnotation bcast = new BroadcastExpressionAnnotation();
-                    bcast.setObject(BroadcastSide.RIGHT);
-                    currExpr.getAnnotations().put(BroadcastExpressionAnnotation.BROADCAST_ANNOTATION_KEY, bcast);
-                }
             }
         }
 
@@ -1274,9 +1248,11 @@ class LangExpressionToPlanTranslator
         for (QuantifiedPair qt : qe.getQuantifiedList()) {
             Expression expr = qt.getExpr();
             Pair<ILogicalExpression, Mutable<ILogicalOperator>> eo1 = langExprToAlgExpression(expr, topOp);
-            topOp = eo1.second;
+            Pair<ILogicalExpression, Mutable<ILogicalOperator>> pUnnestExpr =
+                    makeUnnestExpression(eo1.first, eo1.second);
+            topOp = pUnnestExpr.second;
             LogicalVariable uVar = context.newVarFromExpression(qt.getVarExpr());
-            UnnestOperator u = new UnnestOperator(uVar, new MutableObject<>(makeUnnestExpression(eo1.first)));
+            UnnestOperator u = new UnnestOperator(uVar, new MutableObject<>(pUnnestExpr.first));
             u.setSourceLocation(expr.getSourceLocation());
 
             if (firstOp == null) {
@@ -1692,30 +1668,50 @@ class LangExpressionToPlanTranslator
         return array;
     }
 
-    protected ILogicalExpression makeUnnestExpression(ILogicalExpression expr) {
+    protected Pair<ILogicalExpression, Mutable<ILogicalOperator>> makeUnnestExpression(ILogicalExpression expr,
+            Mutable<ILogicalOperator> topOpRef) throws CompilationException {
         SourceLocation sourceLoc = expr.getSourceLocation();
-        List<Mutable<ILogicalExpression>> argRefs = new ArrayList<>();
-        argRefs.add(new MutableObject<>(expr));
         switch (expr.getExpressionTag()) {
             case CONSTANT:
             case VARIABLE:
                 UnnestingFunctionCallExpression scanCollExpr1 = new UnnestingFunctionCallExpression(
-                        FunctionUtil.getFunctionInfo(BuiltinFunctions.SCAN_COLLECTION), argRefs);
+                        FunctionUtil.getFunctionInfo(BuiltinFunctions.SCAN_COLLECTION),
+                        mkSingletonArrayList(new MutableObject<>(expr)));
                 scanCollExpr1.setSourceLocation(sourceLoc);
-                return scanCollExpr1;
+                return new Pair<>(scanCollExpr1, topOpRef);
             case FUNCTION_CALL:
                 AbstractFunctionCallExpression fce = (AbstractFunctionCallExpression) expr;
                 if (fce.getKind() == FunctionKind.UNNEST) {
-                    return expr;
-                } else {
+                    return new Pair<>(expr, topOpRef);
+                } else if (fce.getKind() == FunctionKind.SCALAR && unnestNeedsAssign(fce)) {
+                    LogicalVariable var = context.newVar();
+                    AssignOperator assignOp = new AssignOperator(var, new MutableObject<>(expr));
+                    assignOp.setSourceLocation(sourceLoc);
+                    assignOp.getInputs().add(topOpRef);
+                    VariableReferenceExpression varRef = new VariableReferenceExpression(var);
+                    varRef.setSourceLocation(sourceLoc);
                     UnnestingFunctionCallExpression scanCollExpr2 = new UnnestingFunctionCallExpression(
-                            FunctionUtil.getFunctionInfo(BuiltinFunctions.SCAN_COLLECTION), argRefs);
+                            FunctionUtil.getFunctionInfo(BuiltinFunctions.SCAN_COLLECTION),
+                            mkSingletonArrayList(new MutableObject<>(varRef)));
                     scanCollExpr2.setSourceLocation(sourceLoc);
-                    return scanCollExpr2;
+                    return new Pair<>(scanCollExpr2, new MutableObject<>(assignOp));
+                } else {
+                    UnnestingFunctionCallExpression scanCollExpr3 = new UnnestingFunctionCallExpression(
+                            FunctionUtil.getFunctionInfo(BuiltinFunctions.SCAN_COLLECTION),
+                            mkSingletonArrayList(new MutableObject<>(expr)));
+                    scanCollExpr3.setSourceLocation(sourceLoc);
+                    return new Pair<>(scanCollExpr3, topOpRef);
                 }
             default:
-                return expr;
+                throw new CompilationException(ErrorCode.COMPILATION_ILLEGAL_STATE, sourceLoc);
         }
+    }
+
+    /**
+     * Whether an Assign operator needs to be introduced when unnesting this function call expression.
+     */
+    private boolean unnestNeedsAssign(AbstractFunctionCallExpression fce) {
+        return BuiltinFunctions.getAggregateFunction(fce.getFunctionIdentifier()) != null;
     }
 
     private boolean rebindBottomOpRef(ILogicalOperator currentOp, Mutable<ILogicalOperator> opRef,

@@ -97,12 +97,18 @@ public class PartitionReplica implements IPartitionReplica {
     public synchronized ISocketChannel getChannel() {
         try {
             if (!NetworkingUtil.isHealthy(sc)) {
-                sc = ReplicationProtocol.establishReplicaConnection(appCtx, id.getLocation());
+                establishReplicaConnection();
             }
             return sc;
         } catch (IOException e) {
             throw new ReplicationException(e);
         }
+    }
+
+    private void establishReplicaConnection() throws IOException {
+        // try to re-resolve the address, in case our replica has had his IP address updated, and that is why the
+        // connection is unhealthy...
+        sc = ReplicationProtocol.establishReplicaConnection(appCtx, id.refreshLocation());
     }
 
     public synchronized void close() {

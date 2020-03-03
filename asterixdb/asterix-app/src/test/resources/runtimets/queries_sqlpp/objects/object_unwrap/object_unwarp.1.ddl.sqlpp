@@ -35,4 +35,15 @@ create type TinySocial.TwitterUserType as
   statuses_count : bigint
 };
 
+create type recordType as {
+  f : int
+};
+
+create type dsType as closed {
+  id: int,
+  rec_f : recordType?
+};
+
 create  dataset TwitterUsers(TwitterUserType) primary key `screen-name`;
+
+create  dataset ds(dsType) primary key id;

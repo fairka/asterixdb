@@ -26,6 +26,7 @@ import org.apache.asterix.common.exceptions.WarningUtil;
 import org.apache.asterix.dataflow.data.nontagged.serde.ABooleanSerializerDeserializer;
 import org.apache.asterix.formats.nontagged.SerializerDeserializerProvider;
 import org.apache.asterix.om.base.ABoolean;
+import org.apache.asterix.om.exceptions.ExceptionUtil;
 import org.apache.asterix.om.types.ATypeTag;
 import org.apache.asterix.om.types.BuiltinType;
 import org.apache.asterix.om.types.EnumDeserializer;
@@ -33,13 +34,13 @@ import org.apache.asterix.om.types.hierachy.ATypeHierarchy;
 import org.apache.asterix.runtime.evaluators.common.ListAccessor;
 import org.apache.asterix.runtime.evaluators.functions.AbstractScalarEval;
 import org.apache.asterix.runtime.evaluators.functions.PointableHelper;
-import org.apache.asterix.runtime.exceptions.ExceptionUtil;
 import org.apache.hyracks.algebricks.core.algebra.functions.FunctionIdentifier;
 import org.apache.hyracks.algebricks.runtime.base.IEvaluatorContext;
 import org.apache.hyracks.algebricks.runtime.base.IScalarEvaluator;
 import org.apache.hyracks.algebricks.runtime.base.IScalarEvaluatorFactory;
 import org.apache.hyracks.api.dataflow.value.ISerializerDeserializer;
 import org.apache.hyracks.api.exceptions.HyracksDataException;
+import org.apache.hyracks.api.exceptions.IWarningCollector;
 import org.apache.hyracks.api.exceptions.SourceLocation;
 import org.apache.hyracks.data.std.api.IPointable;
 import org.apache.hyracks.data.std.primitive.VoidPointable;
@@ -147,7 +148,7 @@ class BitValuePositionFlagEvaluator extends AbstractScalarEval {
 
         // Type and value validity check
         if (!PointableHelper.isValidLongValue(valueBytes, valueStartOffset, true)) {
-            handleTypeMismatchInput(0, ATypeTag.BIGINT, valueBytes, valueStartOffset);
+            ExceptionUtil.warnTypeMismatch(context, srcLoc, funID, valueBytes[valueStartOffset], 0, ATypeTag.BIGINT);
             PointableHelper.setNull(result);
             return;
         }
@@ -160,7 +161,8 @@ class BitValuePositionFlagEvaluator extends AbstractScalarEval {
 
         // Type validity check (for position argument, array is a valid type as well)
         if (!ATypeHierarchy.canPromote(positionTypeTag, ATypeTag.DOUBLE) && positionTypeTag != ATypeTag.ARRAY) {
-            handleTypeMismatchInput(1, secondArgumentExpectedTypes, positionBytes, positionStartOffset);
+            ExceptionUtil.warnTypeMismatch(context, srcLoc, funID, positionBytes[positionStartOffset], 1,
+                    secondArgumentExpectedTypes);
             PointableHelper.setNull(result);
             return;
         }
@@ -174,7 +176,7 @@ class BitValuePositionFlagEvaluator extends AbstractScalarEval {
             ATypeTag flagTypeTag = EnumDeserializer.ATYPETAGDESERIALIZER.deserialize(flagBytes[flagStartOffset]);
 
             if (flagTypeTag != ATypeTag.BOOLEAN) {
-                handleTypeMismatchInput(2, ATypeTag.BOOLEAN, flagBytes, flagStartOffset);
+                ExceptionUtil.warnTypeMismatch(context, srcLoc, funID, flagBytes[flagStartOffset], 2, ATypeTag.BOOLEAN);
                 PointableHelper.setNull(result);
                 return;
             }
@@ -183,7 +185,7 @@ class BitValuePositionFlagEvaluator extends AbstractScalarEval {
         }
 
         // Result long value
-        long longResult = ATypeHierarchy.getLongValue(functionIdentifier.getName(), 0, valueBytes, valueStartOffset);
+        long longResult = ATypeHierarchy.getLongValue(funID.getName(), 0, valueBytes, valueStartOffset);
 
         // If any operation returns false, the result should be null
         boolean isSuccessfulOperation;
@@ -267,11 +269,11 @@ class BitValuePositionFlagEvaluator extends AbstractScalarEval {
 
         // Value validity check
         if (!PointableHelper.isValidLongValue(bytes, startOffset, true)) {
-            handleTypeMismatchInput(1, ATypeTag.BIGINT, bytes, startOffset);
+            ExceptionUtil.warnTypeMismatch(context, srcLoc, funID, bytes[startOffset], 1, ATypeTag.BIGINT);
             return false;
         }
 
-        long position = ATypeHierarchy.getLongValue(functionIdentifier.getName(), 1, bytes, startOffset);
+        long position = ATypeHierarchy.getLongValue(funID.getName(), 1, bytes, startOffset);
 
         // Ensure the position is between 1 and 64 (int64 has 64 bits)
         if (position < 1 || position > 64) {
@@ -287,23 +289,11 @@ class BitValuePositionFlagEvaluator extends AbstractScalarEval {
         return true;
     }
 
-    private void handleTypeMismatchInput(int inputPosition, ATypeTag expected, byte[] actualBytes,
-            int actualStartOffset) {
-        ATypeTag actual = EnumDeserializer.ATYPETAGDESERIALIZER.deserialize(actualBytes[actualStartOffset]);
-        context.getWarningCollector().warn(WarningUtil.forAsterix(sourceLoc, ErrorCode.TYPE_MISMATCH_FUNCTION,
-                functionIdentifier, ExceptionUtil.indexToPosition(inputPosition), expected, actual));
-    }
-
-    private void handleTypeMismatchInput(int inputPosition, byte[] expected, byte[] bytes, int actualStartOffset) {
-        ATypeTag actual = EnumDeserializer.ATYPETAGDESERIALIZER.deserialize(bytes[actualStartOffset]);
-        context.getWarningCollector()
-                .warn(WarningUtil.forAsterix(sourceLoc, ErrorCode.TYPE_MISMATCH_FUNCTION, functionIdentifier,
-                        ExceptionUtil.indexToPosition(inputPosition), ExceptionUtil.toExpectedTypeString(expected),
-                        actual));
-    }
-
     private void handleOutOfRangeInput(int inputPosition, int startLimit, int endLimit, long actual) {
-        context.getWarningCollector().warn(WarningUtil.forAsterix(sourceLoc, ErrorCode.VALUE_OUT_OF_RANGE,
-                functionIdentifier, ExceptionUtil.indexToPosition(inputPosition), startLimit, endLimit, actual));
+        IWarningCollector warningCollector = context.getWarningCollector();
+        if (warningCollector.shouldWarn()) {
+            warningCollector.warn(WarningUtil.forAsterix(srcLoc, ErrorCode.VALUE_OUT_OF_RANGE, funID,
+                    ExceptionUtil.indexToPosition(inputPosition), startLimit, endLimit, actual));
+        }
     }
 }

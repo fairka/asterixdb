@@ -95,10 +95,8 @@ import org.apache.hyracks.algebricks.core.algebra.expressions.IExpressionEvalSiz
 import org.apache.hyracks.algebricks.core.algebra.expressions.IExpressionTypeComputer;
 import org.apache.hyracks.algebricks.core.algebra.expressions.IMergeAggregationExpressionFactory;
 import org.apache.hyracks.algebricks.core.algebra.expressions.IMissableTypeComputer;
-import org.apache.hyracks.algebricks.core.algebra.prettyprint.AbstractLogicalOperatorPrettyPrintVisitor;
-import org.apache.hyracks.algebricks.core.algebra.prettyprint.AlgebricksAppendable;
-import org.apache.hyracks.algebricks.core.algebra.prettyprint.LogicalOperatorPrettyPrintVisitor;
-import org.apache.hyracks.algebricks.core.algebra.prettyprint.LogicalOperatorPrettyPrintVisitorJson;
+import org.apache.hyracks.algebricks.core.algebra.prettyprint.AlgebricksStringBuilderWriter;
+import org.apache.hyracks.algebricks.core.algebra.prettyprint.IPlanPrettyPrinter;
 import org.apache.hyracks.algebricks.core.algebra.prettyprint.PlanPrettyPrinter;
 import org.apache.hyracks.algebricks.core.rewriter.base.IOptimizationContextFactory;
 import org.apache.hyracks.algebricks.core.rewriter.base.PhysicalOptimizationConfig;
@@ -128,8 +126,9 @@ public class APIFramework {
 
     private static final ObjectWriter OBJECT_WRITER = new ObjectMapper().writerWithDefaultPrettyPrinter();
 
-    // A white list of supported configurable parameters.
     public static final String PREFIX_INTERNAL_PARAMETERS = "_internal";
+
+    // A white list of supported configurable parameters.
     private static final Set<String> CONFIGURABLE_PARAMETER_NAMES =
             ImmutableSet.of(CompilerProperties.COMPILER_JOINMEMORY_KEY, CompilerProperties.COMPILER_GROUPMEMORY_KEY,
                     CompilerProperties.COMPILER_SORTMEMORY_KEY, CompilerProperties.COMPILER_WINDOWMEMORY_KEY,
@@ -170,10 +169,10 @@ public class APIFramework {
                 IExpressionTypeComputer expressionTypeComputer, IMissableTypeComputer missableTypeComputer,
                 IConflictingTypeResolver conflictingTypeResolver, PhysicalOptimizationConfig physicalOptimizationConfig,
                 AlgebricksPartitionConstraint clusterLocations, IWarningCollector warningCollector) {
-            LogicalOperatorPrettyPrintVisitor prettyPrintVisitor = new LogicalOperatorPrettyPrintVisitor();
+            IPlanPrettyPrinter prettyPrinter = PlanPrettyPrinter.createStringPlanPrettyPrinter();
             return new AsterixOptimizationContext(varCounter, expressionEvalSizeComputer,
                     mergeAggregationExpressionFactory, expressionTypeComputer, missableTypeComputer,
-                    conflictingTypeResolver, physicalOptimizationConfig, clusterLocations, prettyPrintVisitor,
+                    conflictingTypeResolver, physicalOptimizationConfig, clusterLocations, prettyPrinter,
                     warningCollector);
         }
     }
@@ -243,6 +242,7 @@ public class APIFramework {
         builder.setMissableTypeComputer(MissableTypeComputer.INSTANCE);
         builder.setConflictingTypeResolver(ConflictingTypeResolver.INSTANCE);
         builder.setWarningCollector(warningCollector);
+        builder.setMaxWarnings(conf.getMaxWarnings());
 
         int parallelism = getParallelism((String) querySpecificConfig.get(CompilerProperties.COMPILER_PARALLELISM_KEY),
                 compilerProperties.getParallelism());
@@ -256,8 +256,9 @@ public class APIFramework {
             if (conf.is(SessionConfig.OOB_OPTIMIZED_LOGICAL_PLAN) || isExplainOnly) {
                 if (conf.is(SessionConfig.FORMAT_ONLY_PHYSICAL_OPS)) {
                     // For Optimizer tests.
-                    AlgebricksAppendable buffer = new AlgebricksAppendable(output.out());
-                    PlanPrettyPrinter.printPhysicalOps(plan, buffer, 0);
+                    AlgebricksStringBuilderWriter buf = new AlgebricksStringBuilderWriter(PlanPrettyPrinter.INIT_SIZE);
+                    PlanPrettyPrinter.printPhysicalOps(plan, buf, 0);
+                    output.out().write(buf.toString());
                 } else {
                     if (isQuery || isLoad) {
                         generateOptimizedLogicalPlan(plan, output.config().getPlanFormat());
@@ -339,10 +340,9 @@ public class APIFramework {
         }
     }
 
-    private AbstractLogicalOperatorPrettyPrintVisitor getPrettyPrintVisitor(SessionConfig.PlanFormat planFormat,
-            PrintWriter out) {
-        return planFormat.equals(SessionConfig.PlanFormat.JSON) ? new LogicalOperatorPrettyPrintVisitorJson(out)
-                : new LogicalOperatorPrettyPrintVisitor(out);
+    private IPlanPrettyPrinter getPrettyPrintVisitor(SessionConfig.PlanFormat planFormat) {
+        return planFormat.equals(SessionConfig.PlanFormat.JSON) ? PlanPrettyPrinter.createJsonPlanPrettyPrinter()
+                : PlanPrettyPrinter.createStringPlanPrettyPrinter();
     }
 
     public void executeJobArray(IHyracksClientConnection hcc, JobSpecification[] specs, PrintWriter out)
@@ -483,20 +483,12 @@ public class APIFramework {
     }
 
     private void generateLogicalPlan(ILogicalPlan plan, SessionConfig.PlanFormat format) throws AlgebricksException {
-        final StringWriter stringWriter = new StringWriter();
-        try (PrintWriter writer = new PrintWriter(stringWriter)) {
-            PlanPrettyPrinter.printPlan(plan, getPrettyPrintVisitor(format, writer), 0);
-            executionPlans.setLogicalPlan(stringWriter.toString());
-        }
+        executionPlans.setLogicalPlan(getPrettyPrintVisitor(format).printPlan(plan).toString());
     }
 
     private void generateOptimizedLogicalPlan(ILogicalPlan plan, SessionConfig.PlanFormat format)
             throws AlgebricksException {
-        final StringWriter stringWriter = new StringWriter();
-        try (PrintWriter writer = new PrintWriter(stringWriter)) {
-            PlanPrettyPrinter.printPlan(plan, getPrettyPrintVisitor(format, writer), 0);
-            executionPlans.setOptimizedLogicalPlan(stringWriter.toString());
-        }
+        executionPlans.setOptimizedLogicalPlan(getPrettyPrintVisitor(format).printPlan(plan).toString());
     }
 
     private void generateJob(JobSpecification spec) {

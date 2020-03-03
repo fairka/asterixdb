@@ -33,4 +33,6 @@ public interface IRunGenerator extends IFrameWriter {
      * @return the list of generated (sorted) runs
      */
     List<GeneratedRunFileReader> getRuns();
+
+    ISorter getSorter();
 }

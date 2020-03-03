@@ -34,17 +34,11 @@ public interface ICachedPage {
 
     boolean confiscated();
 
-    IQueueInfo getQueueInfo();
-
-    void setQueueInfo(IQueueInfo queueInfo);
-
     int getPageSize();
 
     int getFrameSizeMultiplier();
 
     void setDiskPageId(long dpid);
-
-    void setFailureCallback(IPageWriteFailureCallback callback);
 
     /**
      * Check if a page is a large page
@@ -52,6 +46,4 @@ public interface ICachedPage {
      * @return true if the page is large, false otherwise
      */
     boolean isLargePage();
-
-    void writeFailed(Exception e);
 }

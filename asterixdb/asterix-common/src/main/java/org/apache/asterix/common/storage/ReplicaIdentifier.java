@@ -20,16 +20,18 @@ package org.apache.asterix.common.storage;
 
 import java.net.InetSocketAddress;
 
+import org.apache.hyracks.util.NetworkUtil;
+
 public class ReplicaIdentifier {
 
     private final int partition;
-    private final InetSocketAddress location;
     private final String id;
+    private volatile InetSocketAddress location;
 
     private ReplicaIdentifier(int partition, InetSocketAddress location) {
         this.partition = partition;
         this.location = location;
-        id = partition + "@" + location.toString();
+        id = partition + "@" + location.getHostString() + ":" + location.getPort();
     }
 
     public static ReplicaIdentifier of(int partition, InetSocketAddress location) {
@@ -41,6 +43,12 @@ public class ReplicaIdentifier {
     }
 
     public InetSocketAddress getLocation() {
+        return location;
+    }
+
+    public InetSocketAddress refreshLocation() {
+        //noinspection NonAtomicOperationOnVolatileField
+        location = NetworkUtil.refresh(location);
         return location;
     }
 

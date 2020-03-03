@@ -77,7 +77,7 @@ public class MetadataTxnTest {
     public void abortMetadataTxn() throws Exception {
         ICcApplicationContext appCtx =
                 (ICcApplicationContext) integrationUtil.getClusterControllerService().getApplicationContext();
-        final MetadataProvider metadataProvider = new MetadataProvider(appCtx, null);
+        final MetadataProvider metadataProvider = MetadataProvider.create(appCtx, null);
         final MetadataTransactionContext mdTxn = MetadataManager.INSTANCE.beginTransaction();
         metadataProvider.setMetadataTxnContext(mdTxn);
         final String nodeGroupName = "ng";
@@ -116,7 +116,7 @@ public class MetadataTxnTest {
                 "CREATE DATASET " + datasetName + "(KeyType) PRIMARY KEY id on " + nodeGroup + ";", format);
         // find source dataset
         Dataset sourceDataset;
-        MetadataProvider metadataProvider = new MetadataProvider(appCtx, null);
+        MetadataProvider metadataProvider = MetadataProvider.create(appCtx, null);
         final MetadataTransactionContext mdTxnCtx = MetadataManager.INSTANCE.beginTransaction();
         metadataProvider.setMetadataTxnContext(mdTxnCtx);
         try {
@@ -127,7 +127,7 @@ public class MetadataTxnTest {
         }
 
         // create rebalance metadata provider and metadata txn
-        metadataProvider = new MetadataProvider(appCtx, null);
+        metadataProvider = MetadataProvider.create(appCtx, null);
         final MetadataTransactionContext rebalanceTxn = MetadataManager.INSTANCE.beginTransaction();
         metadataProvider.setMetadataTxnContext(rebalanceTxn);
         try {
@@ -165,7 +165,7 @@ public class MetadataTxnTest {
         // get created dataset
         ICcApplicationContext appCtx =
                 (ICcApplicationContext) integrationUtil.getClusterControllerService().getApplicationContext();
-        MetadataProvider metadataProvider = new MetadataProvider(appCtx, null);
+        MetadataProvider metadataProvider = MetadataProvider.create(appCtx, null);
         final MetadataTransactionContext mdTxnCtx = MetadataManager.INSTANCE.beginTransaction();
         metadataProvider.setMetadataTxnContext(mdTxnCtx);
         Dataset sourceDataset;
@@ -224,7 +224,7 @@ public class MetadataTxnTest {
     public void surviveInterruptOnMetadataTxnCommit() throws Exception {
         ICcApplicationContext appCtx =
                 (ICcApplicationContext) integrationUtil.getClusterControllerService().getApplicationContext();
-        final MetadataProvider metadataProvider = new MetadataProvider(appCtx, null);
+        final MetadataProvider metadataProvider = MetadataProvider.create(appCtx, null);
         final MetadataTransactionContext mdTxn = MetadataManager.INSTANCE.beginTransaction();
         metadataProvider.setMetadataTxnContext(mdTxn);
         final String nodeGroupName = "ng";
@@ -256,7 +256,7 @@ public class MetadataTxnTest {
     public void failedFlushOnUncommittedMetadataTxn() throws Exception {
         ICcApplicationContext ccAppCtx =
                 (ICcApplicationContext) integrationUtil.getClusterControllerService().getApplicationContext();
-        final MetadataProvider metadataProvider = new MetadataProvider(ccAppCtx, null);
+        final MetadataProvider metadataProvider = MetadataProvider.create(ccAppCtx, null);
         final MetadataTransactionContext mdTxn = MetadataManager.INSTANCE.beginTransaction();
         metadataProvider.setMetadataTxnContext(mdTxn);
         final String nodeGroupName = "ng";
@@ -314,7 +314,7 @@ public class MetadataTxnTest {
         // ensure flush completed successfully and the component was switched
         datasetInfo.waitForIO();
         Assert.assertNotEquals(mutableComponentBeforeFlush, index.getCurrentMemoryComponentIndex());
-        Assert.assertEquals(diskComponentsBeforeFlush + 1, index.getDiskComponents().size());
+        Assert.assertNotEquals(diskComponentsBeforeFlush, index.getDiskComponents().size());
     }
 
     private void addDataset(ICcApplicationContext appCtx, Dataset source, int datasetPostfix, boolean abort)
@@ -322,7 +322,7 @@ public class MetadataTxnTest {
         Dataset dataset = new Dataset(source.getDataverseName(), "ds_" + datasetPostfix, source.getDataverseName(),
                 source.getDatasetType().name(), source.getNodeGroupName(), NoMergePolicyFactory.NAME, null,
                 source.getDatasetDetails(), source.getHints(), DatasetConfig.DatasetType.INTERNAL, datasetPostfix, 0);
-        MetadataProvider metadataProvider = new MetadataProvider(appCtx, null);
+        MetadataProvider metadataProvider = MetadataProvider.create(appCtx, null);
         final MetadataTransactionContext writeTxn = MetadataManager.INSTANCE.beginTransaction();
         metadataProvider.setMetadataTxnContext(writeTxn);
         try {

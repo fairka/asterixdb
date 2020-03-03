@@ -102,7 +102,7 @@ public class OptimizationConfUtil {
         int frameLimit = (int) (memBudget / frameSize);
         if (frameLimit < minFrameLimit) {
             throw AsterixException.create(ErrorCode.COMPILATION_BAD_QUERY_PARAMETER_VALUE, sourceLoc, parameterName,
-                    frameSize * minFrameLimit);
+                    frameSize * minFrameLimit, "bytes");
         }
         // sets the frame limit to the minimum frame limit if the calculated frame limit is too small.
         return Math.max(frameLimit, minFrameLimit);
@@ -126,7 +126,7 @@ public class OptimizationConfUtil {
                     : OptionTypes.POSITIVE_INTEGER.parse(valueInQuery);
         } catch (IllegalArgumentException e) {
             throw AsterixException.create(ErrorCode.COMPILATION_BAD_QUERY_PARAMETER_VALUE, sourceLoc,
-                    CompilerProperties.COMPILER_SORT_SAMPLES_KEY, 1);
+                    CompilerProperties.COMPILER_SORT_SAMPLES_KEY, 1, "samples");
         }
     }
 }

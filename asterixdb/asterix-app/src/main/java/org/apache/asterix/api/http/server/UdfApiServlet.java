@@ -33,6 +33,8 @@ import org.apache.asterix.app.message.LoadUdfMessage;
 import org.apache.asterix.common.dataflow.ICcApplicationContext;
 import org.apache.asterix.common.messaging.api.ICCMessageBroker;
 import org.apache.asterix.common.messaging.api.INcAddressedMessage;
+import org.apache.asterix.common.metadata.DataverseName;
+import org.apache.hyracks.algebricks.common.utils.Pair;
 import org.apache.hyracks.api.client.IHyracksClientConnection;
 import org.apache.hyracks.api.deployment.DeploymentId;
 import org.apache.hyracks.http.api.IServletRequest;
@@ -54,6 +56,7 @@ public class UdfApiServlet extends AbstractServlet {
     private final ICCMessageBroker broker;
     public static final String UDF_TMP_DIR_PREFIX = "udf_temp";
     public static final int UDF_RESPONSE_TIMEOUT = 5000;
+    public static final int URL_PREFIX_LENGTH = 3;
 
     public UdfApiServlet(ICcApplicationContext appCtx, ConcurrentMap<String, Object> ctx, String... paths) {
         super(ctx, paths);
@@ -61,28 +64,28 @@ public class UdfApiServlet extends AbstractServlet {
         this.broker = (ICCMessageBroker) appCtx.getServiceContext().getMessageBroker();
     }
 
-    private String[] getResource(FullHttpRequest req) throws IllegalArgumentException {
+    private Pair<String, DataverseName> getResource(FullHttpRequest req) throws IllegalArgumentException {
         String[] path = new QueryStringDecoder(req.uri()).path().split("/");
         if (path.length != 5) {
             throw new IllegalArgumentException("Invalid resource.");
         }
         String resourceName = path[path.length - 1];
-        String dataverseName = path[path.length - 2];
-        return new String[] { resourceName, dataverseName };
+        DataverseName dataverseName = DataverseName.createFromCanonicalForm(path[path.length - 2]); // TODO: use path separators instead for multiparts
+        return new Pair<>(resourceName, dataverseName);
     }
 
     @Override
     protected void post(IServletRequest request, IServletResponse response) {
         FullHttpRequest req = request.getHttpRequest();
-        String[] resourceNames;
+        Pair<String, DataverseName> resourceNames;
         try {
             resourceNames = getResource(req);
         } catch (IllegalArgumentException e) {
             response.setStatus(HttpResponseStatus.BAD_REQUEST);
             return;
         }
-        String resourceName = resourceNames[0];
-        String dataverse = resourceNames[1];
+        String resourceName = resourceNames.first;
+        DataverseName dataverse = resourceNames.second;
         File udf = null;
         try {
             File workingDir = new File(appCtx.getServiceContext().getServerCtx().getBaseDir().getAbsolutePath(),
@@ -101,7 +104,7 @@ public class UdfApiServlet extends AbstractServlet {
                 }
             }
             IHyracksClientConnection hcc = appCtx.getHcc();
-            DeploymentId udfName = new DeploymentId(dataverse + "." + resourceName);
+            DeploymentId udfName = new DeploymentId(makeDeploymentId(dataverse, resourceName));
             ClassLoader cl = appCtx.getLibraryManager().getLibraryClassLoader(dataverse, resourceName);
             if (cl != null) {
                 deleteUdf(dataverse, resourceName);
@@ -129,27 +132,34 @@ public class UdfApiServlet extends AbstractServlet {
 
     }
 
-    private void deleteUdf(String dataverse, String resourceName) throws Exception {
+    public static String makeDeploymentId(DataverseName dv, String resourceName) {
+        List<String> dvParts = dv.getParts();
+        dvParts.add(resourceName);
+        DataverseName dvWithLibrarySuffix = DataverseName.create(dvParts);
+        return dvWithLibrarySuffix.getCanonicalForm();
+    }
+
+    private void deleteUdf(DataverseName dataverse, String resourceName) throws Exception {
         long reqId = broker.newRequestId();
         List<INcAddressedMessage> requests = new ArrayList<>();
         List<String> ncs = new ArrayList<>(appCtx.getClusterStateManager().getParticipantNodes());
         ncs.forEach(s -> requests.add(new DeleteUdfMessage(dataverse, resourceName, reqId)));
         broker.sendSyncRequestToNCs(reqId, ncs, requests, UDF_RESPONSE_TIMEOUT);
         appCtx.getLibraryManager().deregisterLibraryClassLoader(dataverse, resourceName);
-        appCtx.getHcc().unDeployBinary(new DeploymentId(resourceName));
+        appCtx.getHcc().unDeployBinary(new DeploymentId(makeDeploymentId(dataverse, resourceName)));
     }
 
     @Override
     protected void delete(IServletRequest request, IServletResponse response) {
-        String[] resourceNames;
+        Pair<String, DataverseName> resourceNames;
         try {
             resourceNames = getResource(request.getHttpRequest());
         } catch (IllegalArgumentException e) {
             response.setStatus(HttpResponseStatus.BAD_REQUEST);
             return;
         }
-        String resourceName = resourceNames[0];
-        String dataverse = resourceNames[1];
+        String resourceName = resourceNames.first;
+        DataverseName dataverse = resourceNames.second;
         try {
             deleteUdf(dataverse, resourceName);
         } catch (Exception e) {
