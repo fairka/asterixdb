@@ -153,8 +153,7 @@ public class MergeJoinOperatorDescriptor extends AbstractOperatorDescriptor {
                 return new IFrameWriter() {
                     @Override
                     public void open() throws HyracksDataException {
-                        inputStates[index] = new ProducerConsumerFrameState(ctx.getJobletContext().getJobId(),
-                                new TaskId(getActivityId(), partition), recordDescriptors[index]);
+                        inputStates[index] = new ProducerConsumerFrameState(recordDescriptors[index]);
                     }
 
                     @Override
