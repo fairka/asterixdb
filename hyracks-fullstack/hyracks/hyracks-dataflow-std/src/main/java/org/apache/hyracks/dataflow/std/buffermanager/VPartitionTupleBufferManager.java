@@ -20,6 +20,7 @@
 package org.apache.hyracks.dataflow.std.buffermanager;
 
 import java.nio.ByteBuffer;
+import java.util.ArrayList;
 import java.util.Arrays;
 
 import org.apache.hyracks.api.comm.FixedSizeFrame;
@@ -45,13 +46,13 @@ public class VPartitionTupleBufferManager implements IPartitionedTupleBufferMana
         }
     };
 
-    private IDeallocatableFramePool framePool;
-    private IFrameBufferManager[] partitionArray;
-    private int[] numTuples;
+    protected IDeallocatableFramePool framePool;
+    protected IFrameBufferManager[] partitionArray;
+    protected int[] numTuples;
     private final FixedSizeFrame appendFrame;
     private final FixedSizeFrameTupleAppender appender;
-    private BufferInfo tempInfo;
-    private IPartitionedMemoryConstrain constrain;
+    protected BufferInfo tempInfo;
+    protected IPartitionedMemoryConstrain constrain;
 
     // In case where a frame pool is shared by one or more buffer manager(s), it can be provided from the caller.
     public VPartitionTupleBufferManager(IPartitionedMemoryConstrain constrain, int partitions,
@@ -180,19 +181,19 @@ public class VPartitionTupleBufferManager implements IPartitionedTupleBufferMana
         return FrameHelper.calcRequiredSpace(0, size);
     }
 
-    private int makeGroupFrameId(int partition, int fid) {
+    protected int makeGroupFrameId(int partition, int fid) {
         return fid * getNumPartitions() + partition;
     }
 
-    private int parsePartitionId(int externalFrameId) {
+    protected int parsePartitionId(int externalFrameId) {
         return externalFrameId % getNumPartitions();
     }
 
-    private int parseFrameIdInPartition(int externalFrameId) {
+    protected int parseFrameIdInPartition(int externalFrameId) {
         return externalFrameId / getNumPartitions();
     }
 
-    private int createNewBuffer(int partition, int size) throws HyracksDataException {
+    public int createNewBuffer(int partition, int size) throws HyracksDataException {
         ByteBuffer newBuffer = requestNewBufferFromPool(size);
         if (newBuffer == null) {
             return -1;
@@ -258,6 +259,114 @@ public class VPartitionTupleBufferManager implements IPartitionedTupleBufferMana
         }
         framePool.close();
         Arrays.fill(partitionArray, null);
+    }
+
+    static class PartitionFrameBufferManager implements IFrameBufferManager {
+
+        int size = 0;
+        ArrayList<ByteBuffer> buffers = new ArrayList<>();
+
+        @Override
+        public void reset() throws HyracksDataException {
+            buffers.clear();
+            size = 0;
+        }
+
+        @Override
+        public BufferInfo getFrame(int frameIndex, BufferInfo returnedInfo) {
+            returnedInfo.reset(buffers.get(frameIndex), 0, buffers.get(frameIndex).capacity());
+            return returnedInfo;
+        }
+
+        @Override
+        public int getNumFrames() {
+            return size;
+        }
+
+        @Override
+        public int insertFrame(ByteBuffer frame) throws HyracksDataException {
+            int index = -1;
+            if (buffers.size() == size) {
+                buffers.add(frame);
+                index = buffers.size() - 1;
+            } else {
+                for (int i = 0; i < buffers.size(); ++i) {
+                    if (buffers.get(i) == null) {
+                        buffers.set(i, frame);
+                        index = i;
+                        break;
+                    }
+                }
+            }
+            if (index == -1) {
+                throw new HyracksDataException("Did not insert frame.");
+            }
+            size++;
+            return index;
+        }
+
+        @Override
+        public void removeFrame(int frameIndex) {
+            buffers.set(frameIndex, null);
+            size--;
+        }
+
+        @Override
+        public void close() {
+            buffers = null;
+        }
+
+        int iterator = -1;
+
+        @Override
+        public int next() {
+            while (++iterator < buffers.size()) {
+                if (buffers.get(iterator) != null) {
+                    break;
+                }
+            }
+            return iterator;
+        }
+
+        @Override
+        public boolean exists() {
+            return iterator < buffers.size() && buffers.get(iterator) != null;
+        }
+
+        @Override
+        public void resetIterator() {
+            iterator = -1;
+        }
+
+        @Override
+        public ITupleAccessor getTupleAccessor(final RecordDescriptor recordDescriptor) {
+            return new AbstractTupleAccessor() {
+                protected BufferInfo tempBI = new BufferInfo(null, -1, -1);
+                FrameTupleAccessor innerAccessor = new FrameTupleAccessor(recordDescriptor);
+
+                @Override
+                IFrameTupleAccessor getInnerAccessor() {
+                    return innerAccessor;
+                }
+
+                @Override
+                void resetInnerAccessor(int frameIndex) {
+                    getFrame(frameIndex, tempBI);
+                    innerAccessor.reset(tempBI.getBuffer(), tempBI.getStartOffset(), tempBI.getLength());
+                }
+
+                void resetInnerAccessor(TuplePointer tuplePointer) {
+                    getFrame(tuplePointer.getFrameIndex(), tempBI);
+                    innerAccessor.reset(tempBI.getBuffer(), tempBI.getStartOffset(), tempBI.getLength());
+                }
+
+                @Override
+                int getFrameCount() {
+                    return buffers.size();
+                }
+            };
+        }
+
     }
 
     @Override
@@ -355,6 +464,37 @@ public class VPartitionTupleBufferManager implements IPartitionedTupleBufferMana
                     }
                 }
                 return UNSET;
+            }
+        };
+
+    }
+
+    @Override
+    public ITupleAccessor getTupleAccessor(final RecordDescriptor recordDescriptor) {
+        return new AbstractTupleAccessor() {
+            FrameTupleAccessor innerAccessor = new FrameTupleAccessor(recordDescriptor);
+
+            @Override
+            IFrameTupleAccessor getInnerAccessor() {
+                return innerAccessor;
+            }
+
+            @Override
+            void resetInnerAccessor(TuplePointer tuplePointer) {
+                partitionArray[parsePartitionId(tuplePointer.getFrameIndex())]
+                        .getFrame(parseFrameIdInPartition(tuplePointer.getFrameIndex()), tempInfo);
+                innerAccessor.reset(tempInfo.getBuffer(), tempInfo.getStartOffset(), tempInfo.getLength());
+            }
+
+            @Override
+            void resetInnerAccessor(int frameIndex) {
+                partitionArray[parsePartitionId(frameIndex)].getFrame(parseFrameIdInPartition(frameIndex), tempInfo);
+                innerAccessor.reset(tempInfo.getBuffer(), tempInfo.getStartOffset(), tempInfo.getLength());
+            }
+
+            @Override
+            int getFrameCount() {
+                return partitionArray.length;
             }
         };
     }

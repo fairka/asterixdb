@@ -24,6 +24,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 import org.apache.hyracks.api.comm.FrameHelper;
+import org.apache.hyracks.api.dataflow.value.RecordDescriptor;
 import org.apache.hyracks.api.exceptions.HyracksDataException;
 import org.apache.hyracks.util.IntSerDeUtils;
 
@@ -37,23 +38,18 @@ public class VariableFrameMemoryManager implements IFrameBufferManager {
             physicalFrame = frame;
             physicalOffset = offset;
         }
-
-        void reset(ByteBuffer frame, int offset) {
-            physicalFrame = frame;
-            physicalOffset = offset;
-        }
     }
 
     private final IFramePool framePool;
+    private List<PhysicalFrameOffset> physicalFrameOffsets;
+    private List<BufferInfo> logicalFrameStartSizes;
     private final IFrameFreeSlotPolicy freeSlotPolicy;
-    private final List<PhysicalFrameOffset> physicalFrames = new ArrayList<>();
-    private final List<BufferInfo> logicalFrames = new ArrayList<>();
-    private int numPhysicalFrames = 0;
-    private int numLogicalFrames = 0;
 
     public VariableFrameMemoryManager(IFramePool framePool, IFrameFreeSlotPolicy freeSlotPolicy) {
         this.framePool = framePool;
         this.freeSlotPolicy = freeSlotPolicy;
+        this.physicalFrameOffsets = new ArrayList<>();
+        this.logicalFrameStartSizes = new ArrayList<>();
     }
 
     private int findAvailableFrame(int frameSize) throws HyracksDataException {
@@ -64,37 +60,29 @@ public class VariableFrameMemoryManager implements IFrameBufferManager {
         ByteBuffer buffer = framePool.allocateFrame(frameSize);
         if (buffer != null) {
             IntSerDeUtils.putInt(buffer.array(), FrameHelper.getTupleCountOffset(buffer.capacity()), 0);
-            if (numPhysicalFrames < physicalFrames.size()) {
-                physicalFrames.get(numPhysicalFrames).reset(buffer, 0);
-            } else {
-                physicalFrames.add(new PhysicalFrameOffset(buffer, 0));
-            }
-            numPhysicalFrames++;
-            return numPhysicalFrames - 1; // returns the index of the physical frame appended
+            physicalFrameOffsets.add(new PhysicalFrameOffset(buffer, 0));
+            return physicalFrameOffsets.size() - 1;
         }
         return -1;
     }
 
     @Override
     public void reset() throws HyracksDataException {
-        numPhysicalFrames = 0;
-        numLogicalFrames = 0;
+        physicalFrameOffsets.clear();
+        logicalFrameStartSizes.clear();
         freeSlotPolicy.reset();
         framePool.reset();
     }
 
     @Override
     public BufferInfo getFrame(int frameIndex, BufferInfo info) {
-        if (frameIndex >= numLogicalFrames) {
-            throw new IndexOutOfBoundsException();
-        }
-        info.reset(logicalFrames.get(frameIndex));
+        info.reset(logicalFrameStartSizes.get(frameIndex));
         return info;
     }
 
     @Override
     public int getNumFrames() {
-        return numLogicalFrames;
+        return logicalFrameStartSizes.size();
     }
 
     @Override
@@ -104,7 +92,7 @@ public class VariableFrameMemoryManager implements IFrameBufferManager {
         if (physicalFrameId < 0) {
             return -1;
         }
-        PhysicalFrameOffset frameOffset = physicalFrames.get(physicalFrameId);
+        PhysicalFrameOffset frameOffset = physicalFrameOffsets.get(physicalFrameId);
         ByteBuffer buffer = frameOffset.physicalFrame;
         int offset = frameOffset.physicalOffset;
         System.arraycopy(frame.array(), 0, buffer.array(), offset, frameSize);
@@ -112,22 +100,44 @@ public class VariableFrameMemoryManager implements IFrameBufferManager {
             freeSlotPolicy.pushNewFrame(physicalFrameId, buffer.capacity() - offset - frameSize);
         }
         frameOffset.physicalOffset = offset + frameSize;
-        if (numLogicalFrames < logicalFrames.size()) {
-            logicalFrames.get(numLogicalFrames).reset(buffer, offset, frameSize);
-        } else {
-            logicalFrames.add(new BufferInfo(buffer, offset, frameSize));
-        }
-        numLogicalFrames++;
-        return numLogicalFrames - 1; // returns the index of the logical frame appended
+        logicalFrameStartSizes.add(new BufferInfo(buffer, offset, frameSize));
+        return logicalFrameStartSizes.size() - 1;
+    }
+
+    @Override
+    public void removeFrame(int frameIndex)  {
+        logicalFrameStartSizes.remove(frameIndex);
     }
 
     @Override
     public void close() {
-        numPhysicalFrames = 0;
-        numLogicalFrames = 0;
-        physicalFrames.clear();
-        logicalFrames.clear();
-        freeSlotPolicy.close();
+        physicalFrameOffsets.clear();
+        logicalFrameStartSizes.clear();
+        freeSlotPolicy.reset();
         framePool.close();
+    }
+
+    @Override
+    public int next() {
+        // TODO Auto-generated method stub
+        return 0;
+    }
+
+    @Override
+    public boolean exists() {
+        // TODO Auto-generated method stub
+        return false;
+    }
+
+    @Override
+    public void resetIterator() {
+        // TODO Auto-generated method stub
+
+    }
+
+    @Override
+    public ITupleAccessor getTupleAccessor(RecordDescriptor rd) {
+        // TODO Auto-generated method stub
+        return null;
     }
 }
