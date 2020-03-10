@@ -65,8 +65,9 @@ public abstract class AbstractIntervalMergeJoiner implements IMergeJoiner {
     protected long[] frameCounts = { 0, 0 };
     protected long[] tupleCounts = { 0, 0 };
 
-    public AbstractIntervalMergeJoiner(IHyracksTaskContext ctx, int partition, IntervalMergeStatus status, IntervalMergeJoinLocks locks,
-            RecordDescriptor leftRd, RecordDescriptor rightRd) throws HyracksDataException {
+    public AbstractIntervalMergeJoiner(IHyracksTaskContext ctx, int partition, IntervalMergeStatus status,
+            IntervalMergeJoinLocks locks, RecordDescriptor leftRd, RecordDescriptor rightRd)
+            throws HyracksDataException {
         this.partition = partition;
         this.status = status;
         this.locks = locks;

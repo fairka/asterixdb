@@ -60,7 +60,7 @@ public class IntervalForwardSweepJoinOperatorDescriptor extends AbstractOperator
             int[] leftKeys, int[] rightKeys, RecordDescriptor recordDescriptor,
             IIntervalMergeJoinCheckerFactory imjcf) {
         super(spec, 2, 1);
-        recordDescriptors[0] = recordDescriptor;
+        //recordDescriptors[0] = recordDescriptor;
         this.leftKeys = leftKeys;
         this.rightKeys = rightKeys;
         this.memoryForJoin = memoryForJoin;
@@ -143,8 +143,7 @@ public class IntervalForwardSweepJoinOperatorDescriptor extends AbstractOperator
 
                 byte point = imjcf.isOrderAsc() ? EndPointIndexItem.START_POINT : EndPointIndexItem.END_POINT;
                 Comparator<EndPointIndexItem> endPointComparator = imjcf.isOrderAsc()
-                        ? EndPointIndexItem.EndPointAscComparator
-                        : EndPointIndexItem.EndPointDescComparator;
+                        ? EndPointIndexItem.EndPointAscComparator : EndPointIndexItem.EndPointDescComparator;
 
                 try {
                     writer.open();
@@ -155,7 +154,7 @@ public class IntervalForwardSweepJoinOperatorDescriptor extends AbstractOperator
                     rightState.close();
                 } catch (Exception ex) {
                     writer.fail();
-                    throw new HyracksDataException(ex);
+                    throw new HyracksDataException("ex");
                 } finally {
                     writer.close();
                 }

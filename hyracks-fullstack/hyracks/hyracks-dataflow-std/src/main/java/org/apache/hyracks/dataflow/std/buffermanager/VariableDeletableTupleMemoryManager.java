@@ -185,4 +185,9 @@ public class VariableDeletableTupleMemoryManager implements IDeletableTupleBuffe
         };
     }
 
+    @Override
+    public ITupleAccessor createTupleAccessor() {
+        return null;
+    };
+
 }

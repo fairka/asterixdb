@@ -22,6 +22,7 @@ package org.apache.hyracks.dataflow.std.buffermanager;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
 
+import org.apache.hyracks.api.dataflow.value.RecordDescriptor;
 import org.apache.hyracks.api.exceptions.HyracksDataException;
 
 /**
@@ -56,6 +57,34 @@ public class FrameBufferManager implements IFrameBufferManager {
     @Override
     public void close() {
         buffers = null;
+    }
+
+    @Override
+    public int next() {
+        // TODO Auto-generated method stub
+        return 0;
+    }
+
+    @Override
+    public boolean exists() {
+        // TODO Auto-generated method stub
+        return false;
+    }
+
+    @Override
+    public void resetIterator() {
+        // TODO Auto-generated method stub
+
+    }
+
+    @Override
+    public ITupleAccessor getTupleAccessor(RecordDescriptor rd) {
+        // TODO Auto-generated method stub
+        return null;
+    }
+
+    @Override
+    public void removeFrame(int frameIndex) {
     }
 
 }

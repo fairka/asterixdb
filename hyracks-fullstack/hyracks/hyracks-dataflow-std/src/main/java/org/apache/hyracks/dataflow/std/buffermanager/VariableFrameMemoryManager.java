@@ -105,7 +105,7 @@ public class VariableFrameMemoryManager implements IFrameBufferManager {
     }
 
     @Override
-    public void removeFrame(int frameIndex)  {
+    public void removeFrame(int frameIndex) {
         logicalFrameStartSizes.remove(frameIndex);
     }
 
