@@ -43,7 +43,7 @@ import org.apache.hyracks.dataflow.std.base.AbstractOperatorDescriptor;
 import org.apache.hyracks.dataflow.std.base.AbstractUnaryInputSinkOperatorNodePushable;
 import org.apache.hyracks.dataflow.std.base.AbstractUnaryOutputSourceOperatorNodePushable;
 
-public class IntervalForwardSweepJoinOperatorDescriptor extends AbstractOperatorDescriptor {
+public class IntervalForwardScanJoinOperatorDescriptor extends AbstractOperatorDescriptor {
     private static final long serialVersionUID = 1L;
 
     private static final int LEFT_ACTIVITY_ID = 0;
@@ -54,9 +54,9 @@ public class IntervalForwardSweepJoinOperatorDescriptor extends AbstractOperator
     private final int memoryForJoin;
     private final IIntervalMergeJoinCheckerFactory imjcf;
 
-    private static final Logger LOGGER = Logger.getLogger(IntervalForwardSweepJoinOperatorDescriptor.class.getName());
+    private static final Logger LOGGER = Logger.getLogger(IntervalForwardScanJoinOperatorDescriptor.class.getName());
 
-    public IntervalForwardSweepJoinOperatorDescriptor(IOperatorDescriptorRegistry spec, int memoryForJoin,
+    public IntervalForwardScanJoinOperatorDescriptor(IOperatorDescriptorRegistry spec, int memoryForJoin,
             int[] leftKeys, int[] rightKeys, RecordDescriptor recordDescriptor,
             IIntervalMergeJoinCheckerFactory imjcf) {
         super(spec, 2, 1);
@@ -147,8 +147,8 @@ public class IntervalForwardSweepJoinOperatorDescriptor extends AbstractOperator
 
                 try {
                     writer.open();
-                    IStreamJoiner joiner = new IntervalForwardSweepJoiner(ctx, memoryForJoin, partition, imjcf,
-                            leftKeys, rightKeys, (IConsumerFrame) leftState, (IConsumerFrame) rightState);
+                    IStreamJoiner joiner = new IntervalForwardScanJoiner(ctx, memoryForJoin, partition, imjcf, leftKeys,
+                            rightKeys, (IConsumerFrame) leftState, (IConsumerFrame) rightState);
                     joiner.processJoin(writer);
                     leftState.close();
                     rightState.close();

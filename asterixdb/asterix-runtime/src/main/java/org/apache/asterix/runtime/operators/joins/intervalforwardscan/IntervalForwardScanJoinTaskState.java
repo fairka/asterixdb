@@ -22,11 +22,11 @@ import org.apache.hyracks.api.dataflow.TaskId;
 import org.apache.hyracks.api.job.JobId;
 import org.apache.hyracks.dataflow.std.join.MergeJoinTaskState;
 
-public class IntervalForwardSweepJoinTaskState extends MergeJoinTaskState {
-    protected IntervalForwardSweepJoiner indexJoiner;
+public class IntervalForwardScanJoinTaskState extends MergeJoinTaskState {
+    protected IntervalForwardScanJoiner indexJoiner;
     protected byte point;
 
-    public IntervalForwardSweepJoinTaskState(JobId jobId, TaskId taskId) {
+    public IntervalForwardScanJoinTaskState(JobId jobId, TaskId taskId) {
         super(jobId, taskId);
     }
 

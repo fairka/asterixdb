@@ -31,8 +31,8 @@ import org.apache.hyracks.dataflow.std.buffermanager.ITupleAccessor;
 import org.apache.hyracks.dataflow.std.structures.TuplePointer;
 import org.apache.hyracks.dataflow.std.structures.TuplePointerPool;
 
-public class ForwardSweepActiveManager {
-    private static final Logger LOGGER = Logger.getLogger(ForwardSweepActiveManager.class.getName());
+public class ForwardScanActiveManager {
+    private static final Logger LOGGER = Logger.getLogger(ForwardScanActiveManager.class.getName());
 
     private final int partition;
     private final IPartitionedDeletableTupleBufferManager bufferManager;
@@ -40,7 +40,7 @@ public class ForwardSweepActiveManager {
     private final LinkedList<TuplePointer> active = new LinkedList<>();
     private final TuplePointerPool tpPool = new TuplePointerPool();
 
-    public ForwardSweepActiveManager(IPartitionedDeletableTupleBufferManager bufferManager, int joinBranch) {
+    public ForwardScanActiveManager(IPartitionedDeletableTupleBufferManager bufferManager, int joinBranch) {
         this.bufferManager = bufferManager;
         this.partition = joinBranch;
     }

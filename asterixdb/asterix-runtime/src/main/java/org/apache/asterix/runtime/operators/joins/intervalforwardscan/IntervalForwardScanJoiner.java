@@ -131,13 +131,13 @@ class IntervalSideTuple {
  * The left stream will spill to disk when memory is full.
  * The both right and left use memory to maintain active intervals for the join.
  */
-public class IntervalForwardSweepJoiner extends AbstractStreamJoiner {
+public class IntervalForwardScanJoiner extends AbstractStreamJoiner {
 
-    private static final Logger LOGGER = Logger.getLogger(IntervalForwardSweepJoiner.class.getName());
+    private static final Logger LOGGER = Logger.getLogger(IntervalForwardScanJoiner.class.getName());
 
     private final IPartitionedDeletableTupleBufferManager bufferManager;
 
-    private final ForwardSweepActiveManager[] activeManager;
+    private final ForwardScanActiveManager[] activeManager;
     private final ITupleAccessor[] memoryAccessor;
     private final int[] streamIndex;
     private final RunFileStream[] runFileStream;
@@ -168,7 +168,7 @@ public class IntervalForwardSweepJoiner extends AbstractStreamJoiner {
 
     private final boolean DEBUG = false;
 
-    public IntervalForwardSweepJoiner(IHyracksTaskContext ctx, int memorySize, int partition,
+    public IntervalForwardScanJoiner(IHyracksTaskContext ctx, int memorySize, int partition,
             IIntervalMergeJoinCheckerFactory imjcf, int[] leftKeys, int[] rightKeys, IConsumerFrame leftCF,
             IConsumerFrame rightCF) throws HyracksDataException {
         super(ctx, partition, leftCF, rightCF);
@@ -203,9 +203,9 @@ public class IntervalForwardSweepJoiner extends AbstractStreamJoiner {
         memoryAccessor[LEFT_PARTITION] = bufferManager.getTupleAccessor(leftCF.getRecordDescriptor());
         memoryAccessor[RIGHT_PARTITION] = bufferManager.getTupleAccessor(rightCF.getRecordDescriptor());
 
-        activeManager = new ForwardSweepActiveManager[JOIN_PARTITIONS];
-        activeManager[LEFT_PARTITION] = new ForwardSweepActiveManager(bufferManager, LEFT_PARTITION);
-        activeManager[RIGHT_PARTITION] = new ForwardSweepActiveManager(bufferManager, RIGHT_PARTITION);
+        activeManager = new ForwardScanActiveManager[JOIN_PARTITIONS];
+        activeManager[LEFT_PARTITION] = new ForwardScanActiveManager(bufferManager, LEFT_PARTITION);
+        activeManager[RIGHT_PARTITION] = new ForwardScanActiveManager(bufferManager, RIGHT_PARTITION);
 
         // Run files for both branches
         runFileStream = new RunFileStream[JOIN_PARTITIONS];
