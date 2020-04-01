@@ -1,4 +1,3 @@
-package org.apache.asterix.external.api;
 /*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
@@ -17,8 +16,15 @@ package org.apache.asterix.external.api;
  * specific language governing permissions and limitations
  * under the License.
  */
+/*
+ * GROUPING() with f(grouping element)
+ */
 
-public enum ExternalLanguage {
-    JAVA,
-    PYTHON
-}
+with hundred as (
+ select r % 2 as two, r % 4 as four, r % 10 as ten
+ from range(1, 100) r
+)
+
+select two, four, grouping(two+four) as grp, sum(ten) as agg_sum
+from hundred
+group by two, four;

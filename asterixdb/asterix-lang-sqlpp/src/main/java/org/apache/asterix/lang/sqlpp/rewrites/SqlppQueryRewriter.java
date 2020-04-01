@@ -66,6 +66,7 @@ import org.apache.asterix.lang.sqlpp.rewrites.visitor.SetOperationVisitor;
 import org.apache.asterix.lang.sqlpp.rewrites.visitor.SqlppBuiltinFunctionRewriteVisitor;
 import org.apache.asterix.lang.sqlpp.rewrites.visitor.SqlppGroupByAggregationSugarVisitor;
 import org.apache.asterix.lang.sqlpp.rewrites.visitor.SqlppGroupByVisitor;
+import org.apache.asterix.lang.sqlpp.rewrites.visitor.SqlppGroupingSetsVisitor;
 import org.apache.asterix.lang.sqlpp.rewrites.visitor.SqlppInlineUdfsVisitor;
 import org.apache.asterix.lang.sqlpp.rewrites.visitor.SqlppListInputFunctionRewriteVisitor;
 import org.apache.asterix.lang.sqlpp.rewrites.visitor.SqlppWindowAggregationSugarVisitor;
@@ -78,7 +79,6 @@ import org.apache.asterix.lang.sqlpp.util.SqlppAstPrintUtil;
 import org.apache.asterix.lang.sqlpp.util.SqlppVariableUtil;
 import org.apache.asterix.lang.sqlpp.visitor.base.ISqlppVisitor;
 import org.apache.asterix.metadata.declared.MetadataProvider;
-import org.apache.asterix.metadata.entities.Function;
 import org.apache.hyracks.algebricks.common.utils.Pair;
 import org.apache.hyracks.util.LogRedactionUtil;
 import org.apache.logging.log4j.LogManager;
@@ -101,7 +101,7 @@ public class SqlppQueryRewriter implements IQueryRewriter {
 
     public SqlppQueryRewriter(IParserFactory parserFactory) {
         this.parserFactory = parserFactory;
-        functionParser = new FunctionParser(Function.FunctionLanguage.SQLPP, parserFactory);
+        functionParser = new FunctionParser(parserFactory);
     }
 
     protected void setup(List<FunctionDecl> declaredFunctions, IReturningStatement topExpr,
@@ -144,6 +144,10 @@ public class SqlppQueryRewriter implements IQueryRewriter {
 
         // Window expression core rewrites.
         rewriteWindowExpressions();
+
+        // Rewrites Group-By clauses with multiple grouping sets into UNION ALL
+        // Must run after rewriteSetOperations() and before variableCheckAndRewrite()
+        rewriteGroupingSets();
 
         // Generate ids for variables (considering scopes) and replace global variable access with the dataset function.
         variableCheckAndRewrite();
@@ -241,6 +245,11 @@ public class SqlppQueryRewriter implements IQueryRewriter {
     protected void rewriteGroupBys() throws CompilationException {
         SqlppGroupByVisitor groupByVisitor = new SqlppGroupByVisitor(context);
         rewriteTopExpr(groupByVisitor, null);
+    }
+
+    protected void rewriteGroupingSets() throws CompilationException {
+        SqlppGroupingSetsVisitor groupingSetsVisitor = new SqlppGroupingSetsVisitor(context);
+        rewriteTopExpr(groupingSetsVisitor, null);
     }
 
     protected void rewriteWindowExpressions() throws CompilationException {
