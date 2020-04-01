@@ -27,7 +27,7 @@ import org.apache.hyracks.api.comm.IFrame;
 import org.apache.hyracks.api.dataflow.value.RecordDescriptor;
 import org.apache.hyracks.api.exceptions.HyracksDataException;
 
-public class ProducerConsumerFrameState implements IConsumerFrame {
+public class ProducerConsumerFrame implements IConsumerFrame {
 
     private final RecordDescriptor recordDescriptor;
     private ByteBuffer buffer;
@@ -37,7 +37,7 @@ public class ProducerConsumerFrameState implements IConsumerFrame {
     private Condition frameAvailable = this.lock.newCondition();
     private Condition frameProcessed = this.lock.newCondition();
 
-    public ProducerConsumerFrameState(RecordDescriptor recordDescriptor) {
+    public ProducerConsumerFrame(RecordDescriptor recordDescriptor) {
         this.recordDescriptor = recordDescriptor;
     }
 

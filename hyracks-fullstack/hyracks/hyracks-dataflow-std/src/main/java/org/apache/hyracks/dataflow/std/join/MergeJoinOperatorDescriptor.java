@@ -97,7 +97,7 @@ public class MergeJoinOperatorDescriptor extends AbstractOperatorDescriptor {
             private final int partition;
             private final int inputArity;
             private final RecordDescriptor[] recordDescriptors;
-            private ProducerConsumerFrameState[] inputStates;
+            private ProducerConsumerFrame[] inputStates;
             private JoinComparator[] tupleComparators;
 
             public JoinerOperator(IHyracksTaskContext ctx, int partition, int inputArity,
@@ -107,7 +107,7 @@ public class MergeJoinOperatorDescriptor extends AbstractOperatorDescriptor {
                 this.partition = partition;
                 this.inputArity = inputArity;
                 this.recordDescriptors = inRecordDesc;
-                this.inputStates = new ProducerConsumerFrameState[inputArity];
+                this.inputStates = new ProducerConsumerFrame[inputArity];
                 tupleComparators = new JoinComparator[comparatorFactories.length];
             }
 
@@ -153,7 +153,7 @@ public class MergeJoinOperatorDescriptor extends AbstractOperatorDescriptor {
                 return new IFrameWriter() {
                     @Override
                     public void open() throws HyracksDataException {
-                        inputStates[index] = new ProducerConsumerFrameState(recordDescriptors[index]);
+                        inputStates[index] = new ProducerConsumerFrame(recordDescriptors[index]);
                     }
 
                     @Override
