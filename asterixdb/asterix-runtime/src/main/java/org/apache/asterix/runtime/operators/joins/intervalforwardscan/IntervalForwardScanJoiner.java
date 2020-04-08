@@ -168,9 +168,9 @@ public class IntervalForwardScanJoiner extends AbstractStreamJoiner {
 
     private final boolean DEBUG = false;
 
-    public IntervalForwardScanJoiner(IHyracksTaskContext ctx, int memorySize, int partition,
-            IIntervalMergeJoinCheckerFactory imjcf, int[] leftKeys, int[] rightKeys, IConsumerFrame leftCF,
-            IConsumerFrame rightCF) throws HyracksDataException {
+    public IntervalForwardScanJoiner(IHyracksTaskContext ctx, IConsumerFrame leftCF, IConsumerFrame rightCF, int memorySize, int partition,
+            IIntervalMergeJoinCheckerFactory imjcf, int[] leftKeys, int[] rightKeys
+            ) throws HyracksDataException {
         super(ctx, partition, leftCF, rightCF);
         this.partition = partition;
         this.memorySize = memorySize;
