@@ -38,8 +38,8 @@ import org.apache.hyracks.dataflow.std.base.AbstractUnaryOutputOperatorNodePusha
 public class MergeJoinOperatorDescriptor extends AbstractOperatorDescriptor {
     private static final long serialVersionUID = 1L;
 
-    private final int LEFT_INPUT_INDEX;
-    private final int RIGHT_INPUT_INDEX;
+    private static final int LEFT_INPUT_INDEX = 0;
+    private static final int RIGHT_INPUT_INDEX = 1;
     private final int memoryForJoinInFrames;
     private final IBinaryComparatorFactory[] comparatorFactories;
 
@@ -51,12 +51,8 @@ public class MergeJoinOperatorDescriptor extends AbstractOperatorDescriptor {
             int[] rightKeys, RecordDescriptor recordDescriptor, IBinaryComparatorFactory[] comparatorFactories) {
         super(spec, 2, 1);
         outRecDescs[0] = recordDescriptor;
-
         this.leftKeys = leftKeys;
         this.rightKeys = rightKeys;
-
-        this.LEFT_INPUT_INDEX = 0;
-        this.RIGHT_INPUT_INDEX = 1;
         this.memoryForJoinInFrames = memoryInFrames;
         this.comparatorFactories = comparatorFactories;
     }

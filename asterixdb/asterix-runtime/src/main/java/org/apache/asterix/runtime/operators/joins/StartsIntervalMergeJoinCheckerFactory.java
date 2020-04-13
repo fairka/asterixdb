@@ -16,18 +16,26 @@
  * specific language governing permissions and limitations
  * under the License.
  */
-package org.apache.hyracks.dataflow.std.base;
+package org.apache.asterix.runtime.operators.joins;
 
-import org.apache.hyracks.api.comm.IFrameWriter;
+import org.apache.hyracks.api.context.IHyracksTaskContext;
+import org.apache.hyracks.api.dataflow.value.IRangePartitionType.RangePartitioningType;
 
-public abstract class AbstractUnaryOutputSourceOperatorNodePushable extends AbstractUnaryOutputOperatorNodePushable {
+public class StartsIntervalMergeJoinCheckerFactory extends AbstractIntervalMergeJoinCheckerFactory {
+    private static final long serialVersionUID = 1L;
+
     @Override
-    public IFrameWriter getInputFrameWriter(int index) {
-        throw new IllegalStateException();
+    public IIntervalMergeJoinChecker createMergeJoinChecker(int[] keys0, int[] keys1, IHyracksTaskContext ctx) {
+        return new StartsIntervalMergeJoinChecker(keys0, keys1);
     }
 
     @Override
-    public int getInputArity() {
-        return 0;
+    public IIntervalMergeJoinChecker createInverseMergeJoinChecker(int[] keys0, int[] keys1, IHyracksTaskContext ctx) {
+        return new StartsIntervalMergeJoinChecker(keys0, keys1);
+    }
+
+    @Override
+    public RangePartitioningType getLeftPartitioningType() {
+        return RangePartitioningType.PROJECT;
     }
 }

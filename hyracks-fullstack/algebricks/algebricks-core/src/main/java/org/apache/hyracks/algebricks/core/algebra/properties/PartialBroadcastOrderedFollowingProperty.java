@@ -16,6 +16,7 @@
  * specific language governing permissions and limitations
  * under the License.
  */
+
 package org.apache.hyracks.algebricks.core.algebra.properties;
 
 import java.util.List;
@@ -25,32 +26,27 @@ import org.apache.hyracks.algebricks.core.algebra.base.EquivalenceClass;
 import org.apache.hyracks.algebricks.core.algebra.base.LogicalVariable;
 import org.apache.hyracks.dataflow.common.data.partition.range.RangeMap;
 
-public class OrderedPartitionedProperty extends AbstractOrderedPartitionedProperty {
+public final class PartialBroadcastOrderedFollowingProperty extends AbstractOrderedPartitionedProperty {
 
-    public OrderedPartitionedProperty(List<OrderColumn> orderColumns, INodeDomain domain) {
-        super(orderColumns, domain);
-    }
-
-    public OrderedPartitionedProperty(List<OrderColumn> orderColumns, INodeDomain domain, RangeMap rangeMap) {
+    public PartialBroadcastOrderedFollowingProperty(List<OrderColumn> orderColumns, INodeDomain domain,
+            RangeMap rangeMap) {
         super(orderColumns, domain, rangeMap);
     }
 
     @Override
     public PartitioningType getPartitioningType() {
-        return PartitioningType.ORDERED_PARTITIONED;
+        return PartitioningType.PARTIAL_BROADCAST_ORDERED_FOLLOWING;
     }
 
     @Override
     public IPartitioningProperty normalize(Map<LogicalVariable, EquivalenceClass> equivalenceClasses,
             List<FunctionalDependency> fds) {
-        List<OrderColumn> columns = PropertiesUtil.replaceOrderColumnsByEqClasses(orderColumns, equivalenceClasses);
-        columns = PropertiesUtil.applyFDsToOrderColumns(columns, fds);
-        return newInstance(columns, domain, rangeMap);
+        return this;
     }
 
     @Override
     protected AbstractOrderedPartitionedProperty newInstance(List<OrderColumn> orderColumns, INodeDomain domain,
             RangeMap rangeMap) {
-        return new OrderedPartitionedProperty(orderColumns, domain, rangeMap);
+        return new PartialBroadcastOrderedFollowingProperty(orderColumns, domain, rangeMap);
     }
 }

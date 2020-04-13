@@ -16,18 +16,24 @@
  * specific language governing permissions and limitations
  * under the License.
  */
-package org.apache.hyracks.dataflow.std.base;
 
-import org.apache.hyracks.api.comm.IFrameWriter;
+package org.apache.hyracks.algebricks.core.algebra.functions;
 
-public abstract class AbstractUnaryOutputSourceOperatorNodePushable extends AbstractUnaryOutputOperatorNodePushable {
-    @Override
-    public IFrameWriter getInputFrameWriter(int index) {
-        throw new IllegalStateException();
+import java.io.Serializable;
+
+public abstract class AbstractFunctionInfo implements IFunctionInfo, Serializable {
+
+    private static final long serialVersionUID = 1L;
+
+    private final boolean isFunctional;
+
+    protected AbstractFunctionInfo(boolean isFunctional) {
+        this.isFunctional = isFunctional;
     }
 
     @Override
-    public int getInputArity() {
-        return 0;
+    public boolean isFunctional() {
+        return isFunctional;
     }
+
 }

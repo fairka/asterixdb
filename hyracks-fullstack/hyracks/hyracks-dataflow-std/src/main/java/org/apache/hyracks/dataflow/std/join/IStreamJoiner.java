@@ -27,4 +27,5 @@ public interface IStreamJoiner {
      * @throws HyracksDataException
      */
     void processJoin() throws HyracksDataException;
+
 }

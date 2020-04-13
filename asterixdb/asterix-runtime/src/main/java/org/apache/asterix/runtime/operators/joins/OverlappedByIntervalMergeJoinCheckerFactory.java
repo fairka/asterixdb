@@ -16,16 +16,20 @@
  * specific language governing permissions and limitations
  * under the License.
  */
-package org.apache.asterix.runtime.operators.joins.intervalindex;
+package org.apache.asterix.runtime.operators.joins;
 
-import org.apache.hyracks.api.comm.IFrame;
-import org.apache.hyracks.api.dataflow.value.RecordDescriptor;
-import org.apache.hyracks.api.exceptions.HyracksDataException;
+import org.apache.hyracks.api.context.IHyracksTaskContext;
 
-public interface IConsumerFrame {
+public class OverlappedByIntervalMergeJoinCheckerFactory extends AbstractIntervalInverseMergeJoinCheckerFactory {
+    private static final long serialVersionUID = 1L;
 
-    public RecordDescriptor getRecordDescriptor();
+    @Override
+    public IIntervalMergeJoinChecker createMergeJoinChecker(int[] keys0, int[] keys1, IHyracksTaskContext ctx) {
+        return new OverlappedByIntervalMergeJoinChecker(keys0, keys1);
+    }
 
-    public boolean getFrame(IFrame returnFrame) throws HyracksDataException;
-
+    @Override
+    public IIntervalMergeJoinChecker createInverseMergeJoinChecker(int[] keys0, int[] keys1, IHyracksTaskContext ctx) {
+        return new OverlapsIntervalMergeJoinChecker(keys0, keys1);
+    }
 }

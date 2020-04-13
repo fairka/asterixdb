@@ -16,13 +16,21 @@
  * specific language governing permissions and limitations
  * under the License.
  */
-package org.apache.asterix.runtime.operators.joins.intervalindex;
+package org.apache.asterix.runtime.operators.joins;
 
-import org.apache.hyracks.api.comm.IFrameWriter;
-import org.apache.hyracks.api.exceptions.HyracksDataException;
+import org.apache.hyracks.api.context.IHyracksTaskContext;
 
-public interface IStreamJoiner {
+public class OverlapsIntervalMergeJoinCheckerFactory extends AbstractIntervalMergeJoinCheckerFactory {
+    private static final long serialVersionUID = 1L;
 
-    void processJoin(IFrameWriter writer) throws HyracksDataException;
+    @Override
+    public IIntervalMergeJoinChecker createMergeJoinChecker(int[] keys0, int[] keys1, IHyracksTaskContext ctx) {
+        return new OverlapsIntervalMergeJoinChecker(keys0, keys1);
+    }
+
+    @Override
+    public IIntervalMergeJoinChecker createInverseMergeJoinChecker(int[] keys0, int[] keys1, IHyracksTaskContext ctx) {
+        return new OverlappedByIntervalMergeJoinChecker(keys0, keys1);
+    }
 
 }

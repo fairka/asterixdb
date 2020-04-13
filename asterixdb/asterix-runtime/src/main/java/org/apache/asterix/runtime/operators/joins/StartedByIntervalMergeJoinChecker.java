@@ -16,18 +16,27 @@
  * specific language governing permissions and limitations
  * under the License.
  */
-package org.apache.hyracks.dataflow.std.base;
+package org.apache.asterix.runtime.operators.joins;
 
-import org.apache.hyracks.api.comm.IFrameWriter;
+import org.apache.asterix.om.pointables.nonvisitor.AIntervalPointable;
+import org.apache.asterix.runtime.evaluators.functions.temporal.IntervalPartitionLogic;
+import org.apache.hyracks.api.exceptions.HyracksDataException;
 
-public abstract class AbstractUnaryOutputSourceOperatorNodePushable extends AbstractUnaryOutputOperatorNodePushable {
-    @Override
-    public IFrameWriter getInputFrameWriter(int index) {
-        throw new IllegalStateException();
+public class StartedByIntervalMergeJoinChecker extends StartsIntervalMergeJoinChecker {
+    private static final long serialVersionUID = 1L;
+
+    public StartedByIntervalMergeJoinChecker(int[] keysLeft, int[] keysRight) {
+        super(keysLeft, keysRight);
     }
 
     @Override
-    public int getInputArity() {
-        return 0;
+    public boolean compareInterval(AIntervalPointable ipLeft, AIntervalPointable ipRight) throws HyracksDataException {
+        return il.startedBy(ipLeft, ipRight);
     }
+
+    @Override
+    public boolean compareIntervalPartition(int s1, int e1, int s2, int e2) {
+        return IntervalPartitionLogic.startedBy(s1, e1, s2, e2);
+    }
+
 }

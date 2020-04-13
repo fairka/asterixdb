@@ -70,6 +70,8 @@ import org.apache.hyracks.algebricks.core.algebra.operators.physical.HashPartiti
 import org.apache.hyracks.algebricks.core.algebra.operators.physical.HashPartitionMergeExchangePOperator;
 import org.apache.hyracks.algebricks.core.algebra.operators.physical.MicroStableSortPOperator;
 import org.apache.hyracks.algebricks.core.algebra.operators.physical.OneToOneExchangePOperator;
+import org.apache.hyracks.algebricks.core.algebra.operators.physical.PartialBroadcastRangeFollowingExchangePOperator;
+import org.apache.hyracks.algebricks.core.algebra.operators.physical.PartialBroadcastRangeIntersectExchangePOperator;
 import org.apache.hyracks.algebricks.core.algebra.operators.physical.RandomMergeExchangePOperator;
 import org.apache.hyracks.algebricks.core.algebra.operators.physical.RandomPartitionExchangePOperator;
 import org.apache.hyracks.algebricks.core.algebra.operators.physical.RangePartitionExchangePOperator;
@@ -90,6 +92,8 @@ import org.apache.hyracks.algebricks.core.algebra.properties.LocalGroupingProper
 import org.apache.hyracks.algebricks.core.algebra.properties.LocalOrderProperty;
 import org.apache.hyracks.algebricks.core.algebra.properties.OrderColumn;
 import org.apache.hyracks.algebricks.core.algebra.properties.OrderedPartitionedProperty;
+import org.apache.hyracks.algebricks.core.algebra.properties.PartialBroadcastOrderedFollowingProperty;
+import org.apache.hyracks.algebricks.core.algebra.properties.PartialBroadcastOrderedIntersectProperty;
 import org.apache.hyracks.algebricks.core.algebra.properties.PhysicalRequirements;
 import org.apache.hyracks.algebricks.core.algebra.properties.PropertiesUtil;
 import org.apache.hyracks.algebricks.core.algebra.properties.RandomPartitioningProperty;
@@ -601,6 +605,18 @@ public class EnforceStructuralPropertiesRule implements IAlgebraicRewriteRule {
                     pop = new RandomPartitionExchangePOperator(nd);
                     break;
                 }
+                case PARTIAL_BROADCAST_ORDERED_FOLLOWING: {
+                    PartialBroadcastOrderedFollowingProperty pbp = (PartialBroadcastOrderedFollowingProperty) pp;
+                    pop = new PartialBroadcastRangeFollowingExchangePOperator(pbp.getOrderColumns(),
+                            pbp.getNodeDomain(), pbp.getRangeMap());
+                    break;
+                }
+                case PARTIAL_BROADCAST_ORDERED_INTERSECT: {
+                    PartialBroadcastOrderedIntersectProperty pbp = (PartialBroadcastOrderedIntersectProperty) pp;
+                    pop = new PartialBroadcastRangeIntersectExchangePOperator(pbp.getIntervalColumns(),
+                            pbp.getNodeDomain(), pbp.getRangeMap());
+                    break;
+                }
                 default: {
                     throw new NotImplementedException("Enforcer for " + pp.getPartitioningType()
                             + " partitioning type has not been implemented.");
@@ -732,7 +748,7 @@ public class EnforceStructuralPropertiesRule implements IAlgebraicRewriteRule {
         parentOp.getInputs().set(childIndex, forwardRef);
         parentOp.recomputeSchema();
         ctx.computeAndSetTypeEnvironmentForOperator(parentOp);
-        return new RangePartitionExchangePOperator(partitioningColumns, rangeMapKey, targetDomain);
+        return new RangePartitionExchangePOperator(partitioningColumns, targetDomain, rangeMapKey);
     }
 
     private static ReplicateOperator createReplicateOperator(Mutable<ILogicalOperator> inputOperator,

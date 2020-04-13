@@ -24,12 +24,11 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 
 import org.apache.asterix.dataflow.data.nontagged.serde.AIntervalSerializerDeserializer;
+import org.apache.asterix.runtime.operators.joins.AbstractStreamJoiner;
 import org.apache.asterix.runtime.operators.joins.IIntervalMergeJoinChecker;
 import org.apache.asterix.runtime.operators.joins.IIntervalMergeJoinCheckerFactory;
 import org.apache.asterix.runtime.operators.joins.IntervalJoinUtil;
-import org.apache.asterix.runtime.operators.joins.intervalindex.AbstractStreamJoiner;
-import org.apache.asterix.runtime.operators.joins.intervalindex.IConsumerFrame;
-import org.apache.asterix.runtime.operators.joins.intervalindex.TuplePrinterUtil;
+import org.apache.asterix.runtime.operators.joins.TuplePrinterUtil;
 import org.apache.hyracks.api.comm.IFrameTupleAccessor;
 import org.apache.hyracks.api.comm.IFrameWriter;
 import org.apache.hyracks.api.context.IHyracksTaskContext;
@@ -40,6 +39,7 @@ import org.apache.hyracks.dataflow.std.buffermanager.IPartitionedDeletableTupleB
 import org.apache.hyracks.dataflow.std.buffermanager.ITupleAccessor;
 import org.apache.hyracks.dataflow.std.buffermanager.TupleAccessor;
 import org.apache.hyracks.dataflow.std.buffermanager.VPartitionDeletableTupleBufferManager;
+import org.apache.hyracks.dataflow.std.join.IConsumerFrame;
 import org.apache.hyracks.dataflow.std.join.RunFileStream;
 import org.apache.hyracks.dataflow.std.structures.RunFilePointer;
 import org.apache.hyracks.dataflow.std.structures.TuplePointer;
@@ -168,9 +168,9 @@ public class IntervalForwardScanJoiner extends AbstractStreamJoiner {
 
     private final boolean DEBUG = false;
 
-    public IntervalForwardScanJoiner(IHyracksTaskContext ctx, IConsumerFrame leftCF, IConsumerFrame rightCF, int memorySize, int partition,
-            IIntervalMergeJoinCheckerFactory imjcf, int[] leftKeys, int[] rightKeys
-            ) throws HyracksDataException {
+    public IntervalForwardScanJoiner(IHyracksTaskContext ctx, IConsumerFrame leftCF, IConsumerFrame rightCF,
+            int memorySize, int partition, IIntervalMergeJoinCheckerFactory imjcf, int[] leftKeys, int[] rightKeys)
+            throws HyracksDataException {
         super(ctx, partition, leftCF, rightCF);
         this.partition = partition;
         this.memorySize = memorySize;
@@ -270,6 +270,10 @@ public class IntervalForwardScanJoiner extends AbstractStreamJoiner {
     }
 
     @Override
+    public void processJoin() {
+        //Do Nothing for now
+    }
+
     public void processJoin(IFrameWriter writer) throws HyracksDataException {
         TupleStatus leftTs = loadTuple(LEFT_PARTITION);
         TupleStatus rightTs = loadTuple(RIGHT_PARTITION);

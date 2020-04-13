@@ -16,7 +16,7 @@
  * specific language governing permissions and limitations
  * under the License.
  */
-package org.apache.asterix.runtime.operators.joins.intervalindex;
+package org.apache.asterix.runtime.operators.joins;
 
 import org.apache.asterix.runtime.operators.joins.intervalmergejoin.IntervalMergeBranchStatus;
 import org.apache.hyracks.api.comm.IFrame;
@@ -26,6 +26,8 @@ import org.apache.hyracks.api.exceptions.HyracksDataException;
 import org.apache.hyracks.dataflow.common.comm.io.FrameTupleAppender;
 import org.apache.hyracks.dataflow.std.buffermanager.ITupleAccessor;
 import org.apache.hyracks.dataflow.std.buffermanager.TupleAccessor;
+import org.apache.hyracks.dataflow.std.join.IConsumerFrame;
+import org.apache.hyracks.dataflow.std.join.IStreamJoiner;
 
 public abstract class AbstractStreamJoiner implements IStreamJoiner {
 
