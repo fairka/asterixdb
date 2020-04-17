@@ -83,8 +83,8 @@ public class JoinUtils {
     private JoinUtils() {
     }
 
-    public static void setJoinAlgorithmAndExchangeAlgo(AbstractBinaryJoinOperator op, Boolean topLevelOp, IOptimizationContext context)
-            throws AlgebricksException {
+    public static void setJoinAlgorithmAndExchangeAlgo(AbstractBinaryJoinOperator op, Boolean topLevelOp,
+            IOptimizationContext context) throws AlgebricksException {
         if (!topLevelOp) {
             throw new IllegalStateException("Micro operator not implemented for: " + op.getOperatorTag());
         }
