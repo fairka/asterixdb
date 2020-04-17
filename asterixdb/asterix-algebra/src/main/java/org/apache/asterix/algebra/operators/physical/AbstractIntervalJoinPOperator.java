@@ -48,7 +48,6 @@ import org.apache.hyracks.api.dataflow.IOperatorDescriptor;
 import org.apache.hyracks.api.dataflow.value.RecordDescriptor;
 import org.apache.hyracks.api.job.IOperatorDescriptorRegistry;
 import org.apache.hyracks.dataflow.common.data.partition.range.RangeMap;
-import org.apache.hyracks.dataflow.std.base.RangeId;
 
 public abstract class AbstractIntervalJoinPOperator extends AbstractJoinPOperator {
 
@@ -126,10 +125,10 @@ public abstract class AbstractIntervalJoinPOperator extends AbstractJoinPOperato
         List<ILocalStructuralProperty> ispRight = new ArrayList<>();
         ispRight.add(new LocalOrderProperty(getRightLocalSortOrderColumn()));
 
-//        if (op.getExecutionMode() == AbstractLogicalOperator.ExecutionMode.PARTITIONED) {
-//            ppLeft = new OrderedPartitionedProperty(getLeftRangeOrderColumn(), null, rangeMapHint);
-//            ppRight = new OrderedPartitionedProperty(getRightRangeOrderColumn(), null, rangeMapHint);
-//        }
+        //        if (op.getExecutionMode() == AbstractLogicalOperator.ExecutionMode.PARTITIONED) {
+        //            ppLeft = new OrderedPartitionedProperty(getLeftRangeOrderColumn(), null, rangeMapHint);
+        //            ppRight = new OrderedPartitionedProperty(getRightRangeOrderColumn(), null, rangeMapHint);
+        //        }
 
         pv[0] = new StructuralPropertiesVector(ppLeft, ispLeft);
         pv[1] = new StructuralPropertiesVector(ppRight, ispRight);
@@ -172,8 +171,7 @@ public abstract class AbstractIntervalJoinPOperator extends AbstractJoinPOperato
         RecordDescriptor recordDescriptor =
                 JobGenHelper.mkRecordDescriptor(context.getTypeEnvironment(op), opSchema, context);
 
-        IOperatorDescriptor opDesc =
-                getIntervalOperatorDescriptor(keysLeft, keysRight, spec, recordDescriptor, mjcf);
+        IOperatorDescriptor opDesc = getIntervalOperatorDescriptor(keysLeft, keysRight, spec, recordDescriptor, mjcf);
         contributeOpDesc(builder, (AbstractLogicalOperator) op, opDesc);
 
         ILogicalOperator src1 = op.getInputs().get(0).getValue();

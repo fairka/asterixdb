@@ -29,7 +29,6 @@ import org.apache.hyracks.api.dataflow.IOperatorDescriptor;
 import org.apache.hyracks.api.dataflow.value.RecordDescriptor;
 import org.apache.hyracks.api.job.IOperatorDescriptorRegistry;
 import org.apache.hyracks.dataflow.common.data.partition.range.RangeMap;
-import org.apache.hyracks.dataflow.std.base.RangeId;
 
 public class IntervalForwardScanJoinPOperator extends AbstractIntervalJoinPOperator {
 
@@ -39,10 +38,8 @@ public class IntervalForwardScanJoinPOperator extends AbstractIntervalJoinPOpera
 
     public IntervalForwardScanJoinPOperator(JoinKind kind, JoinPartitioningType partitioningType,
             List<LogicalVariable> sideLeftOfEqualities, List<LogicalVariable> sideRightOfEqualities,
-            int memSizeInFrames, IIntervalMergeJoinCheckerFactory mjcf,
-            RangeMap rangeMapHint) {
-        super(kind, partitioningType, sideLeftOfEqualities, sideRightOfEqualities, mjcf,
-                rangeMapHint);
+            int memSizeInFrames, IIntervalMergeJoinCheckerFactory mjcf, RangeMap rangeMapHint) {
+        super(kind, partitioningType, sideLeftOfEqualities, sideRightOfEqualities, mjcf, rangeMapHint);
         this.memSizeInFrames = memSizeInFrames;
 
         LOGGER.fine("IntervalForwardScanJoinPOperator constructed with: JoinKind=" + kind + ", JoinPartitioningType="

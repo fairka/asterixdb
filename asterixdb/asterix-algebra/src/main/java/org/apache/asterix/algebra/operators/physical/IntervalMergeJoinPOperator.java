@@ -43,7 +43,7 @@ public class IntervalMergeJoinPOperator extends AbstractIntervalJoinPOperator {
             List<LogicalVariable> sideLeft, List<LogicalVariable> sideRight, int memSizeInFrames,
             IIntervalMergeJoinCheckerFactory mjcf, RangeId leftRangeId, RangeId rightRangeId, RangeMap rangeMapHint) {
 
-        super(kind, partitioningType, sideLeft, sideRight, mjcf, leftRangeId, rightRangeId, rangeMapHint);
+        super(kind, partitioningType, sideLeft, sideRight, mjcf, rangeMapHint);
         this.memSizeInFrames = memSizeInFrames;
         this.keysLeftBranch = sideLeft;
         this.keysRightBranch = sideRight;
@@ -59,11 +59,9 @@ public class IntervalMergeJoinPOperator extends AbstractIntervalJoinPOperator {
         return "INTERVAL_MERGE_JOIN";
     }
 
-    @Override
     IOperatorDescriptor getIntervalOperatorDescriptor(int[] keysLeft, int[] keysRight, IOperatorDescriptorRegistry spec,
-            RecordDescriptor recordDescriptor, IIntervalMergeJoinCheckerFactory mjcf, RangeId rangeId) {
+            RecordDescriptor recordDescriptor, IIntervalMergeJoinCheckerFactory mjcf) {
         return new IntervalMergeJoinOperatorDescriptor(spec, memSizeInFrames, recordDescriptor, keysLeft, keysRight,
                 mjcf);
     }
-
 }
