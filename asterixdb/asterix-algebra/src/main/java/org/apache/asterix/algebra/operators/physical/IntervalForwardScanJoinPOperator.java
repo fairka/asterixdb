@@ -39,17 +39,16 @@ public class IntervalForwardScanJoinPOperator extends AbstractIntervalJoinPOpera
 
     public IntervalForwardScanJoinPOperator(JoinKind kind, JoinPartitioningType partitioningType,
             List<LogicalVariable> sideLeftOfEqualities, List<LogicalVariable> sideRightOfEqualities,
-            int memSizeInFrames, IIntervalMergeJoinCheckerFactory mjcf, RangeId leftRangeId, RangeId rightRangeId,
+            int memSizeInFrames, IIntervalMergeJoinCheckerFactory mjcf,
             RangeMap rangeMapHint) {
-        super(kind, partitioningType, sideLeftOfEqualities, sideRightOfEqualities, mjcf, leftRangeId, rightRangeId,
+        super(kind, partitioningType, sideLeftOfEqualities, sideRightOfEqualities, mjcf,
                 rangeMapHint);
         this.memSizeInFrames = memSizeInFrames;
 
         LOGGER.fine("IntervalForwardScanJoinPOperator constructed with: JoinKind=" + kind + ", JoinPartitioningType="
                 + partitioningType + ", List<LogicalVariable>=" + sideLeftOfEqualities + ", List<LogicalVariable>="
                 + sideRightOfEqualities + ", int memSizeInFrames=" + memSizeInFrames
-                + ", IMergeJoinCheckerFactory mjcf=" + mjcf + ", RangeId leftRangeId=" + leftRangeId
-                + ", RangeId rightRangeId=" + rightRangeId + ".");
+                + ", IMergeJoinCheckerFactory mjcf=" + mjcf + ".");
     }
 
     @Override
@@ -59,7 +58,7 @@ public class IntervalForwardScanJoinPOperator extends AbstractIntervalJoinPOpera
 
     @Override
     IOperatorDescriptor getIntervalOperatorDescriptor(int[] keysLeft, int[] keysRight, IOperatorDescriptorRegistry spec,
-            RecordDescriptor recordDescriptor, IIntervalMergeJoinCheckerFactory mjcf, RangeId rangeId) {
+            RecordDescriptor recordDescriptor, IIntervalMergeJoinCheckerFactory mjcf) {
         return new IntervalForwardScanJoinOperatorDescriptor(spec, memSizeInFrames, keysLeft, keysRight,
                 recordDescriptor, mjcf);
     }

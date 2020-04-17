@@ -23,13 +23,25 @@ import java.util.List;
 
 import org.apache.asterix.runtime.operators.joins.IIntervalMergeJoinCheckerFactory;
 import org.apache.hyracks.algebricks.common.exceptions.AlgebricksException;
-import org.apache.hyracks.algebricks.core.algebra.base.*;
+import org.apache.hyracks.algebricks.core.algebra.base.IHyracksJobBuilder;
+import org.apache.hyracks.algebricks.core.algebra.base.ILogicalOperator;
+import org.apache.hyracks.algebricks.core.algebra.base.IOptimizationContext;
+import org.apache.hyracks.algebricks.core.algebra.base.LogicalVariable;
+import org.apache.hyracks.algebricks.core.algebra.base.PhysicalOperatorTag;
 import org.apache.hyracks.algebricks.core.algebra.operators.logical.AbstractBinaryJoinOperator.JoinKind;
 import org.apache.hyracks.algebricks.core.algebra.operators.logical.AbstractLogicalOperator;
 import org.apache.hyracks.algebricks.core.algebra.operators.logical.IOperatorSchema;
 import org.apache.hyracks.algebricks.core.algebra.operators.logical.OrderOperator.IOrder.OrderKind;
 import org.apache.hyracks.algebricks.core.algebra.operators.physical.AbstractJoinPOperator;
-import org.apache.hyracks.algebricks.core.algebra.properties.*;
+import org.apache.hyracks.algebricks.core.algebra.properties.ILocalStructuralProperty;
+import org.apache.hyracks.algebricks.core.algebra.properties.IPartitioningProperty;
+import org.apache.hyracks.algebricks.core.algebra.properties.IPartitioningRequirementsCoordinator;
+import org.apache.hyracks.algebricks.core.algebra.properties.IPhysicalPropertiesVector;
+import org.apache.hyracks.algebricks.core.algebra.properties.LocalOrderProperty;
+import org.apache.hyracks.algebricks.core.algebra.properties.OrderColumn;
+import org.apache.hyracks.algebricks.core.algebra.properties.OrderedPartitionedProperty;
+import org.apache.hyracks.algebricks.core.algebra.properties.PhysicalRequirements;
+import org.apache.hyracks.algebricks.core.algebra.properties.StructuralPropertiesVector;
 import org.apache.hyracks.algebricks.core.jobgen.impl.JobGenContext;
 import org.apache.hyracks.algebricks.core.jobgen.impl.JobGenHelper;
 import org.apache.hyracks.api.dataflow.IOperatorDescriptor;
@@ -43,19 +55,15 @@ public abstract class AbstractIntervalJoinPOperator extends AbstractJoinPOperato
     private final List<LogicalVariable> keysLeftBranch;
     private final List<LogicalVariable> keysRightBranch;
     protected final IIntervalMergeJoinCheckerFactory mjcf;
-    private final RangeId leftRangeId;
-    private final RangeId rightRangeId;
     private final RangeMap rangeMapHint;
 
     public AbstractIntervalJoinPOperator(JoinKind kind, JoinPartitioningType partitioningType,
             List<LogicalVariable> sideLeftOfEqualities, List<LogicalVariable> sideRightOfEqualities,
-            IIntervalMergeJoinCheckerFactory mjcf, RangeId leftRangeId, RangeId rightRangeId, RangeMap rangeMapHint) {
+            IIntervalMergeJoinCheckerFactory mjcf, RangeMap rangeMapHint) {
         super(kind, partitioningType);
         this.keysLeftBranch = sideLeftOfEqualities;
         this.keysRightBranch = sideRightOfEqualities;
         this.mjcf = mjcf;
-        this.leftRangeId = leftRangeId;
-        this.rightRangeId = rightRangeId;
         this.rangeMapHint = rangeMapHint;
     }
 
@@ -69,14 +77,6 @@ public abstract class AbstractIntervalJoinPOperator extends AbstractJoinPOperato
 
     public IIntervalMergeJoinCheckerFactory getIntervalMergeJoinCheckerFactory() {
         return mjcf;
-    }
-
-    public RangeId getLeftRangeId() {
-        return leftRangeId;
-    }
-
-    public RangeId getRightRangeId() {
-        return rightRangeId;
     }
 
     public RangeMap getRangeMapHint() {
@@ -126,10 +126,10 @@ public abstract class AbstractIntervalJoinPOperator extends AbstractJoinPOperato
         List<ILocalStructuralProperty> ispRight = new ArrayList<>();
         ispRight.add(new LocalOrderProperty(getRightLocalSortOrderColumn()));
 
-        if (op.getExecutionMode() == AbstractLogicalOperator.ExecutionMode.PARTITIONED) {
-            ppLeft = new OrderedPartitionedProperty(getLeftRangeOrderColumn(), null, rangeMapHint);
-            ppRight = new OrderedPartitionedProperty(getRightRangeOrderColumn(), null, rangeMapHint);
-        }
+//        if (op.getExecutionMode() == AbstractLogicalOperator.ExecutionMode.PARTITIONED) {
+//            ppLeft = new OrderedPartitionedProperty(getLeftRangeOrderColumn(), null, rangeMapHint);
+//            ppRight = new OrderedPartitionedProperty(getRightRangeOrderColumn(), null, rangeMapHint);
+//        }
 
         pv[0] = new StructuralPropertiesVector(ppLeft, ispLeft);
         pv[1] = new StructuralPropertiesVector(ppRight, ispRight);
@@ -173,7 +173,7 @@ public abstract class AbstractIntervalJoinPOperator extends AbstractJoinPOperato
                 JobGenHelper.mkRecordDescriptor(context.getTypeEnvironment(op), opSchema, context);
 
         IOperatorDescriptor opDesc =
-                getIntervalOperatorDescriptor(keysLeft, keysRight, spec, recordDescriptor, mjcf, leftRangeId);
+                getIntervalOperatorDescriptor(keysLeft, keysRight, spec, recordDescriptor, mjcf);
         contributeOpDesc(builder, (AbstractLogicalOperator) op, opDesc);
 
         ILogicalOperator src1 = op.getInputs().get(0).getValue();
@@ -183,7 +183,6 @@ public abstract class AbstractIntervalJoinPOperator extends AbstractJoinPOperato
     }
 
     abstract IOperatorDescriptor getIntervalOperatorDescriptor(int[] keysLeft, int[] keysRight,
-            IOperatorDescriptorRegistry spec, RecordDescriptor recordDescriptor, IIntervalMergeJoinCheckerFactory mjcf,
-            RangeId rangeId);
+            IOperatorDescriptorRegistry spec, RecordDescriptor recordDescriptor, IIntervalMergeJoinCheckerFactory mjcf);
 
 }

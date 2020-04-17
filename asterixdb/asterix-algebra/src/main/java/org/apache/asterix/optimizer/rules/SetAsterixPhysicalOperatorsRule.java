@@ -50,7 +50,15 @@ import org.apache.hyracks.algebricks.core.algebra.expressions.AbstractFunctionCa
 import org.apache.hyracks.algebricks.core.algebra.expressions.AggregateFunctionCallExpression;
 import org.apache.hyracks.algebricks.core.algebra.expressions.IMergeAggregationExpressionFactory;
 import org.apache.hyracks.algebricks.core.algebra.metadata.IDataSourceIndex;
-import org.apache.hyracks.algebricks.core.algebra.operators.logical.*;
+import org.apache.hyracks.algebricks.core.algebra.operators.logical.AbstractLogicalOperator;
+import org.apache.hyracks.algebricks.core.algebra.operators.logical.AbstractUnnestMapOperator;
+import org.apache.hyracks.algebricks.core.algebra.operators.logical.AggregateOperator;
+import org.apache.hyracks.algebricks.core.algebra.operators.logical.GroupByOperator;
+import org.apache.hyracks.algebricks.core.algebra.operators.logical.InnerJoinOperator;
+import org.apache.hyracks.algebricks.core.algebra.operators.logical.LeftOuterJoinOperator;
+import org.apache.hyracks.algebricks.core.algebra.operators.logical.LeftOuterUnnestMapOperator;
+import org.apache.hyracks.algebricks.core.algebra.operators.logical.UnnestMapOperator;
+import org.apache.hyracks.algebricks.core.algebra.operators.logical.WindowOperator;
 import org.apache.hyracks.algebricks.core.algebra.operators.physical.AbstractWindowPOperator;
 import org.apache.hyracks.algebricks.core.algebra.operators.physical.ExternalGroupByPOperator;
 import org.apache.hyracks.algebricks.core.algebra.operators.physical.WindowPOperator;
@@ -61,18 +69,27 @@ import org.apache.hyracks.algebricks.rewriter.rules.SetAlgebricksPhysicalOperato
 
 public final class SetAsterixPhysicalOperatorsRule extends SetAlgebricksPhysicalOperatorsRule {
 
+<<<<<<< HEAD
     @Override
     protected ILogicalOperatorVisitor<IPhysicalOperator, Boolean> createPhysicalOperatorFactoryVisitor(
             IOptimizationContext context) {
         return new AsterixPhysicalOperatorFactoryVisitor(context);
     }
+=======
+	@Override
+	protected ILogicalOperatorVisitor<IPhysicalOperator, Boolean> createPhysicalOperatorFactoryVisitor(
+			IOptimizationContext context) {
+		return new AsterixPhysicalOperatorFactoryVisitor(context);
+	}
+>>>>>>> ddb21a600c1c7d59cc764542ac2342963734bf16
 
-    private static class AsterixPhysicalOperatorFactoryVisitor extends AlgebricksPhysicalOperatorFactoryVisitor {
+	private static class AsterixPhysicalOperatorFactoryVisitor extends AlgebricksPhysicalOperatorFactoryVisitor {
 
-        private AsterixPhysicalOperatorFactoryVisitor(IOptimizationContext context) {
-            super(context);
-        }
+		private AsterixPhysicalOperatorFactoryVisitor(IOptimizationContext context) {
+			super(context);
+		}
 
+<<<<<<< HEAD
         @Override
         public IPhysicalOperator visitInnerJoinOperator(InnerJoinOperator op, Boolean topLevelOp)
                 throws AlgebricksException {
@@ -119,29 +136,85 @@ public final class SetAsterixPhysicalOperatorsRule extends SetAlgebricksPhysical
                     return null;
                 }
             }
+=======
+		@Override
+		public IPhysicalOperator visitInnerJoinOperator(InnerJoinOperator op, Boolean topLevelOp)
+				throws AlgebricksException {
+			JoinUtils.setJoinAlgorithmAndExchangeAlgo(op, topLevelOp, context);
+			if (op.getPhysicalOperator() != null) {
+				return op.getPhysicalOperator();
+			}
+			return visitAbstractBinaryJoinOperator(op, topLevelOp);
+		}
 
-            // Check whether there are multiple aggregates in the sub plan.
-            // Currently, we don't support multiple aggregates in one external group-by.
-            ILogicalOperator r1Logical = aggOp;
-            while (r1Logical.hasInputs()) {
-                r1Logical = r1Logical.getInputs().get(0).getValue();
-                if (r1Logical.getOperatorTag() == LogicalOperatorTag.AGGREGATE) {
-                    return null;
-                }
-            }
+		@Override
+		public IPhysicalOperator visitLeftOuterJoinOperator(LeftOuterJoinOperator op, Boolean topLevelOp)
+				throws AlgebricksException {
+			JoinUtils.setJoinAlgorithmAndExchangeAlgo(op, topLevelOp, context);
+			if (op.getPhysicalOperator() != null) {
+				return op.getPhysicalOperator();
+			}
+			return op.getPhysicalOperator();
+		}
 
-            for (int i = 0; i < aggNum; i++) {
-                AbstractFunctionCallExpression expr = (AbstractFunctionCallExpression) aggExprs.get(i).getValue();
-                AggregateFunctionCallExpression serialAggExpr = BuiltinFunctions
-                        .makeSerializableAggregateFunctionExpression(expr.getFunctionIdentifier(), expr.getArguments());
-                serialAggExpr.setSourceLocation(expr.getSourceLocation());
-                aggOp.getExpressions().get(i).setValue(serialAggExpr);
-            }
+		@Override
+		public ExternalGroupByPOperator createExternalGroupByPOperator(GroupByOperator gby) throws AlgebricksException {
+			Mutable<ILogicalOperator> r0 = gby.getNestedPlans().get(0).getRoots().get(0);
+			if (!r0.getValue().getOperatorTag().equals(LogicalOperatorTag.AGGREGATE)) {
+				return null;
+			}
+			AggregateOperator aggOp = (AggregateOperator) r0.getValue();
+			boolean serializable = aggOp.getExpressions().stream()
+					.allMatch(exprRef -> exprRef.getValue().getExpressionTag() == LogicalExpressionTag.FUNCTION_CALL
+							&& BuiltinFunctions.isAggregateFunctionSerializable(
+									((AbstractFunctionCallExpression) exprRef.getValue()).getFunctionIdentifier()));
+			if (!serializable) {
+				return null;
+			}
 
-            generateMergeAggregationExpressions(gby);
-            return new ExternalGroupByPOperator(gby.getGroupByVarList());
-        }
+			// if serializable, use external group-by
+			// now check whether the serialized version aggregation function has
+			// corresponding intermediate agg
+			IMergeAggregationExpressionFactory mergeAggregationExpressionFactory = context
+					.getMergeAggregationExpressionFactory();
+			List<LogicalVariable> originalVariables = aggOp.getVariables();
+			List<Mutable<ILogicalExpression>> aggExprs = aggOp.getExpressions();
+			int aggNum = aggExprs.size();
+			for (int i = 0; i < aggNum; i++) {
+				AbstractFunctionCallExpression expr = (AbstractFunctionCallExpression) aggExprs.get(i).getValue();
+				AggregateFunctionCallExpression serialAggExpr = BuiltinFunctions
+						.makeSerializableAggregateFunctionExpression(expr.getFunctionIdentifier(), expr.getArguments());
+				serialAggExpr.setSourceLocation(expr.getSourceLocation());
+				if (mergeAggregationExpressionFactory.createMergeAggregation(originalVariables.get(i), serialAggExpr,
+						context) == null) {
+					return null;
+				}
+			}
+>>>>>>> ddb21a600c1c7d59cc764542ac2342963734bf16
 
+			// Check whether there are multiple aggregates in the sub plan.
+			// Currently, we don't support multiple aggregates in one external group-by.
+			ILogicalOperator r1Logical = aggOp;
+			while (r1Logical.hasInputs()) {
+				r1Logical = r1Logical.getInputs().get(0).getValue();
+				if (r1Logical.getOperatorTag() == LogicalOperatorTag.AGGREGATE) {
+					return null;
+				}
+			}
+
+			for (int i = 0; i < aggNum; i++) {
+				AbstractFunctionCallExpression expr = (AbstractFunctionCallExpression) aggExprs.get(i).getValue();
+				AggregateFunctionCallExpression serialAggExpr = BuiltinFunctions
+						.makeSerializableAggregateFunctionExpression(expr.getFunctionIdentifier(), expr.getArguments());
+				serialAggExpr.setSourceLocation(expr.getSourceLocation());
+				aggOp.getExpressions().get(i).setValue(serialAggExpr);
+			}
+
+			generateMergeAggregationExpressions(gby);
+			return new ExternalGroupByPOperator(gby.getGroupByVarList());
+		}
+
+<<<<<<< HEAD
         private void generateMergeAggregationExpressions(GroupByOperator gby) throws AlgebricksException {
             if (gby.getNestedPlans().size() != 1) {
                 throw new CompilationException(ErrorCode.COMPILATION_ERROR, gby.getSourceLocation(),
@@ -267,4 +340,130 @@ public final class SetAsterixPhysicalOperatorsRule extends SetAlgebricksPhysical
             }
         }
     }
+=======
+		private void generateMergeAggregationExpressions(GroupByOperator gby) throws AlgebricksException {
+			if (gby.getNestedPlans().size() != 1) {
+				throw new CompilationException(ErrorCode.COMPILATION_ERROR, gby.getSourceLocation(),
+						"External group-by currently works only for one nested plan with one root containing"
+								+ "an aggregate and a nested-tuple-source.");
+			}
+			ILogicalPlan p0 = gby.getNestedPlans().get(0);
+			if (p0.getRoots().size() != 1) {
+				throw new CompilationException(ErrorCode.COMPILATION_ERROR, gby.getSourceLocation(),
+						"External group-by currently works only for one nested plan with one root containing"
+								+ "an aggregate and a nested-tuple-source.");
+			}
+			IMergeAggregationExpressionFactory mergeAggregationExpressionFactory = context
+					.getMergeAggregationExpressionFactory();
+			Mutable<ILogicalOperator> r0 = p0.getRoots().get(0);
+			AbstractLogicalOperator r0Logical = (AbstractLogicalOperator) r0.getValue();
+			if (r0Logical.getOperatorTag() != LogicalOperatorTag.AGGREGATE) {
+				throw new CompilationException(ErrorCode.COMPILATION_ERROR, gby.getSourceLocation(),
+						"The merge aggregation expression generation should not process a " + r0Logical.getOperatorTag()
+								+ " operator.");
+			}
+			AggregateOperator aggOp = (AggregateOperator) r0.getValue();
+			List<Mutable<ILogicalExpression>> aggFuncRefs = aggOp.getExpressions();
+			List<LogicalVariable> aggProducedVars = aggOp.getVariables();
+			int n = aggOp.getExpressions().size();
+			List<Mutable<ILogicalExpression>> mergeExpressionRefs = new ArrayList<>();
+			for (int i = 0; i < n; i++) {
+				ILogicalExpression aggFuncExpr = aggFuncRefs.get(i).getValue();
+				ILogicalExpression mergeExpr = mergeAggregationExpressionFactory
+						.createMergeAggregation(aggProducedVars.get(i), aggFuncExpr, context);
+				if (mergeExpr == null) {
+					throw new CompilationException(ErrorCode.COMPILATION_ERROR, aggFuncExpr.getSourceLocation(),
+							"The aggregation function "
+									+ ((AbstractFunctionCallExpression) aggFuncExpr).getFunctionIdentifier().getName()
+									+ " does not have a registered intermediate aggregation function.");
+				}
+				mergeExpressionRefs.add(new MutableObject<>(mergeExpr));
+			}
+			aggOp.setMergeExpressions(mergeExpressionRefs);
+		}
+
+		@Override
+		public IPhysicalOperator visitUnnestMapOperator(UnnestMapOperator op, Boolean topLevelOp)
+				throws AlgebricksException {
+			return visitAbstractUnnestMapOperator(op);
+		}
+
+		@Override
+		public IPhysicalOperator visitLeftOuterUnnestMapOperator(LeftOuterUnnestMapOperator op, Boolean topLevelOp)
+				throws AlgebricksException {
+			return visitAbstractUnnestMapOperator(op);
+		}
+
+		private IPhysicalOperator visitAbstractUnnestMapOperator(AbstractUnnestMapOperator op)
+				throws AlgebricksException {
+			ILogicalExpression unnestExpr = op.getExpressionRef().getValue();
+			if (unnestExpr.getExpressionTag() != LogicalExpressionTag.FUNCTION_CALL) {
+				throw new CompilationException(ErrorCode.COMPILATION_ILLEGAL_STATE, op.getSourceLocation());
+			}
+			AbstractFunctionCallExpression f = (AbstractFunctionCallExpression) unnestExpr;
+			if (!f.getFunctionIdentifier().equals(BuiltinFunctions.INDEX_SEARCH)) {
+				throw new CompilationException(ErrorCode.COMPILATION_ILLEGAL_STATE, op.getSourceLocation());
+			}
+			AccessMethodJobGenParams jobGenParams = new AccessMethodJobGenParams();
+			jobGenParams.readFromFuncArgs(f.getArguments());
+			MetadataProvider mp = (MetadataProvider) context.getMetadataProvider();
+			DataSourceId dataSourceId = new DataSourceId(jobGenParams.getDataverseName(),
+					jobGenParams.getDatasetName());
+			Dataset dataset = mp.findDataset(jobGenParams.getDataverseName(), jobGenParams.getDatasetName());
+			IDataSourceIndex<String, DataSourceId> dsi = mp.findDataSourceIndex(jobGenParams.getIndexName(),
+					dataSourceId);
+			INodeDomain storageDomain = mp.findNodeDomain(dataset.getNodeGroupName());
+			if (dsi == null) {
+				throw new CompilationException(ErrorCode.COMPILATION_ERROR, op.getSourceLocation(),
+						"Could not find index " + jobGenParams.getIndexName() + " for dataset " + dataSourceId);
+			}
+			IndexType indexType = jobGenParams.getIndexType();
+			boolean requiresBroadcast = jobGenParams.getRequiresBroadcast();
+			switch (indexType) {
+			case BTREE: {
+				BTreeJobGenParams btreeJobGenParams = new BTreeJobGenParams();
+				btreeJobGenParams.readFromFuncArgs(f.getArguments());
+				return new BTreeSearchPOperator(dsi, storageDomain, requiresBroadcast,
+						btreeJobGenParams.isPrimaryIndex(), btreeJobGenParams.isEqCondition(),
+						btreeJobGenParams.getLowKeyVarList(), btreeJobGenParams.getHighKeyVarList());
+			}
+			case RTREE: {
+				return new RTreeSearchPOperator(dsi, storageDomain, requiresBroadcast);
+			}
+			case SINGLE_PARTITION_WORD_INVIX:
+			case SINGLE_PARTITION_NGRAM_INVIX: {
+				return new InvertedIndexPOperator(dsi, storageDomain, requiresBroadcast, false);
+			}
+			case LENGTH_PARTITIONED_WORD_INVIX:
+			case LENGTH_PARTITIONED_NGRAM_INVIX: {
+				return new InvertedIndexPOperator(dsi, storageDomain, requiresBroadcast, true);
+			}
+			default: {
+				throw AlgebricksException.create(org.apache.hyracks.api.exceptions.ErrorCode.OPERATOR_NOT_IMPLEMENTED,
+						op.getSourceLocation(), op.getOperatorTag().toString() + " with " + indexType + " index");
+			}
+			}
+		}
+
+		@Override
+		public AbstractWindowPOperator createWindowPOperator(WindowOperator winOp) throws AlgebricksException {
+			if (winOp.hasNestedPlans()) {
+				boolean frameStartIsMonotonic = AnalysisUtil.isWindowFrameBoundaryMonotonic(
+						winOp.getFrameStartExpressions(), winOp.getFrameValueExpressions());
+				boolean frameEndIsMonotonic = AnalysisUtil.isWindowFrameBoundaryMonotonic(
+						winOp.getFrameEndExpressions(), winOp.getFrameValueExpressions());
+				boolean nestedTrivialAggregates = winOp.getNestedPlans().stream()
+						.allMatch(AnalysisUtil::isTrivialAggregateSubplan);
+				return new WindowPOperator(winOp.getPartitionVarList(), winOp.getOrderColumnList(),
+						frameStartIsMonotonic, frameEndIsMonotonic, nestedTrivialAggregates);
+			} else if (AnalysisUtil.hasFunctionWithProperty(winOp,
+					BuiltinFunctions.WindowFunctionProperty.MATERIALIZE_PARTITION)) {
+				return new WindowPOperator(winOp.getPartitionVarList(), winOp.getOrderColumnList(), false, false,
+						false);
+			} else {
+				return new WindowStreamPOperator(winOp.getPartitionVarList(), winOp.getOrderColumnList());
+			}
+		}
+	}
+>>>>>>> ddb21a600c1c7d59cc764542ac2342963734bf16
 }
