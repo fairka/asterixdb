@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -16,16 +16,8 @@
  * specific language governing permissions and limitations
  * under the License.
  */
+use GeoJSON1;
 
-package org.apache.asterix.fuzzyjoin.tokenorder;
-
-import java.io.Serializable;
-import java.util.Collection;
-
-public interface TokenRank extends Serializable {
-    public int add(String token);
-
-    public Integer getRank(String token);
-
-    public Collection<Integer> getTokenRanks(Iterable<String> tokens);
-}
+strict_st_union((
+  SELECT VALUE gbu FROM [st_make_point(1.0,1.0),st_make_point(1.0,2.0)] as gbu
+));

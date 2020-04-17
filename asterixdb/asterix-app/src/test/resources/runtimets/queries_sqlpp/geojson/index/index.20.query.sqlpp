@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -16,39 +16,7 @@
  * specific language governing permissions and limitations
  * under the License.
  */
+use IndexGeoJSON;
 
-package org.apache.asterix.fuzzyjoin.tokenorder;
-
-import java.util.HashMap;
-
-public class IntTokenRankFrequency implements IntTokenRank {
-    /**
-     *
-     */
-    private static final long serialVersionUID = 1L;
-
-    private final HashMap<Integer, Integer> ranksMap = new HashMap<Integer, Integer>();
-    private int crtRank = 0;
-
-    @Override
-    public int add(int token) {
-        int prevRank = crtRank;
-        ranksMap.put(token, prevRank);
-        crtRank++;
-        return prevRank;
-    }
-
-    @Override
-    public int getRank(int token) {
-        Integer rank = ranksMap.get(token);
-        if (rank == null) {
-            return -1;
-        }
-        return rank;
-    }
-
-    @Override
-    public String toString() {
-        return "[" + crtRank + ",\n " + ranksMap + "\n]";
-    }
-}
+SELECT * FROM Geometries
+ORDER BY id;

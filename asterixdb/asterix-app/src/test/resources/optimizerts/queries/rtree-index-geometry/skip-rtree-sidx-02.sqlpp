@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -17,11 +17,27 @@
  * under the License.
  */
 
-package org.apache.asterix.fuzzyjoin.tokenizer;
+/*
+ *  Description     : The test is intended to verify that the secondary RTree index is not used in the optimized query plan.
+ *                  : Notice the query hint to avoid using any secondary index to evaluate the predicate in the where clause
+ *  Expected Result : Success
+ *
+*/
 
-import java.io.Serializable;
-import java.util.List;
+drop  dataverse IndexGeoJSON if exists;
+create  dataverse IndexGeoJSON;
 
-public interface Tokenizer extends Serializable {
-    public List<String> tokenize(String text);
-}
+use IndexGeoJSON;
+
+CREATE TYPE GeometryType AS{
+  id : int,
+  myGeometry : geometry
+};
+
+CREATE DATASET Geometries (GeometryType) PRIMARY KEY id;
+
+CREATE INDEX geomIndex ON Geometries(myGeometry) TYPE rtree;
+
+SELECT VALUE geo.id
+FROM Geometries geo
+WHERE /* +skip-index*/ st_contains(geo.myGeometry, st_geom_from_text("POLYGON((1 1,5 1,5 5,1 5,1 1))"));

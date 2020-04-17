@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -17,15 +17,27 @@
  * under the License.
  */
 
-package org.apache.asterix.fuzzyjoin.tokenizer;
+/*
+ *  Description     : The test is intended to verify that the secondary RTree index is not used in the optimized query plan.
+ *                  : Notice the query hint to avoid using any secondary index to evaluate the predicate in the where clause
+ *  Expected Result : Success
+ *
+*/
 
-public class TokenizerFactory {
-    public static Tokenizer getTokenizer(String tokenizer, String wordSeparator, char tokenSeparator) {
-        if (tokenizer.equals("NGram")) {
-            return new NGramTokenizer();
-        } else if (tokenizer.equals("Word")) {
-            return new WordTokenizer(wordSeparator, tokenSeparator);
-        }
-        throw new RuntimeException("Unknown tokenizer \"" + tokenizer + "\".");
-    }
-}
+drop  dataverse IndexGeoJSON if exists;
+create  dataverse IndexGeoJSON;
+
+use IndexGeoJSON;
+
+CREATE TYPE GeometryType AS{
+  id : int,
+  myGeometry : geometry
+};
+
+CREATE DATASET Geometries (GeometryType) PRIMARY KEY id;
+
+CREATE INDEX geomIndex ON Geometries(myGeometry) TYPE rtree;
+
+SELECT VALUE geo.id
+FROM Geometries geo
+WHERE /* +skip-index*/ st_overlaps(geo.myGeometry, st_geom_from_text("POLYGON((1 1,5 1,5 5,1 5,1 1))"));

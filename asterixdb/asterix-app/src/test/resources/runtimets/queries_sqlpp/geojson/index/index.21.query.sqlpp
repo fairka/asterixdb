@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -16,13 +16,9 @@
  * specific language governing permissions and limitations
  * under the License.
  */
+use IndexGeoJSON;
 
-package org.apache.asterix.fuzzyjoin.tokenorder;
-
-import java.io.Serializable;
-
-public interface IntTokenRank extends Serializable {
-    public int add(int token);
-
-    public int getRank(int token);
-}
+SELECT VALUE geo.id
+FROM Geometries geo
+WHERE st_intersects(geo.myGeometry, st_geom_from_text("POLYGON((1 1,5 1,5 5,1 5,1 1))"))
+ORDER BY geo.id;
