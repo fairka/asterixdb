@@ -18,6 +18,8 @@
  */
 package org.apache.hyracks.algebricks.core.algebra.operators.logical.visitors;
 
+import static org.apache.hyracks.algebricks.core.algebra.base.PhysicalOperatorTag.PARTIAL_BROADCAST_RANGE_INTERSECT_EXCHANGE;
+
 import java.util.Collection;
 import java.util.HashSet;
 import java.util.List;
@@ -73,7 +75,9 @@ import org.apache.hyracks.algebricks.core.algebra.operators.logical.WriteOperato
 import org.apache.hyracks.algebricks.core.algebra.operators.logical.WriteResultOperator;
 import org.apache.hyracks.algebricks.core.algebra.operators.physical.HashPartitionExchangePOperator;
 import org.apache.hyracks.algebricks.core.algebra.operators.physical.HashPartitionMergeExchangePOperator;
+import org.apache.hyracks.algebricks.core.algebra.operators.physical.PartialBroadcastRangeIntersectExchangePOperator;
 import org.apache.hyracks.algebricks.core.algebra.operators.physical.SortMergeExchangePOperator;
+import org.apache.hyracks.algebricks.core.algebra.properties.IntervalColumn;
 import org.apache.hyracks.algebricks.core.algebra.properties.OrderColumn;
 import org.apache.hyracks.algebricks.core.algebra.visitors.ILogicalOperatorVisitor;
 
@@ -159,6 +163,14 @@ public class UsedVariableVisitor implements ILogicalOperatorVisitor<Void, Void> 
                     SortMergeExchangePOperator sortMergePOp = (SortMergeExchangePOperator) physOp;
                     for (OrderColumn orderCol : sortMergePOp.getSortColumns()) {
                         usedVariables.add(orderCol.getColumn());
+                    }
+                    break;
+                case PARTIAL_BROADCAST_RANGE_INTERSECT_EXCHANGE:
+                    PartialBroadcastRangeIntersectExchangePOperator intersectPOp =
+                            (PartialBroadcastRangeIntersectExchangePOperator) physOp;
+                    for (IntervalColumn intervalCol : intersectPOp.getIntervalFields()) {
+                        usedVariables.add(intervalCol.getStartColumn());
+                        usedVariables.add(intervalCol.getEndColumn());
                     }
                     break;
                 default:

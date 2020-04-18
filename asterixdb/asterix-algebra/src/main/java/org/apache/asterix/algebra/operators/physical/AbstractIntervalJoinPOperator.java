@@ -33,15 +33,7 @@ import org.apache.hyracks.algebricks.core.algebra.operators.logical.AbstractLogi
 import org.apache.hyracks.algebricks.core.algebra.operators.logical.IOperatorSchema;
 import org.apache.hyracks.algebricks.core.algebra.operators.logical.OrderOperator.IOrder.OrderKind;
 import org.apache.hyracks.algebricks.core.algebra.operators.physical.AbstractJoinPOperator;
-import org.apache.hyracks.algebricks.core.algebra.properties.ILocalStructuralProperty;
-import org.apache.hyracks.algebricks.core.algebra.properties.IPartitioningProperty;
-import org.apache.hyracks.algebricks.core.algebra.properties.IPartitioningRequirementsCoordinator;
-import org.apache.hyracks.algebricks.core.algebra.properties.IPhysicalPropertiesVector;
-import org.apache.hyracks.algebricks.core.algebra.properties.LocalOrderProperty;
-import org.apache.hyracks.algebricks.core.algebra.properties.OrderColumn;
-import org.apache.hyracks.algebricks.core.algebra.properties.OrderedPartitionedProperty;
-import org.apache.hyracks.algebricks.core.algebra.properties.PhysicalRequirements;
-import org.apache.hyracks.algebricks.core.algebra.properties.StructuralPropertiesVector;
+import org.apache.hyracks.algebricks.core.algebra.properties.*;
 import org.apache.hyracks.algebricks.core.jobgen.impl.JobGenContext;
 import org.apache.hyracks.algebricks.core.jobgen.impl.JobGenHelper;
 import org.apache.hyracks.api.dataflow.IOperatorDescriptor;
@@ -55,15 +47,20 @@ public abstract class AbstractIntervalJoinPOperator extends AbstractJoinPOperato
     private final List<LogicalVariable> keysRightBranch;
     protected final IIntervalMergeJoinCheckerFactory mjcf;
     private final RangeMap rangeMapHint;
+    private final List<IntervalColumn> intervalColumnLeft;
+    private final List<IntervalColumn> intervalColumnRight;
 
     public AbstractIntervalJoinPOperator(JoinKind kind, JoinPartitioningType partitioningType,
             List<LogicalVariable> sideLeftOfEqualities, List<LogicalVariable> sideRightOfEqualities,
-            IIntervalMergeJoinCheckerFactory mjcf, RangeMap rangeMapHint) {
+            IIntervalMergeJoinCheckerFactory mjcf, RangeMap rangeMapHint, List<IntervalColumn> intervalColumnLeft,
+            List<IntervalColumn> intervalColumnRight) {
         super(kind, partitioningType);
         this.keysLeftBranch = sideLeftOfEqualities;
         this.keysRightBranch = sideRightOfEqualities;
         this.mjcf = mjcf;
         this.rangeMapHint = rangeMapHint;
+        this.intervalColumnLeft = intervalColumnLeft;
+        this.intervalColumnRight = intervalColumnRight;
     }
 
     public List<LogicalVariable> getKeysLeftBranch() {
@@ -103,8 +100,6 @@ public abstract class AbstractIntervalJoinPOperator extends AbstractJoinPOperato
     public void computeDeliveredProperties(ILogicalOperator iop, IOptimizationContext context) {
         ArrayList<OrderColumn> order = getLeftRangeOrderColumn();
 
-        //        (List<OrderColumn> orderColumns, INodeDomain domain, RangeMap rangeMap) {
-        //            super(orderColumns, domain, rangeMap);
         IPartitioningProperty pp = new OrderedPartitionedProperty(order, null, rangeMapHint);
         List<ILocalStructuralProperty> propsLocal = new ArrayList<>();
         propsLocal.add(new LocalOrderProperty(getLeftLocalSortOrderColumn()));
@@ -125,10 +120,11 @@ public abstract class AbstractIntervalJoinPOperator extends AbstractJoinPOperato
         List<ILocalStructuralProperty> ispRight = new ArrayList<>();
         ispRight.add(new LocalOrderProperty(getRightLocalSortOrderColumn()));
 
-        //        if (op.getExecutionMode() == AbstractLogicalOperator.ExecutionMode.PARTITIONED) {
-        //            ppLeft = new OrderedPartitionedProperty(getLeftRangeOrderColumn(), null, rangeMapHint);
-        //            ppRight = new OrderedPartitionedProperty(getRightRangeOrderColumn(), null, rangeMapHint);
-        //        }
+        if (op.getExecutionMode() == AbstractLogicalOperator.ExecutionMode.PARTITIONED) {
+            INodeDomain targetNodeDomain = context.getComputationNodeDomain();
+            ppLeft = new PartialBroadcastOrderedIntersectProperty(intervalColumnLeft, targetNodeDomain, rangeMapHint);
+            ppRight = new PartialBroadcastOrderedIntersectProperty(intervalColumnRight, targetNodeDomain, rangeMapHint);
+        }
 
         pv[0] = new StructuralPropertiesVector(ppLeft, ispLeft);
         pv[1] = new StructuralPropertiesVector(ppRight, ispRight);

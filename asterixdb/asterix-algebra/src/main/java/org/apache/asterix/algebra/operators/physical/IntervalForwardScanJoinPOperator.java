@@ -25,6 +25,7 @@ import org.apache.asterix.runtime.operators.joins.IIntervalMergeJoinCheckerFacto
 import org.apache.asterix.runtime.operators.joins.intervalforwardscan.IntervalForwardScanJoinOperatorDescriptor;
 import org.apache.hyracks.algebricks.core.algebra.base.LogicalVariable;
 import org.apache.hyracks.algebricks.core.algebra.operators.logical.AbstractBinaryJoinOperator.JoinKind;
+import org.apache.hyracks.algebricks.core.algebra.properties.IntervalColumn;
 import org.apache.hyracks.api.dataflow.IOperatorDescriptor;
 import org.apache.hyracks.api.dataflow.value.RecordDescriptor;
 import org.apache.hyracks.api.job.IOperatorDescriptorRegistry;
@@ -38,8 +39,10 @@ public class IntervalForwardScanJoinPOperator extends AbstractIntervalJoinPOpera
 
     public IntervalForwardScanJoinPOperator(JoinKind kind, JoinPartitioningType partitioningType,
             List<LogicalVariable> sideLeftOfEqualities, List<LogicalVariable> sideRightOfEqualities,
-            int memSizeInFrames, IIntervalMergeJoinCheckerFactory mjcf, RangeMap rangeMapHint) {
-        super(kind, partitioningType, sideLeftOfEqualities, sideRightOfEqualities, mjcf, rangeMapHint);
+            int memSizeInFrames, IIntervalMergeJoinCheckerFactory mjcf, RangeMap rangeMapHint,
+            List<IntervalColumn> intervalColumnLeft, List<IntervalColumn> intervalColumnRight) {
+        super(kind, partitioningType, sideLeftOfEqualities, sideRightOfEqualities, mjcf, rangeMapHint,
+                intervalColumnLeft, intervalColumnRight);
         this.memSizeInFrames = memSizeInFrames;
 
         LOGGER.fine("IntervalForwardScanJoinPOperator constructed with: JoinKind=" + kind + ", JoinPartitioningType="
@@ -50,7 +53,7 @@ public class IntervalForwardScanJoinPOperator extends AbstractIntervalJoinPOpera
 
     @Override
     public String getIntervalJoin() {
-        return "INTERVAL_FORWARD_SWEEP_JOIN";
+        return "INTERVAL_FORWARD_SCAN_JOIN";
     }
 
     @Override
