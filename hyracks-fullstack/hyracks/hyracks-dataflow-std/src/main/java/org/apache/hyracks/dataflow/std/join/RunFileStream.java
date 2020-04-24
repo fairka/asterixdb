@@ -187,13 +187,6 @@ public class RunFileStream {
         }
     }
 
-    public long getReadPointer() {
-        if (runFileReader != null) {
-            return runFileReader.getReadPointer();
-        }
-        return -1;
-    }
-
     public boolean isReading() {
         return status.isRunFileReading();
     }
