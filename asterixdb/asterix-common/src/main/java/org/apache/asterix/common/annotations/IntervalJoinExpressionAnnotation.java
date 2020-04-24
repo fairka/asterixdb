@@ -20,7 +20,7 @@ package org.apache.asterix.common.annotations;
 
 import org.apache.hyracks.algebricks.core.algebra.expressions.AbstractExpressionAnnotation;
 import org.apache.hyracks.algebricks.core.algebra.expressions.IExpressionAnnotation;
-import org.apache.hyracks.api.dataflow.value.IRangeMap;
+import org.apache.hyracks.dataflow.common.data.partition.range.RangeMap;
 
 public class IntervalJoinExpressionAnnotation extends AbstractExpressionAnnotation {
 
@@ -32,7 +32,7 @@ public class IntervalJoinExpressionAnnotation extends AbstractExpressionAnnotati
     private static final String OVERLAPPING_INTERVAL_PARTITION_HINT_STRING = "interval-partition-join";
     public static final IntervalJoinExpressionAnnotation INSTANCE = new IntervalJoinExpressionAnnotation();
 
-    private IRangeMap map = null;
+    private RangeMap map = null;
     private String joinType = null;
     private long leftMaxDuration = -1;
     private long rightMaxDuration = -1;
@@ -106,11 +106,11 @@ public class IntervalJoinExpressionAnnotation extends AbstractExpressionAnnotati
         return tuplesPerFrame;
     }
 
-    public void setRangeMap(IRangeMap map) {
+    public void setRangeMap(RangeMap map) {
         this.map = map;
     }
 
-    public IRangeMap getRangeMap() {
+    public RangeMap getRangeMap() {
         return map;
     }
 
