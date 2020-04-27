@@ -195,6 +195,13 @@ public class RunFileStream {
         return status.isRunFileWriting();
     }
 
+    public long getReadPointer() {
+        if (runFileReader != null) {
+            return runFileReader.getReadPointer();
+        }
+        return -1;
+    }
+
     public ByteBuffer getAppenderBuffer() {
         return runFileAppender.getBuffer();
     }
