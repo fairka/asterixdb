@@ -18,6 +18,8 @@
  */
 package org.apache.asterix.lang.common.util;
 
+import static org.apache.asterix.om.base.temporal.ADateParserFactory.parseDatePart;
+
 import java.io.DataOutput;
 import java.util.List;
 
@@ -29,6 +31,7 @@ import org.apache.asterix.formats.nontagged.SerializerDeserializerProvider;
 import org.apache.asterix.lang.common.base.Expression;
 import org.apache.asterix.lang.common.base.Expression.Kind;
 import org.apache.asterix.lang.common.base.Literal;
+import org.apache.asterix.lang.common.expression.CallExpr;
 import org.apache.asterix.lang.common.expression.ListConstructor;
 import org.apache.asterix.lang.common.expression.LiteralExpr;
 import org.apache.asterix.lang.common.literal.DoubleLiteral;
@@ -36,11 +39,7 @@ import org.apache.asterix.lang.common.literal.FloatLiteral;
 import org.apache.asterix.lang.common.literal.IntegerLiteral;
 import org.apache.asterix.lang.common.literal.LongIntegerLiteral;
 import org.apache.asterix.lang.common.literal.StringLiteral;
-import org.apache.asterix.om.base.AMutableDouble;
-import org.apache.asterix.om.base.AMutableFloat;
-import org.apache.asterix.om.base.AMutableInt32;
-import org.apache.asterix.om.base.AMutableInt64;
-import org.apache.asterix.om.base.AMutableString;
+import org.apache.asterix.om.base.*;
 import org.apache.asterix.om.types.ATypeTag;
 import org.apache.asterix.om.types.BuiltinType;
 import org.apache.hyracks.algebricks.common.exceptions.NotImplementedException;
@@ -48,6 +47,7 @@ import org.apache.hyracks.api.dataflow.value.IBinaryComparator;
 import org.apache.hyracks.api.dataflow.value.IBinaryComparatorFactory;
 import org.apache.hyracks.api.dataflow.value.ISerializerDeserializer;
 import org.apache.hyracks.api.exceptions.HyracksDataException;
+import org.apache.hyracks.api.exceptions.HyracksException;
 import org.apache.hyracks.api.exceptions.SourceLocation;
 import org.apache.hyracks.data.std.util.ArrayBackedValueStorage;
 import org.apache.hyracks.dataflow.common.data.partition.range.RangeMap;
@@ -74,6 +74,8 @@ public class RangeMapBuilder {
             if (item.getKind() == Kind.LITERAL_EXPRESSION) {
                 parseLiteralToBytes((LiteralExpr) item, out);
                 offsets[i] = abvs.getLength();
+            } else if (item.getKind() == Kind.CALL_EXPRESSION) {
+                parseIntervalToBytes((CallExpr) item, out);
             } else {
                 throw new CompilationException("Expected literal in the range hint");
             }
@@ -81,6 +83,70 @@ public class RangeMapBuilder {
         }
 
         return new RangeMap(1, abvs.getByteArray(), offsets);
+    }
+
+    private static void parseIntervalToBytes(CallExpr item, DataOutput out) throws CompilationException {
+
+        try {
+
+            if (!item.getFunctionSignature().getName().equals("interval")) {
+                throw new CompilationException("The range hint must be a list.");
+            }
+
+            List<Expression> exprList = item.getExprList();
+
+            if (exprList.size() != 2) {
+                throw new CompilationException("Interval does not have the correct number of arguments");
+            }
+
+            //Date 1
+
+            Expression arg1 = exprList.get(0);
+
+            if (arg1.getKind() != Kind.CALL_EXPRESSION) {
+                throw new CompilationException("Argument 1 must be a call expression");
+            }
+
+            CallExpr arg1Expr = (CallExpr) arg1;
+
+            if (!arg1Expr.getFunctionSignature().getName().equals("date")) {
+                throw new CompilationException("Arguments must be of type date");
+            }
+
+            LiteralExpr arg1LiteralExpr = (LiteralExpr) arg1Expr.getExprList().get(0);
+            Literal arg1Literal = arg1LiteralExpr.getValue();
+            String arg1Value = arg1Literal.getStringValue();
+            long intervalStart;
+            intervalStart = parseDatePart(arg1Value, 0, arg1Value.length());
+
+            //Date 2
+            Expression arg2 = exprList.get(1);
+
+            if (arg2.getKind() != Kind.CALL_EXPRESSION) {
+                throw new CompilationException("Argument 2 Must be a call expression");
+            }
+
+            CallExpr arg2Expr = (CallExpr) arg2;
+
+            if (!arg2Expr.getFunctionSignature().getName().equals("date")) {
+                throw new CompilationException("Arguments must be of type date");
+            }
+
+            LiteralExpr arg2LiteralExpr = (LiteralExpr) arg2Expr.getExprList().get(0);
+            Literal arg2Literal = arg2LiteralExpr.getValue();
+            String arg2Value = arg2Literal.getStringValue();
+            long intervalEnd;
+            intervalEnd = parseDatePart(arg2Value, 0, arg2Value.length());
+
+            //Interval and Serialize
+            AInterval interval = new AInterval(intervalStart, intervalEnd, (byte) 0);
+            ISerializerDeserializer serde =
+                    SerializerDeserializerProvider.INSTANCE.getSerializerDeserializer(BuiltinType.AINTERVAL);
+            serde.serialize(interval, out);
+
+        } catch (HyracksException e) {
+            throw new CompilationException(ErrorCode.RANGE_MAP_ERROR, e, item.getSourceLocation(), e.getMessage());
+        }
     }
 
     @SuppressWarnings("unchecked")

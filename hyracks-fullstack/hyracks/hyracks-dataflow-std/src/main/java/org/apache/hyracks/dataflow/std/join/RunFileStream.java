@@ -54,6 +54,7 @@ public class RunFileStream {
     private long writeCount = 0;
     private long frameTupleCount = 0;
     private long totalTupleCount = 0;
+    private long readPreviousPtr;
 
     /**
      * The RunFileSream uses two frames to buffer read and write operations.
@@ -140,7 +141,7 @@ public class RunFileStream {
         // Create reader
         runFileReader = runFileWriter.createReader();
         runFileReader.open();
-        runFileReader.reset(startOffset);
+        runFileReader.seek(startOffset);
 
         // Load first frame
         loadNextBuffer(accessor);

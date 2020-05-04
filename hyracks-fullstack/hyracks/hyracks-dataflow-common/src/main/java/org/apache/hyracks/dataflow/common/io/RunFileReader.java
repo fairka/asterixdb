@@ -96,11 +96,6 @@ public class RunFileReader implements IFrameReader {
         return true;
     }
 
-    public void reset(long pointer) throws HyracksDataException {
-        readPtr = pointer;
-        readPreviousPtr = readPtr;
-    }
-
     @Override
     public void close() throws HyracksDataException {
         if (handle == null) {
