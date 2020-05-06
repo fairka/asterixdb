@@ -44,31 +44,76 @@ public class ADateTimeParserFactory implements IValueParserFactory {
 
             @Override
             public void parse(char[] buffer, int start, int length, DataOutput out) throws HyracksDataException {
-                long chrononTimeInMs = 0;
-
-                short timeOffset = (short) ((buffer[start] == '-') ? 1 : 0);
-
-                timeOffset += 8;
-
-                if (buffer[start + timeOffset] != 'T') {
-                    timeOffset += 2;
-                    if (buffer[start + timeOffset] != 'T') {
-                        throw new HyracksDataException(dateTimeErrorMessage + ": missing T");
-                    }
-                }
-
-                chrononTimeInMs = ADateParserFactory.parseDatePart(buffer, start, timeOffset);
-
-                chrononTimeInMs +=
-                        ATimeParserFactory.parseTimePart(buffer, start + timeOffset + 1, length - timeOffset - 1);
-
                 try {
-                    out.writeLong(chrononTimeInMs);
+                    out.writeLong(parseDateTimePart(buffer, start, length));
                 } catch (IOException ex) {
                     throw HyracksDataException.create(ex);
                 }
+
             }
         };
     }
 
+    //Fix Documentation
+    /**
+     * Parse the given char sequence as a datetime string, and return the milliseconds represented by the date.
+     *
+     * @param charAccessor
+     *            accessor for the char sequence
+     * @param isDateOnly
+     *            indicating whether it is a single datetime string, or it is the date part of a datetime string
+     * @param errorMessage
+     * @return
+     * @throws Exception
+     */
+    public static long parseDateTimePart(String dateTimeString, int start, int length) throws HyracksDataException {
+        long chrononTimeInMs = 0;
+
+        short timeOffset = (short) ((dateTimeString.charAt(start) == '-') ? 1 : 0);
+
+        timeOffset += 8;
+
+        if (dateTimeString.charAt(start + timeOffset) != 'T') {
+            timeOffset += 2;
+            if (dateTimeString.charAt(start + timeOffset) != 'T') {
+                throw new HyracksDataException(dateTimeErrorMessage + ": missing T");
+            }
+        }
+
+        chrononTimeInMs = ADateParserFactory.parseDatePart(dateTimeString, start, timeOffset);
+
+        return chrononTimeInMs
+                + ATimeParserFactory.parseTimePart(dateTimeString, start + timeOffset + 1, length - timeOffset - 1);
+    }
+
+    //Fix Documentation
+    /**
+     * A copy-and-paste of {@link #parseDateTimePart(String, int, int)} but for a char array, in order
+     * to avoid object creation.
+     *
+     * @param dateTimeString
+     * @param start
+     * @param length
+     * @return
+     * @throws HyracksDataException
+     */
+    public static long parseDateTimePart(char[] dateTimeString, int start, int length) throws HyracksDataException {
+        long chrononTimeInMs = 0;
+
+        short timeOffset = (short) ((dateTimeString[start] == '-') ? 1 : 0);
+
+        timeOffset += 8;
+
+        if (dateTimeString[start + timeOffset] != 'T') {
+            timeOffset += 2;
+            if (dateTimeString[start + timeOffset] != 'T') {
+                throw new HyracksDataException(dateTimeErrorMessage + ": missing T");
+            }
+        }
+
+        chrononTimeInMs = ADateParserFactory.parseDatePart(dateTimeString, start, timeOffset);
+
+        return chrononTimeInMs
+                + ATimeParserFactory.parseTimePart(dateTimeString, start + timeOffset + 1, length - timeOffset - 1);
+    }
 }
