@@ -54,15 +54,12 @@ public class ADateTimeParserFactory implements IValueParserFactory {
         };
     }
 
-    //Fix Documentation
     /**
-     * Parse the given char sequence as a datetime string, and return the milliseconds represented by the date.
+     * Parse the given char sequence as a datetime string, and return the milliseconds represented by the date and time.
      *
-     * @param charAccessor
-     *            accessor for the char sequence
-     * @param isDateOnly
-     *            indicating whether it is a single datetime string, or it is the date part of a datetime string
-     * @param errorMessage
+     * @param dateTimeString
+     * @param start
+     * @param length
      * @return
      * @throws Exception
      */

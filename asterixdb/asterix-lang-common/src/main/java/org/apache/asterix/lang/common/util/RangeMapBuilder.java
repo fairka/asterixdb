@@ -42,6 +42,7 @@ import org.apache.asterix.lang.common.literal.IntegerLiteral;
 import org.apache.asterix.lang.common.literal.LongIntegerLiteral;
 import org.apache.asterix.lang.common.literal.StringLiteral;
 import org.apache.asterix.om.base.*;
+import org.apache.asterix.om.base.temporal.GregorianCalendarSystem;
 import org.apache.asterix.om.types.ATypeTag;
 import org.apache.asterix.om.types.BuiltinType;
 import org.apache.hyracks.algebricks.common.exceptions.NotImplementedException;
@@ -87,95 +88,105 @@ public class RangeMapBuilder {
         return new RangeMap(1, abvs.getByteArray(), offsets);
     }
 
+    @SuppressWarnings("unchecked")
     private static void parseIntervalToBytes(CallExpr item, DataOutput out) throws CompilationException {
-
+        @SuppressWarnings("rawtypes")
+        ISerializerDeserializer serde;
         try {
+            if (item.getFunctionSignature().getName().equals("date")) {
+                GregorianCalendarSystem cal = GregorianCalendarSystem.getInstance();
+                //Serialize Dates
+                LiteralExpr argumentLiteralExpr = (LiteralExpr) item.getExprList().get(0);
+                String dateValue = argumentLiteralExpr.getValue().toString();
+                long parsedDate = parseDatePart(dateValue, 0, dateValue.length());
+                int intDate = cal.getChrononInDays(parsedDate);
+                ADate date = new ADate(intDate);
+                serde = SerializerDeserializerProvider.INSTANCE.getSerializerDeserializer(BuiltinType.ADATE);
+                serde.serialize(date, out);
 
-            if (!item.getFunctionSignature().getName().equals("interval")) {
-                throw new CompilationException("The range hint must be a list.");
+            } else if (item.getFunctionSignature().getName().equals("interval")) {
+
+                //Serialize An interval of date, time, or datetime
+                List<Expression> exprList = item.getExprList();
+                Expression arg1 = exprList.get(0);
+                Expression arg2 = exprList.get(1);
+
+                if (arg1.getKind() != Kind.CALL_EXPRESSION || arg2.getKind() != Kind.CALL_EXPRESSION) {
+                    throw new CompilationException("Argument must be Call Expression: arg1 && arg2");
+                }
+
+                CallExpr arg1Expr = (CallExpr) arg1;
+                CallExpr arg2Expr = (CallExpr) arg2;
+
+                byte typeTag = getIntervalTypeTag(arg1Expr);
+                if (typeTag != getIntervalTypeTag(arg2Expr) || exprList.size() != 2) {
+                    throw new NotImplementedException(
+                            "The range map builder has not been implemented for expressions of different types.");
+                }
+
+                long intervalStart = parseIntervalPointToBytes(arg1Expr);
+                long intervalEnd = parseIntervalPointToBytes(arg2Expr);
+
+                //Interval and Serialize
+                AInterval interval = new AInterval(intervalStart, intervalEnd, typeTag);
+                serde = SerializerDeserializerProvider.INSTANCE.getSerializerDeserializer(BuiltinType.AINTERVAL);
+                serde.serialize(interval, out);
             }
-
-            List<Expression> exprList = item.getExprList();
-
-            if (exprList.size() != 2) {
-                throw new CompilationException("Interval does not have the correct number of arguments");
-            }
-
-            Expression arg1 = exprList.get(0);
-            Expression arg2 = exprList.get(1);
-
-            if (arg1.getKind() != Kind.CALL_EXPRESSION || arg2.getKind() != Kind.CALL_EXPRESSION) {
-                throw new CompilationException("Argument must be Call Expression: arg1 && arg2");
-            }
-
-            CallExpr arg1Expr = (CallExpr) arg1;
-            CallExpr arg2Expr = (CallExpr) arg2;
-            LiteralExpr arg1LiteralExpr, arg2LiteralExpr;
-            Literal arg1Literal, arg2Literal;
-            String arg1Value, arg2Value;
-            long intervalStart, intervalEnd;
-            byte typeTag;
-
-            switch (arg1Expr.getFunctionSignature().getName()) {
-                case "date":
-                    arg1LiteralExpr = (LiteralExpr) arg1Expr.getExprList().get(0);
-                    arg1Literal = arg1LiteralExpr.getValue();
-                    arg1Value = arg1Literal.getStringValue();
-                    intervalStart = parseDatePart(arg1Value, 0, arg1Value.length());
-                    break;
-                case "time":
-                    arg1LiteralExpr = (LiteralExpr) arg1Expr.getExprList().get(0);
-                    arg1Literal = arg1LiteralExpr.getValue();
-                    arg1Value = arg1Literal.getStringValue();
-                    intervalStart = parseTimePart(arg1Value, 0, arg1Value.length());
-                    break;
-                case "datetime":
-                    arg1LiteralExpr = (LiteralExpr) arg1Expr.getExprList().get(0);
-                    arg1Literal = arg1LiteralExpr.getValue();
-                    arg1Value = arg1Literal.getStringValue();
-                    intervalStart = parseDateTimePart(arg1Value, 0, arg1Value.length());
-                    break;
-                default:
-                    throw new NotImplementedException("The range map builder has not been implemented for "
-                            + arg1Expr.getFunctionSignature().getName() + " type of expressions.");
-            }
-
-            switch (arg2Expr.getFunctionSignature().getName()) {
-                case "date":
-                    arg2LiteralExpr = (LiteralExpr) arg2Expr.getExprList().get(0);
-                    arg2Literal = arg2LiteralExpr.getValue();
-                    arg2Value = arg2Literal.getStringValue();
-                    intervalEnd = parseDatePart(arg2Value, 0, arg2Value.length());
-                    typeTag = ATypeTag.DATE.serialize();
-                    break;
-                case "time":
-                    arg2LiteralExpr = (LiteralExpr) arg2Expr.getExprList().get(0);
-                    arg2Literal = arg2LiteralExpr.getValue();
-                    arg2Value = arg2Literal.getStringValue();
-                    intervalEnd = parseTimePart(arg2Value, 0, arg2Value.length());
-                    typeTag = ATypeTag.TIME.serialize();
-                    break;
-                case "datetime":
-                    arg2LiteralExpr = (LiteralExpr) arg2Expr.getExprList().get(0);
-                    arg2Literal = arg2LiteralExpr.getValue();
-                    arg2Value = arg2Literal.getStringValue();
-                    intervalEnd = parseDateTimePart(arg2Value, 0, arg2Value.length());
-                    typeTag = ATypeTag.DATETIME.serialize();
-                    break;
-                default:
-                    throw new NotImplementedException("The range map builder has not been implemented for "
-                            + arg2Expr.getFunctionSignature().getName() + " type of expressions.");
-            }
-
-            //Interval and Serialize
-            AInterval interval = new AInterval(intervalStart, intervalEnd, typeTag);
-            ISerializerDeserializer serde =
-                    SerializerDeserializerProvider.INSTANCE.getSerializerDeserializer(BuiltinType.AINTERVAL);
-            serde.serialize(interval, out);
 
         } catch (HyracksException e) {
             throw new CompilationException(ErrorCode.RANGE_MAP_ERROR, e, item.getSourceLocation(), e.getMessage());
         }
+    }
+
+    private static long parseIntervalPointToBytes(CallExpr arg1Expr) throws HyracksDataException {
+        LiteralExpr arg1LiteralExpr;
+        Literal arg1Literal;
+        String arg1Value;
+        long intervalPoint;
+
+        switch (arg1Expr.getFunctionSignature().getName()) {
+            case "date":
+                arg1LiteralExpr = (LiteralExpr) arg1Expr.getExprList().get(0);
+                arg1Literal = arg1LiteralExpr.getValue();
+                arg1Value = arg1Literal.getStringValue();
+                intervalPoint = parseDatePart(arg1Value, 0, arg1Value.length());
+                break;
+            case "time":
+                arg1LiteralExpr = (LiteralExpr) arg1Expr.getExprList().get(0);
+                arg1Literal = arg1LiteralExpr.getValue();
+                arg1Value = arg1Literal.getStringValue();
+                intervalPoint = parseTimePart(arg1Value, 0, arg1Value.length());
+                break;
+            case "datetime":
+                arg1LiteralExpr = (LiteralExpr) arg1Expr.getExprList().get(0);
+                arg1Literal = arg1LiteralExpr.getValue();
+                arg1Value = arg1Literal.getStringValue();
+                intervalPoint = parseDateTimePart(arg1Value, 0, arg1Value.length());
+                break;
+            default:
+                throw new NotImplementedException("The range map builder has not been implemented for "
+                        + arg1Expr.getFunctionSignature().getName() + " type of expressions.");
+        }
+        return intervalPoint;
+    }
+
+    private static byte getIntervalTypeTag(CallExpr expression) {
+        byte typeTag;
+        switch (expression.getFunctionSignature().getName()) {
+            case "date":
+                typeTag = ATypeTag.DATE.serialize();
+                break;
+            case "time":
+                typeTag = ATypeTag.TIME.serialize();
+                break;
+            case "datetime":
+                typeTag = ATypeTag.DATETIME.serialize();
+                break;
+            default:
+                throw new NotImplementedException("The range map builder has not been implemented for "
+                        + expression.getFunctionSignature().getName() + " type of expressions.");
+        }
+        return typeTag;
     }
 
     @SuppressWarnings("unchecked")
