@@ -45,4 +45,4 @@ primary key name;
 
 select element { "staff": f.employment, "student" : d.attendance }
 from Staff as f, Students as d
-where `interval-after`(f.employment, d.attendance);
+where interval_after(f.employment, d.attendance);
