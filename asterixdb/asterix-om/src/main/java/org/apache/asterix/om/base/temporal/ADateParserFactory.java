@@ -25,6 +25,8 @@ import org.apache.hyracks.api.exceptions.HyracksDataException;
 import org.apache.hyracks.dataflow.common.data.parsers.IValueParser;
 import org.apache.hyracks.dataflow.common.data.parsers.IValueParserFactory;
 
+import static org.apache.asterix.om.base.temporal.GregorianCalendarSystem.CHRONON_OF_DAY;
+
 public class ADateParserFactory implements IValueParserFactory {
 
     public static final IValueParserFactory INSTANCE = new ADateParserFactory();
@@ -37,15 +39,14 @@ public class ADateParserFactory implements IValueParserFactory {
 
     }
 
-    @Override
-    public IValueParser createValueParser() {
+    @Override public IValueParser createValueParser() {
 
         return new IValueParser() {
 
-            @Override
-            public void parse(char[] buffer, int start, int length, DataOutput out) throws HyracksDataException {
+            @Override public void parse(char[] buffer, int start, int length, DataOutput out)
+                    throws HyracksDataException {
                 try {
-                    out.writeInt((int) (parseDatePart(buffer, start, length) / GregorianCalendarSystem.CHRONON_OF_DAY));
+                    out.writeInt((int) (parseDatePart(buffer, start, length) / CHRONON_OF_DAY));
                 } catch (IOException ex) {
                     throw HyracksDataException.create(ex);
                 }
@@ -56,11 +57,9 @@ public class ADateParserFactory implements IValueParserFactory {
     /**
      * Parse the given char sequence as a date string, and return the milliseconds represented by the date.
      *
-     * @param charAccessor
-     *            accessor for the char sequence
-     * @param isDateOnly
-     *            indicating whether it is a single date string, or it is the date part of a datetime string
-     * @param errorMessage
+     * @param dateString
+     * @param start
+     * @param length
      * @return
      * @throws Exception
      */
@@ -340,5 +339,49 @@ public class ADateParserFactory implements IValueParserFactory {
         }
 
         return GregorianCalendarSystem.getInstance().getChronon(year, month, day, 0, 0, 0, 0, 0);
+    }
+
+    /**
+     * Parse the given string sequence as a date string, and return the days represented by the date.
+     *
+     * @param dateString
+     * @param start
+     * @param length
+     * @return
+     * @throws Exception
+     */
+    public static int parseDatePartInDays(String dateString, int start, int length) throws HyracksDataException {
+        long chronon = parseDatePart(dateString, start, length);
+        if (chronon >= 0) {
+            return (int) (chronon / CHRONON_OF_DAY);
+        } else {
+            if (chronon % CHRONON_OF_DAY != 0) {
+                return (int) (chronon / CHRONON_OF_DAY - 1);
+            } else {
+                return (int) (chronon / CHRONON_OF_DAY);
+            }
+        }
+    }
+
+    /**
+     * Parse the given string sequence as a date string, and return the days represented by the date.
+     *
+     * @param dateString
+     * @param start
+     * @param length
+     * @return
+     * @throws Exception
+     */
+    public static int parseDatePartInDays(char[] dateString, int start, int length) throws HyracksDataException {
+        long chronon = parseDatePart(dateString, start, length);
+        if (chronon >= 0) {
+            return (int) (chronon / CHRONON_OF_DAY);
+        } else {
+            if (chronon % CHRONON_OF_DAY != 0) {
+                return (int) (chronon / CHRONON_OF_DAY - 1);
+            } else {
+                return (int) (chronon / CHRONON_OF_DAY);
+            }
+        }
     }
 }

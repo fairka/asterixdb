@@ -27,7 +27,6 @@ import java.util.List;
 import org.apache.asterix.common.exceptions.CompilationException;
 import org.apache.asterix.common.exceptions.ErrorCode;
 import org.apache.asterix.common.exceptions.RuntimeDataException;
-import org.apache.asterix.external.parser.ParseException;
 import org.apache.asterix.formats.nontagged.BinaryComparatorFactoryProvider;
 import org.apache.asterix.formats.nontagged.SerializerDeserializerProvider;
 import org.apache.asterix.lang.common.base.Expression;
@@ -43,8 +42,8 @@ import org.apache.asterix.lang.common.literal.LongIntegerLiteral;
 import org.apache.asterix.lang.common.literal.StringLiteral;
 import org.apache.asterix.om.base.*;
 import org.apache.asterix.om.base.temporal.ADateParserFactory;
+import org.apache.asterix.om.base.temporal.ADateTimeParserFactory;
 import org.apache.asterix.om.base.temporal.ATimeParserFactory;
-import org.apache.asterix.om.base.temporal.GregorianCalendarSystem;
 import org.apache.asterix.om.types.ATypeTag;
 import org.apache.asterix.om.types.BuiltinType;
 import org.apache.hyracks.algebricks.common.exceptions.NotImplementedException;
@@ -64,7 +63,7 @@ public class RangeMapBuilder {
 
     public static RangeMap parseHint(Expression expression) throws CompilationException {
         if (expression.getKind() != Kind.LIST_CONSTRUCTOR_EXPRESSION) {
-            throw new CompilationException("The range hint must be a list.");
+            throw new CompilationException(ErrorCode.RANGE_MAP_ERROR, expression.getSourceLocation());
         }
 
         ArrayBackedValueStorage abvs = new ArrayBackedValueStorage();
@@ -80,9 +79,9 @@ public class RangeMapBuilder {
                 parseLiteralToBytes((LiteralExpr) item, out);
                 offsets[i] = abvs.getLength();
             } else if (item.getKind() == Kind.CALL_EXPRESSION) {
-                parseIntervalToBytes((CallExpr) item, out);
+                parseExpressionToBytes((CallExpr) item, out);
             } else {
-                throw new CompilationException("Expected literal in the range hint");
+                throw new CompilationException(ErrorCode.RANGE_MAP_ERROR, expression.getSourceLocation());
             }
             // TODO Add support for composite fields.
         }
@@ -91,60 +90,39 @@ public class RangeMapBuilder {
     }
 
     @SuppressWarnings("unchecked")
-    private static void parseIntervalToBytes(CallExpr item, DataOutput out) throws CompilationException {
+    private static void parseExpressionToBytes(CallExpr item, DataOutput out) throws CompilationException {
+        AMutableDate aDate = new AMutableDate(0);
+        AMutableTime aTime = new AMutableTime(0);
+        AMutableDateTime aDateTime = new AMutableDateTime(0L);
         @SuppressWarnings("rawtypes")
         ISerializerDeserializer serde;
-        long parsedString;
-        GregorianCalendarSystem cal = GregorianCalendarSystem.getInstance();
+
+        if(!(item.getKind() == Kind.LITERAL_EXPRESSION)){
+            throw new CompilationException(ErrorCode.RANGE_MAP_ERROR, item.getSourceLocation());
+        }
+        LiteralExpr argumentLiteralExpr = (LiteralExpr) item.getExprList().get(0);
+        String value = argumentLiteralExpr.getValue().toString();
 
         try {
-
-            LiteralExpr argumentLiteralExpr = (LiteralExpr) item.getExprList().get(0);
-            String value = argumentLiteralExpr.getValue().toString();
-
             switch (item.getFunctionSignature().getName()) {
                 case "date":
-                    AMutableDate aDate = new AMutableDate(0);
-
                     //Serialize a Date
-                    long chrononTimeInMs = ADateParserFactory.parseDatePart(value, 0, value.length());
-                    short temp = 0;
-                    if (chrononTimeInMs < 0 && chrononTimeInMs % GregorianCalendarSystem.CHRONON_OF_DAY != 0) {
-                        temp = 1;
-                    }
+                    int chrononTimeInDays = ADateParserFactory.parseDatePartInDays(value, 0, value.length());
                     serde = SerializerDeserializerProvider.INSTANCE.getSerializerDeserializer(BuiltinType.ADATE);
-                    aDate.setValue((int) (chrononTimeInMs / GregorianCalendarSystem.CHRONON_OF_DAY) - temp);
+                    aDate.setValue(chrononTimeInDays);
                     serde.serialize(aDate, out);
-
                     break;
                 case "time":
-
-                    AMutableTime aTime = new AMutableTime(0);
+                    //Serialize a Time
                     int chrononTimeInMillis = ATimeParserFactory.parseTimePart(value, 0, value.length());
                     serde = SerializerDeserializerProvider.INSTANCE.getSerializerDeserializer(BuiltinType.ATIME);
                     aTime.setValue(chrononTimeInMillis);
                     serde.serialize(aTime, out);
                     break;
-
                 case "datetime":
-                    //datetime
-                    // +1 if it is negative (-)
-
-                    int timeOffset = (value.charAt(0) == '-') ? 1 : 0;
-
-                    timeOffset = timeOffset + 8 + 0;
-
-                    if (value.charAt(timeOffset) != 'T') {
-                        timeOffset += 2;
-                        if (value.charAt(timeOffset) != 'T') {
-                            throw new ParseException(ErrorCode.PARSER_ADM_DATA_PARSER_INTERVAL_INVALID_DATETIME);
-                        }
-                    }
-                    long chrononTimeInMills = ADateParserFactory.parseDatePart(value, 0, timeOffset);
-                    chrononTimeInMills +=
-                            ATimeParserFactory.parseTimePart(value, timeOffset + 1, value.length() - timeOffset - 1);
-                    AMutableDateTime aDateTime = new AMutableDateTime(0L);
-                    aDateTime.setValue(chrononTimeInMills);
+                    //Serialize a Datetime
+                    long chronoDatetimeInMills = ADateTimeParserFactory.parseDateTimePart(value, 0, value.length());
+                    aDateTime.setValue(chronoDatetimeInMills);
                     serde = SerializerDeserializerProvider.INSTANCE.getSerializerDeserializer(BuiltinType.ADATETIME);
                     serde.serialize(aDateTime, out);
                     break;

@@ -16,17 +16,13 @@
  * specific language governing permissions and limitations
  * under the License.
  */
-/*
- * Description      :   Check temporal join functionality for interval
- * Expected Result  :   Success
- * Date             :   9th January 2019
- */
 
-use TinyCollege;
+use test;
 
-select element { "staff" : f.name, "student" : d.name }
-from Staff as f, Students as d
-where
-/*+ range [date("2003-06-30"), date("2005-12-31"), date("2008-06-30")] */
-interval_after(f.employment, d.attendance)
-order by f.name, d.name;
+
+insert into tsdata
+select element {'id':1,'time':test.time('23:49:23.938'),'date':test.date('1904-01-06'),'datetime':test.datetime('2012-01-12T12:31:39')};
+insert into tsdata
+select element {'id':2,'time':test.time('12:37:10'),'date':test.date('2194-07-06'),'datetime':test.datetime('2013-01-12T12:31:39')};
+insert into tsdata
+select element {'id':3,'time':test.time('09:28:10.9'),'date':test.date('-1904-01-06'),'datetime':test.datetime('2012-01-12T18:31:39'),'dtduration':test.`day_time_duration`('P3DT2S'),'ymduration':test.`year_month_duration`('P29M')};
