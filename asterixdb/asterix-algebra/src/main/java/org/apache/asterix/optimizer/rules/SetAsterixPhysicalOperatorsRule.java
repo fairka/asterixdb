@@ -34,7 +34,7 @@ import org.apache.asterix.om.functions.BuiltinFunctions;
 import org.apache.asterix.optimizer.base.AnalysisUtil;
 import org.apache.asterix.optimizer.rules.am.AccessMethodJobGenParams;
 import org.apache.asterix.optimizer.rules.am.BTreeJobGenParams;
-import org.apache.asterix.optimizer.rules.util.JoinUtils;
+import org.apache.asterix.optimizer.rules.util.AsterixJoinUtils;
 import org.apache.commons.lang3.mutable.Mutable;
 import org.apache.commons.lang3.mutable.MutableObject;
 import org.apache.hyracks.algebricks.common.exceptions.AlgebricksException;
@@ -84,7 +84,7 @@ public final class SetAsterixPhysicalOperatorsRule extends SetAlgebricksPhysical
         @Override
         public IPhysicalOperator visitInnerJoinOperator(InnerJoinOperator op, Boolean topLevelOp)
                 throws AlgebricksException {
-            JoinUtils.setJoinAlgorithmAndExchangeAlgo(op, topLevelOp, context);
+            AsterixJoinUtils.setJoinAlgorithmAndExchangeAlgo(op, topLevelOp, context);
             if (op.getPhysicalOperator() != null) {
                 return op.getPhysicalOperator();
             }
@@ -94,7 +94,7 @@ public final class SetAsterixPhysicalOperatorsRule extends SetAlgebricksPhysical
         @Override
         public IPhysicalOperator visitLeftOuterJoinOperator(LeftOuterJoinOperator op, Boolean topLevelOp)
                 throws AlgebricksException {
-            JoinUtils.setJoinAlgorithmAndExchangeAlgo(op, topLevelOp, context);
+            AsterixJoinUtils.setJoinAlgorithmAndExchangeAlgo(op, topLevelOp, context);
             if (op.getPhysicalOperator() != null) {
                 return op.getPhysicalOperator();
             }

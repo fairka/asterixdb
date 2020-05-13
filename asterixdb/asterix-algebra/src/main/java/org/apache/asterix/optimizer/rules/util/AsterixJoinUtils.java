@@ -55,12 +55,12 @@ import org.apache.hyracks.algebricks.core.algebra.properties.IntervalColumn;
 import org.apache.hyracks.data.std.util.ArrayBackedValueStorage;
 import org.apache.hyracks.dataflow.common.data.partition.range.RangeMap;
 
-public class JoinUtils {
+public class AsterixJoinUtils {
 
     private static final int LEFT = 0;
     private static final int RIGHT = 1;
 
-    private static final Logger LOGGER = Logger.getLogger(JoinUtils.class.getName());
+    private static final Logger LOGGER = Logger.getLogger(AsterixJoinUtils.class.getName());
 
     private static final Map<FunctionIdentifier, FunctionIdentifier> INTERVAL_JOIN_CONDITIONS = new HashMap<>();
 
@@ -80,7 +80,7 @@ public class JoinUtils {
         INTERVAL_JOIN_CONDITIONS.put(BuiltinFunctions.INTERVAL_STARTS, BuiltinFunctions.INTERVAL_STARTED_BY);
     }
 
-    private JoinUtils() {
+    private AsterixJoinUtils() {
     }
 
     public static void setJoinAlgorithmAndExchangeAlgo(AbstractBinaryJoinOperator op, Boolean topLevelOp,

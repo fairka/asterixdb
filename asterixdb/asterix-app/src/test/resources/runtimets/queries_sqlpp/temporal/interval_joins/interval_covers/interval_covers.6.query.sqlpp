@@ -26,5 +26,5 @@ use TinyCollege;
 
 select element { "staff" : f.name, "student" : d.name }
 from Students as d, Staff as f
-where `interval-covers`(d.attendance, f.employment)
+where interval_covers(d.attendance, f.employment)
 order by f.name, d.name;

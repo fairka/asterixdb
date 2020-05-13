@@ -26,5 +26,5 @@ use TinyCollege;
 
 select element { "staff" : f.name, "student" : d.name }
 from Staff as f, Students as d
-where `interval-meets`(f.employment, d.attendance)
+where interval_meets(f.employment, d.attendance)
 order by f.name, d.name;
