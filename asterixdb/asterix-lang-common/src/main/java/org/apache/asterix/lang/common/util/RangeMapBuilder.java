@@ -79,6 +79,7 @@ public class RangeMapBuilder {
                 offsets[i] = abvs.getLength();
             } else if (item.getKind() == Kind.CALL_EXPRESSION) {
                 parseExpressionToBytes((CallExpr) item, out);
+                offsets[i] = abvs.getLength();
             } else {
                 throw new CompilationException(ErrorCode.RANGE_MAP_ERROR, expression.getSourceLocation());
             }
@@ -96,7 +97,7 @@ public class RangeMapBuilder {
         @SuppressWarnings("rawtypes")
         ISerializerDeserializer serde;
 
-        if (!(item.getKind() == Kind.LITERAL_EXPRESSION)) {
+        if (!(item.getKind() == Kind.CALL_EXPRESSION)) {
             throw new CompilationException(ErrorCode.RANGE_MAP_ERROR, item.getSourceLocation());
         }
         LiteralExpr argumentLiteralExpr = (LiteralExpr) item.getExprList().get(0);
