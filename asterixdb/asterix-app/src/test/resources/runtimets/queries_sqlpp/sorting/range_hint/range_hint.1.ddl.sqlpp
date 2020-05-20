@@ -30,7 +30,7 @@ use test;
 
 create type test.Schema as
  closed {
-  id : integer,
+  id : int,
   double : double,
   string : string,
   long : bigint,
