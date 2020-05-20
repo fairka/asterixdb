@@ -20,5 +20,5 @@
 use test;
 select value v
 from tsdata as v
-/*+ range [time('05:28:10.2'), time('12:28:10.2'), time('23:28:10.2')] */
-order by v.time;
+/*+ range [2.0, 4.0, 10.0] */
+order by v.long;

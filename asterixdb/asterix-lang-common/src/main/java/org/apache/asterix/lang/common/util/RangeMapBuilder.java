@@ -96,8 +96,8 @@ public class RangeMapBuilder {
         AMutableDateTime aDateTime = new AMutableDateTime(0L);
         @SuppressWarnings("rawtypes")
         ISerializerDeserializer serde;
-        
-        if (!(item.getKind() == Kind.CALL_EXPRESSION)) {
+
+        if (!(item.getExprList().get(0).getKind() == Kind.LITERAL_EXPRESSION)) {
             throw new CompilationException(ErrorCode.RANGE_MAP_ERROR, item.getSourceLocation());
         }
         LiteralExpr argumentLiteralExpr = (LiteralExpr) item.getExprList().get(0);

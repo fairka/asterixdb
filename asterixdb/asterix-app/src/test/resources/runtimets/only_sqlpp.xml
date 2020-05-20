@@ -18,6 +18,11 @@
  ! under the License.
  !-->
 <test-suite xmlns="urn:xml.testframework.asterix.apache.org" ResultOffsetPath="results" QueryOffsetPath="queries_sqlpp" QueryFileExtension=".sqlpp">
-  <test-group name="failed">
+  <test-group name="sorting">
+    <test-case FilePath="sorting">
+      <compilation-unit name="range_hint">
+        <output-dir compare="Text">range_hint</output-dir>
+      </compilation-unit>
+    </test-case>
   </test-group>
 </test-suite>

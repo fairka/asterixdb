@@ -33,6 +33,7 @@ create type test.Schema as
   id : integer,
   double : double,
   string : string,
+  long : bigint,
   float : float,
   time : time,
   date : date,
