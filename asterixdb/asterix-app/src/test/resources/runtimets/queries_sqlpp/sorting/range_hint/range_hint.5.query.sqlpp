@@ -20,5 +20,5 @@
 use test;
 select value v
 from tsdata as v
-/*+ range [, 4, 10] */
+/*+ range ['b', 'n', 'z'] */
 order by v.string;

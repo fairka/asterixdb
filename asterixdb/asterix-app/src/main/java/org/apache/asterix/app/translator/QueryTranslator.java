@@ -705,7 +705,7 @@ public class QueryTranslator extends AbstractLangTranslator implements IStatemen
             }
             String ngName = ngNameId != null ? ngNameId.getValue()
                     : configureNodegroupForDataset(appCtx, dd.getHints(), dataverseName, datasetName, metadataProvider,
-                    sourceLoc);
+                            sourceLoc);
 
             if (compactionPolicy == null) {
                 compactionPolicy = StorageConstants.DEFAULT_COMPACTION_POLICY_NAME;
