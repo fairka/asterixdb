@@ -47,7 +47,7 @@ public class ADateParserFactory implements IValueParserFactory {
             @Override
             public boolean parse(char[] buffer, int start, int length, DataOutput out) throws HyracksDataException {
                 try {
-                    out.writeInt((int) (parseDatePart(buffer, start, length) / CHRONON_OF_DAY));
+                    out.writeInt((int) (parseDatePart(buffer, start, length) / GregorianCalendarSystem.CHRONON_OF_DAY));
                     return true;
                 } catch (IOException ex) {
                     throw HyracksDataException.create(ex);
