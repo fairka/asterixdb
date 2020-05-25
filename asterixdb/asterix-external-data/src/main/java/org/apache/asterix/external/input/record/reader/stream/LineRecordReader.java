@@ -23,37 +23,49 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.function.LongSupplier;
 
 import org.apache.asterix.external.api.AsterixInputStream;
 import org.apache.asterix.external.util.ExternalDataConstants;
 import org.apache.asterix.external.util.ExternalDataUtils;
+import org.apache.hyracks.api.context.IHyracksTaskContext;
 import org.apache.hyracks.api.exceptions.HyracksDataException;
 
 public class LineRecordReader extends StreamRecordReader {
 
-    private boolean hasHeader;
+    protected boolean hasHeader;
     protected boolean prevCharCR;
     protected int newlineLength;
-    protected int recordNumber = 0;
-    protected boolean nextIsHeader = false;
-    private static final List<String> recordReaderFormats = Collections.unmodifiableList(
-            Arrays.asList(ExternalDataConstants.FORMAT_DELIMITED_TEXT, ExternalDataConstants.FORMAT_CSV));
+    protected long beginLineNumber = 1;
+    protected long lineNumber = 1;
+    protected boolean newSource = false;
+    private static final List<String> recordReaderFormats =
+            Collections.unmodifiableList(Arrays.asList(ExternalDataConstants.FORMAT_DELIMITED_TEXT,
+                    ExternalDataConstants.FORMAT_CSV, ExternalDataConstants.FORMAT_TSV));
     private static final String REQUIRED_CONFIGS = "";
 
     @Override
-    public void configure(AsterixInputStream inputStream, Map<String, String> config) throws HyracksDataException {
-        super.configure(inputStream);
+    public void configure(IHyracksTaskContext ctx, AsterixInputStream inputStream, Map<String, String> config)
+            throws HyracksDataException {
+        super.configure(inputStream, config);
         this.hasHeader = ExternalDataUtils.hasHeader(config);
-        if (hasHeader) {
-            inputStream.setNotificationHandler(this);
-        }
+        this.newSource = true;
+        inputStream.setNotificationHandler(this);
     }
 
     @Override
     public void notifyNewSource() {
-        if (hasHeader) {
-            nextIsHeader = true;
-        }
+        resetForNewSource();
+    }
+
+    @Override
+    public void resetForNewSource() {
+        super.resetForNewSource();
+        newSource = true;
+        beginLineNumber = 1;
+        lineNumber = 1;
+        prevCharCR = false;
+        newlineLength = 0;
     }
 
     @Override
@@ -89,6 +101,7 @@ public class LineRecordReader extends StreamRecordReader {
              * consuming it until we have a chance to look at the char that
              * follows.
              */
+            beginLineNumber = lineNumber;
             newlineLength = 0; //length of terminating newline
             prevCharCR = false; //true of prev char was CR
             record.reset();
@@ -99,42 +112,50 @@ public class LineRecordReader extends StreamRecordReader {
                     startPosn = bufferPosn = 0;
                     bufferLength = reader.read(inputBuffer);
                     if (bufferLength <= 0) {
-                        if (readLength > 0) {
-                            record.endRecord();
-                            recordNumber++;
-                            return true;
+                        if (readLength <= 0) {
+                            close();
+                            return false; //EOF
                         }
-                        close();
-                        return false; //EOF
+                        record.endRecord();
+                        break;
                     }
                 }
                 for (; bufferPosn < bufferLength; ++bufferPosn) { //search for newline
                     if (inputBuffer[bufferPosn] == ExternalDataConstants.LF) {
                         newlineLength = (prevCharCR) ? 2 : 1;
                         ++bufferPosn; // at next invocation proceed from following byte
+                        ++lineNumber;
                         break;
                     }
                     if (prevCharCR) { //CR + notLF, we are at notLF
+                        ++lineNumber;
                         newlineLength = 1;
                         break;
                     }
                     prevCharCR = (inputBuffer[bufferPosn] == ExternalDataConstants.CR);
                 }
                 readLength = bufferPosn - startPosn;
-                if (prevCharCR && newlineLength == 0) {
-                    --readLength; //CR at the end of the buffer
-                    prevCharCR = false;
-                }
                 if (readLength > 0) {
                     record.append(inputBuffer, startPosn, readLength);
                 }
             } while (newlineLength == 0);
-            if (nextIsHeader) {
-                nextIsHeader = false;
+            if (record.isEmptyRecord()) {
                 continue;
             }
-            recordNumber++;
+            if (newSource && hasHeader) {
+                newSource = false;
+                continue;
+            }
             return true;
         }
+    }
+
+    @Override
+    public LongSupplier getLineNumber() {
+        return this::getBeginLineNumber;
+    }
+
+    private long getBeginLineNumber() {
+        return beginLineNumber;
     }
 }

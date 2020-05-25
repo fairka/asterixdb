@@ -56,7 +56,7 @@ import org.apache.asterix.api.http.server.VersionApiServlet;
 import org.apache.asterix.app.active.ActiveNotificationHandler;
 import org.apache.asterix.app.cc.CCExtensionManager;
 import org.apache.asterix.app.config.ConfigValidator;
-import org.apache.asterix.app.external.ExternalLibraryUtils;
+import org.apache.asterix.app.io.PersistedResourceRegistry;
 import org.apache.asterix.app.replication.NcLifecycleCoordinator;
 import org.apache.asterix.app.result.JobResultCallback;
 import org.apache.asterix.common.api.AsterixThreadFactory;
@@ -73,10 +73,12 @@ import org.apache.asterix.common.config.PropertiesAccessor;
 import org.apache.asterix.common.config.ReplicationProperties;
 import org.apache.asterix.common.context.IStorageComponentProvider;
 import org.apache.asterix.common.dataflow.ICcApplicationContext;
+import org.apache.asterix.common.external.IAdapterFactoryService;
 import org.apache.asterix.common.library.ILibraryManager;
 import org.apache.asterix.common.metadata.IMetadataLockUtil;
 import org.apache.asterix.common.replication.INcLifecycleCoordinator;
 import org.apache.asterix.common.utils.Servlets;
+import org.apache.asterix.external.adapter.factory.AdapterFactoryService;
 import org.apache.asterix.external.library.ExternalLibraryManager;
 import org.apache.asterix.file.StorageComponentProvider;
 import org.apache.asterix.messaging.CCMessageBroker;
@@ -143,27 +145,24 @@ public class CCApplication extends BaseCCApplication {
         final ClusterControllerService controllerService =
                 (ClusterControllerService) ccServiceCtx.getControllerService();
         ccServiceCtx.setMessageBroker(new CCMessageBroker(controllerService));
-
+        ccServiceCtx.setPersistedResourceRegistry(new PersistedResourceRegistry());
         configureLoggingLevel(ccServiceCtx.getAppConfig().getLoggingLevel(ExternalProperties.Option.LOG_LEVEL));
-
         LOGGER.info("Starting Asterix cluster controller");
-
         String strIP = ccServiceCtx.getCCContext().getClusterControllerInfo().getClientNetAddress();
         int port = ccServiceCtx.getCCContext().getClusterControllerInfo().getClientNetPort();
         hcc = new HyracksConnection(strIP, port,
                 ccServiceCtx.getControllerService().getNetworkSecurityManager().getSocketChannelFactory());
         MetadataBuiltinFunctions.init();
-        ILibraryManager libraryManager = new ExternalLibraryManager();
         ReplicationProperties repProp =
                 new ReplicationProperties(PropertiesAccessor.getInstance(ccServiceCtx.getAppConfig()));
         INcLifecycleCoordinator lifecycleCoordinator = createNcLifeCycleCoordinator(repProp.isReplicationEnabled());
-        ExternalLibraryUtils.setUpInstalledLibraries(libraryManager, ccServiceCtx.getServerCtx().getAppDir());
         componentProvider = new StorageComponentProvider();
-
         ccExtensionManager = new CCExtensionManager(new ArrayList<>(getExtensions()));
         IGlobalRecoveryManager globalRecoveryManager = createGlobalRecoveryManager();
+        ILibraryManager libraryManager = new ExternalLibraryManager(ccServiceCtx.getServerCtx().getAppDir(),
+                ccServiceCtx.getPersistedResourceRegistry());
         appCtx = createApplicationContext(libraryManager, globalRecoveryManager, lifecycleCoordinator,
-                () -> new Receptionist("CC"), ConfigValidator::new, ccExtensionManager);
+                () -> new Receptionist("CC"), ConfigValidator::new, ccExtensionManager, new AdapterFactoryService());
         final CCConfig ccConfig = controllerService.getCCConfig();
         if (System.getProperty("java.rmi.server.hostname") == null) {
             System.setProperty("java.rmi.server.hostname", ccConfig.getClusterPublicAddress());
@@ -211,11 +210,12 @@ public class CCApplication extends BaseCCApplication {
     protected ICcApplicationContext createApplicationContext(ILibraryManager libraryManager,
             IGlobalRecoveryManager globalRecoveryManager, INcLifecycleCoordinator lifecycleCoordinator,
             IReceptionistFactory receptionistFactory, IConfigValidatorFactory configValidatorFactory,
-            CCExtensionManager ccExtensionManager) throws AlgebricksException, IOException {
+            CCExtensionManager ccExtensionManager, IAdapterFactoryService adapterFactoryService)
+            throws AlgebricksException, IOException {
         return new CcApplicationContext(ccServiceCtx, getHcc(), libraryManager, () -> MetadataManager.INSTANCE,
                 globalRecoveryManager, lifecycleCoordinator, new ActiveNotificationHandler(), componentProvider,
                 new MetadataLockManager(), createMetadataLockUtil(), receptionistFactory, configValidatorFactory,
-                ccExtensionManager);
+                ccExtensionManager, adapterFactoryService);
     }
 
     protected IGlobalRecoveryManager createGlobalRecoveryManager() throws Exception {

@@ -31,15 +31,15 @@
     <test-case FilePath="api">
       <compilation-unit name="readonly-request">
         <output-dir compare="Text">readonly-request</output-dir>
-        <expected-error>ASX0044: CREATE_DATAVERSE statement is prohibited by this request</expected-error>
-        <expected-error>ASX0044: DATAVERSE_DROP statement is prohibited by this request</expected-error>
-        <expected-error>ASX0044: DATASET_DECL statement is prohibited by this request</expected-error>
-        <expected-error>ASX0044: DATASET_DROP statement is prohibited by this request</expected-error>
-        <expected-error>ASX0044: CREATE_INDEX statement is prohibited by this request</expected-error>
-        <expected-error>ASX0044: INDEX_DROP statement is prohibited by this request</expected-error>
-        <expected-error>ASX0044: INSERT statement is prohibited by this request</expected-error>
-        <expected-error>ASX0044: UPSERT statement is prohibited by this request</expected-error>
-        <expected-error>ASX0044: DELETE statement is prohibited by this request</expected-error>
+        <expected-error>ASX0044: CREATE_DATAVERSE statement is not supported in read-only mode</expected-error>
+        <expected-error>ASX0044: DATAVERSE_DROP statement is not supported in read-only mode</expected-error>
+        <expected-error>ASX0044: DATASET_DECL statement is not supported in read-only mode</expected-error>
+        <expected-error>ASX0044: DATASET_DROP statement is not supported in read-only mode</expected-error>
+        <expected-error>ASX0044: CREATE_INDEX statement is not supported in read-only mode</expected-error>
+        <expected-error>ASX0044: INDEX_DROP statement is not supported in read-only mode</expected-error>
+        <expected-error>ASX0044: INSERT statement is not supported in read-only mode</expected-error>
+        <expected-error>ASX0044: UPSERT statement is not supported in read-only mode</expected-error>
+        <expected-error>ASX0044: DELETE statement is not supported in read-only mode</expected-error>
       </compilation-unit>
     </test-case>
     <test-case FilePath="api">
@@ -106,6 +106,25 @@
     <test-case FilePath="api">
       <compilation-unit name="format-param-in-accept-05">
         <output-dir compare="AST">format-param-in-accept-05</output-dir>
+      </compilation-unit>
+    </test-case>
+    <test-case FilePath="api">
+      <compilation-unit name="get-non-query">
+        <output-dir compare="Text">get-non-query</output-dir>
+        <expected-error>CREATE_DATAVERSE statement is not supported in read-only mode</expected-error>
+        <expected-error>TYPE_DECL statement is not supported in read-only mode</expected-error>
+        <expected-error>CREATE_FUNCTION statement is not supported in read-only mode</expected-error>
+      </compilation-unit>
+    </test-case>
+    <test-case FilePath="api">
+      <compilation-unit name="get-query">
+        <output-dir compare="Text">get-query</output-dir>
+      </compilation-unit>
+    </test-case>
+    <test-case FilePath="api">
+      <compilation-unit name="post-non-query">
+        <output-dir compare="Text">post-non-query</output-dir>
+        <expected-error>TYPE_DECL statement is not supported in read-only mode</expected-error>
       </compilation-unit>
     </test-case>
   </test-group>
@@ -318,10 +337,16 @@
         <output-dir compare="Text">agg_number_rec</output-dir>
       </compilation-unit>
     </test-case>
-    <test-case FilePath="aggregate">
+    <test-case FilePath="aggregate" check-warnings="true">
       <compilation-unit name="avg_mixed">
         <output-dir compare="Text">avg_mixed</output-dir>
-        <expected-error>Type incompatibility: function agg-avg gets incompatible input values: string and float</expected-error>
+        <expected-warn>Unsupported type: agg-avg cannot process input type string (in line 26, at column 16)</expected-warn>
+      </compilation-unit>
+    </test-case>
+    <test-case FilePath="aggregate" check-warnings="true">
+      <compilation-unit name="serial_avg_mixed">
+        <output-dir compare="Text">serial_avg_mixed</output-dir>
+        <expected-warn>Unsupported type: agg-avg cannot process input type string (in line 29, at column 39)</expected-warn>
       </compilation-unit>
     </test-case>
     <test-case FilePath="aggregate">
@@ -806,6 +831,71 @@
     <test-case FilePath="aggregate">
       <compilation-unit name="scalar_var_null">
         <output-dir compare="Text">scalar_var_null</output-dir>
+      </compilation-unit>
+    </test-case>
+    <test-case FilePath="aggregate">
+      <compilation-unit name="serial_avg_empty">
+        <output-dir compare="Text">serial_avg_empty</output-dir>
+      </compilation-unit>
+    </test-case>
+    <test-case FilePath="aggregate">
+      <compilation-unit name="serial_avg_int8">
+        <output-dir compare="Text">serial_avg_int8</output-dir>
+      </compilation-unit>
+    </test-case>
+    <test-case FilePath="aggregate">
+      <compilation-unit name="serial_avg_int8_null">
+        <output-dir compare="Text">serial_avg_int8_null</output-dir>
+      </compilation-unit>
+    </test-case>
+    <test-case FilePath="aggregate">
+      <compilation-unit name="serial_avg_int16">
+        <output-dir compare="Text">serial_avg_int16</output-dir>
+      </compilation-unit>
+    </test-case>
+    <test-case FilePath="aggregate">
+      <compilation-unit name="serial_avg_int16_null">
+        <output-dir compare="Text">serial_avg_int16_null</output-dir>
+      </compilation-unit>
+    </test-case>
+    <test-case FilePath="aggregate">
+      <compilation-unit name="serial_avg_int32">
+        <output-dir compare="Text">serial_avg_int32</output-dir>
+      </compilation-unit>
+    </test-case>
+    <test-case FilePath="aggregate">
+      <compilation-unit name="serial_avg_int32_null">
+        <output-dir compare="Text">serial_avg_int32_null</output-dir>
+      </compilation-unit>
+    </test-case>
+    <test-case FilePath="aggregate">
+      <compilation-unit name="serial_avg_int64">
+        <output-dir compare="Text">serial_avg_int64</output-dir>
+      </compilation-unit>
+    </test-case>
+    <test-case FilePath="aggregate">
+      <compilation-unit name="serial_avg_int64_null">
+        <output-dir compare="Text">serial_avg_int64_null</output-dir>
+      </compilation-unit>
+    </test-case>
+    <test-case FilePath="aggregate">
+      <compilation-unit name="serial_avg_float">
+        <output-dir compare="Text">serial_avg_float</output-dir>
+      </compilation-unit>
+    </test-case>
+    <test-case FilePath="aggregate">
+      <compilation-unit name="serial_avg_float_null">
+        <output-dir compare="Text">serial_avg_float_null</output-dir>
+      </compilation-unit>
+    </test-case>
+    <test-case FilePath="aggregate">
+      <compilation-unit name="serial_avg_double">
+        <output-dir compare="Text">serial_avg_double</output-dir>
+      </compilation-unit>
+    </test-case>
+    <test-case FilePath="aggregate">
+      <compilation-unit name="serial_avg_double_null">
+        <output-dir compare="Text">serial_avg_double_null</output-dir>
       </compilation-unit>
     </test-case>
     <test-case FilePath="aggregate">
@@ -1517,10 +1607,16 @@
         <output-dir compare="Text">agg_number_rec</output-dir>
       </compilation-unit>
     </test-case>
-    <test-case FilePath="aggregate-sql">
+    <test-case FilePath="aggregate-sql" check-warnings="true">
       <compilation-unit name="avg_mixed">
         <output-dir compare="Text">avg_mixed</output-dir>
-        <expected-error>Type incompatibility: function agg-avg gets incompatible input values: string and float</expected-error>
+        <expected-warn>Unsupported type: agg-avg cannot process input type string (in line 26, at column 16)</expected-warn>
+      </compilation-unit>
+    </test-case>
+    <test-case FilePath="aggregate-sql" check-warnings="true">
+      <compilation-unit name="serial_avg_mixed">
+        <output-dir compare="Text">serial_avg_mixed</output-dir>
+        <expected-warn>Unsupported type: agg-avg cannot process input type string (in line 29, at column 38)</expected-warn>
       </compilation-unit>
     </test-case>
     <test-case FilePath="aggregate-sql">
@@ -1998,6 +2094,71 @@
     <test-case FilePath="aggregate-sql">
       <compilation-unit name="scalar_var_null">
         <output-dir compare="Text">scalar_var_null</output-dir>
+      </compilation-unit>
+    </test-case>
+    <test-case FilePath="aggregate-sql">
+      <compilation-unit name="serial_avg_empty">
+        <output-dir compare="Text">serial_avg_empty</output-dir>
+      </compilation-unit>
+    </test-case>
+    <test-case FilePath="aggregate-sql">
+      <compilation-unit name="serial_avg_int8">
+        <output-dir compare="Text">serial_avg_int8</output-dir>
+      </compilation-unit>
+    </test-case>
+    <test-case FilePath="aggregate-sql">
+      <compilation-unit name="serial_avg_int8_null">
+        <output-dir compare="Text">serial_avg_int8_null</output-dir>
+      </compilation-unit>
+    </test-case>
+    <test-case FilePath="aggregate-sql">
+      <compilation-unit name="serial_avg_int16">
+        <output-dir compare="Text">serial_avg_int16</output-dir>
+      </compilation-unit>
+    </test-case>
+    <test-case FilePath="aggregate-sql">
+      <compilation-unit name="serial_avg_int16_null">
+        <output-dir compare="Text">serial_avg_int16_null</output-dir>
+      </compilation-unit>
+    </test-case>
+    <test-case FilePath="aggregate-sql">
+      <compilation-unit name="serial_avg_int32">
+        <output-dir compare="Text">serial_avg_int32</output-dir>
+      </compilation-unit>
+    </test-case>
+    <test-case FilePath="aggregate-sql">
+      <compilation-unit name="serial_avg_int32_null">
+        <output-dir compare="Text">serial_avg_int32_null</output-dir>
+      </compilation-unit>
+    </test-case>
+    <test-case FilePath="aggregate-sql">
+      <compilation-unit name="serial_avg_int64">
+        <output-dir compare="Text">serial_avg_int64</output-dir>
+      </compilation-unit>
+    </test-case>
+    <test-case FilePath="aggregate-sql">
+      <compilation-unit name="serial_avg_int64_null">
+        <output-dir compare="Text">serial_avg_int64_null</output-dir>
+      </compilation-unit>
+    </test-case>
+    <test-case FilePath="aggregate-sql">
+      <compilation-unit name="serial_avg_float">
+        <output-dir compare="Text">serial_avg_float</output-dir>
+      </compilation-unit>
+    </test-case>
+    <test-case FilePath="aggregate-sql">
+      <compilation-unit name="serial_avg_float_null">
+        <output-dir compare="Text">serial_avg_float_null</output-dir>
+      </compilation-unit>
+    </test-case>
+    <test-case FilePath="aggregate-sql">
+      <compilation-unit name="serial_avg_double">
+        <output-dir compare="Text">serial_avg_double</output-dir>
+      </compilation-unit>
+    </test-case>
+    <test-case FilePath="aggregate-sql">
+      <compilation-unit name="serial_avg_double_null">
+        <output-dir compare="Text">serial_avg_double_null</output-dir>
       </compilation-unit>
     </test-case>
     <test-case FilePath="aggregate-sql">
@@ -3754,7 +3915,7 @@
         </test-case>
         -->
   </test-group>
-  <test-group name="ddl/create-index">
+  <test-group name="ddl">
     <test-case FilePath="ddl/create-index">
       <compilation-unit name="create-index-1">
         <output-dir compare="Text">create-index-1</output-dir>
@@ -3785,9 +3946,39 @@
       </compilation-unit>
     </test-case>
     <test-case FilePath="ddl">
+      <compilation-unit name="create-dataset-inline-type-1">
+        <output-dir compare="Text">create-dataset-inline-type-1</output-dir>
+      </compilation-unit>
+    </test-case>
+    <test-case FilePath="ddl">
+      <compilation-unit name="create-dataset-inline-type-2">
+        <output-dir compare="Text">create-dataset-inline-type-2</output-dir>
+        <expected-error>ASX1082: Cannot find datatype with name test.$d$t$i$Cust1</expected-error>
+        <expected-error>ASX1082: Cannot find datatype with name test.$d$t$i$Cust2</expected-error>
+      </compilation-unit>
+    </test-case>
+    <test-case FilePath="ddl">
       <compilation-unit name="drop-primary-index">
         <output-dir compare="Text">drop-primary-index</output-dir>
         <expected-error>Cannot drop index "ds". Drop dataset "ds" to remove this index</expected-error>
+      </compilation-unit>
+    </test-case>
+    <test-case FilePath="ddl">
+      <compilation-unit name="invalid-dataverse">
+        <output-dir compare="Text">invalid-dataverse</output-dir>
+        <source-location>false</source-location>
+        <expected-error>Cannot find dataverse with name fakeDataverse (in line 20, at column 1)</expected-error>
+        <expected-error>Cannot find dataverse with name fakeDataverse (in line 25, at column 1)</expected-error>
+        <expected-error>Cannot find dataverse with name fakeDataverse (in line 27, at column 1)</expected-error>
+        <expected-error>Cannot find dataverse with name fakeDataverse (in line 28, at column 1)</expected-error>
+        <expected-error>Cannot find datatype with name fakeDataverse.myType</expected-error>
+        <expected-error>Cannot find dataverse with name fakeDataverse (in line 28, at column 1)</expected-error>
+        <expected-error>Cannot find dataverse with name fakeDataverse (in line 30, at column 1)</expected-error>
+      </compilation-unit>
+    </test-case>
+    <test-case FilePath="ddl">
+      <compilation-unit name="dataset-and-index-same-dataverse">
+        <output-dir compare="Text">dataset-and-index-same-dataverse</output-dir>
       </compilation-unit>
     </test-case>
   </test-group>
@@ -5227,6 +5418,16 @@
     <test-case FilePath="group-by">
       <compilation-unit name="gby-array">
         <output-dir compare="Text">gby-array</output-dir>
+      </compilation-unit>
+    </test-case>
+    <test-case FilePath="group-by">
+      <compilation-unit name="gby-case-01">
+        <output-dir compare="Text">gby-case-01</output-dir>
+      </compilation-unit>
+    </test-case>
+    <test-case FilePath="group-by">
+      <compilation-unit name="gby-nested-01">
+        <output-dir compare="Text">gby-nested-01</output-dir>
       </compilation-unit>
     </test-case>
     <test-case FilePath="group-by">
@@ -11808,22 +12009,16 @@
     <test-case FilePath="load">
       <compilation-unit name="csv_05">
         <output-dir compare="Text">csv_05</output-dir>
-        <expected-error>At record: 1, field#: 4 - a quote enclosing a field needs to be placed in the beginning of that field</expected-error>
-        <source-location>false</source-location>
       </compilation-unit>
     </test-case>
     <test-case FilePath="load">
       <compilation-unit name="csv_06">
         <output-dir compare="Text">csv_06</output-dir>
-        <expected-error>At record: 1, field#: 3 - a quote enclosing a field needs to be placed in the beginning of that field</expected-error>
-        <source-location>false</source-location>
       </compilation-unit>
     </test-case>
     <test-case FilePath="load">
       <compilation-unit name="csv_07">
         <output-dir compare="Text">csv_07</output-dir>
-        <expected-error>At record: 1, field#: 3 -  A quote enclosing a field needs to be followed by the delimiter</expected-error>
-        <source-location>false</source-location>
       </compilation-unit>
     </test-case>
     <test-case FilePath="load">
@@ -12340,6 +12535,11 @@
     <test-case FilePath="leftouterjoin">
       <compilation-unit name="loj-01-sugar">
         <output-dir compare="Text">loj-01</output-dir>
+      </compilation-unit>
+    </test-case>
+    <test-case FilePath="leftouterjoin">
+      <compilation-unit name="loj-02-push-select">
+        <output-dir compare="Text">loj-02-push-select</output-dir>
       </compilation-unit>
     </test-case>
     <test-case FilePath="leftouterjoin">
@@ -12987,6 +13187,18 @@
       </compilation-unit>
     </test-case>
   </test-group>
+  <test-group name="csv-tsv-parser">
+    <test-case FilePath="csv-tsv-parser">
+      <compilation-unit name="csv-parser-001">
+        <output-dir compare="Text">csv-parser-001</output-dir>
+      </compilation-unit>
+    </test-case>
+    <test-case FilePath="csv-tsv-parser">
+      <compilation-unit name="tsv-parser-001">
+        <output-dir compare="Text">tsv-parser-001</output-dir>
+      </compilation-unit>
+    </test-case>
+  </test-group>
   <test-group name="binary">
     <test-case FilePath="binary">
       <compilation-unit name="parse">
@@ -13077,6 +13289,11 @@
       <compilation-unit name="union_negative_3">
         <output-dir compare="Text">union</output-dir>
         <expected-error>Operation UNION with set semantics is not supported.</expected-error>
+      </compilation-unit>
+    </test-case>
+    <test-case FilePath="union">
+      <compilation-unit name="union_nested">
+        <output-dir compare="Text">union_nested</output-dir>
       </compilation-unit>
     </test-case>
     <test-case FilePath="union">
@@ -13390,6 +13607,11 @@
     <test-case FilePath="composite-key">
       <compilation-unit name="composite-prefix">
         <output-dir compare="Text">composite-prefix</output-dir>
+      </compilation-unit>
+    </test-case>
+    <test-case FilePath="composite-key">
+      <compilation-unit name="composite-prefix-low-high">
+        <output-dir compare="Text">composite-prefix-low-high</output-dir>
       </compilation-unit>
     </test-case>
   </test-group>
@@ -13768,7 +13990,7 @@
 
         <expected-warn>Type mismatch: function string-concat expects its 2nd input parameter to be of type string, but the actual input type is bigint (in line 30, at column 1)</expected-warn>
         <expected-warn>Type mismatch: function string-concat expects its 2nd input parameter to be of type string, but the actual input type is tinyint (in line 31, at column 7)</expected-warn>
-        <expected-warn>Type mismatch: function substring expects its 1st input parameter to be of type string, but the actual input type is bigint (in line 32, at column 1)</expected-warn>
+        <expected-warn>Type mismatch: function substring expects its 2nd input parameter to be of type tinyint, smallint, integer, bigint, float or double, but the actual input type is string (in line 32, at column 1)</expected-warn>
         <expected-warn>Type mismatch: function codepoint-to-string expects its 1st input parameter to be of type array, but the actual input type is string (in line 33, at column 1)</expected-warn>
         <expected-warn>Unsupported type: codepoint-to-string cannot process input type string (in line 34, at column 1)</expected-warn>
         <expected-warn>Unsupported type: codepoint-to-string cannot process input type double (in line 35, at column 1)</expected-warn>
@@ -13870,12 +14092,13 @@
         <expected-warn>Type mismatch: function round-half-to-even expects its 2nd input parameter to be of type tinyint, smallint, integer, bigint, float or double, but the actual input type is string</expected-warn>
         <expected-warn>Type mismatch: function trunc expects its 2nd input parameter to be of type tinyint, smallint, integer, bigint, float or double, but the actual input type is string</expected-warn>
 
-        <expected-warn>Type mismatch: function round expects its 1st input parameter to be of type tinyint, smallint, integer, bigint, float or double, but the actual input type is string</expected-warn>
-        <expected-warn>Type mismatch: function round-half-to-even expects its 2nd input parameter to be of type tinyint, smallint, integer, bigint, float or double, but the actual input type is string</expected-warn>
-        <expected-warn>Type mismatch: function trunc expects its 2nd input parameter to be of type tinyint, smallint, integer, bigint, float or double, but the actual input type is string</expected-warn>
-        <expected-warn>Type mismatch: function round expects its 1st input parameter to be of type tinyint, smallint, integer, bigint, float or double, but the actual input type is string</expected-warn>
-        <expected-warn>Type mismatch: function round-half-to-even expects its 2nd input parameter to be of type tinyint, smallint, integer, bigint, float or double, but the actual input type is string</expected-warn>
-        <expected-warn>Type mismatch: function trunc expects its 2nd input parameter to be of type tinyint, smallint, integer, bigint, float or double, but the actual input type is string</expected-warn>
+        <expected-warn>Type mismatch: function round expects its 2nd input parameter to be of type tinyint, smallint, integer or bigint, but the actual input type is string (in line 33, at column 24)</expected-warn>
+        <expected-warn>Type mismatch: function round expects its 2nd input parameter to be of type tinyint, smallint, integer or bigint, but the actual input type is string (in line 33, at column 47)</expected-warn>
+        <expected-warn>Type mismatch: function trunc expects its 1st input parameter to be of type tinyint, smallint, integer, bigint, float or double, but the actual input type is string (in line 34, at column 24)</expected-warn>
+        <expected-warn>Type mismatch: function trunc expects its 1st input parameter to be of type tinyint, smallint, integer, bigint, float or double, but the actual input type is string (in line 34, at column 47)</expected-warn>
+
+        <expected-warn>Type mismatch: function round-half-to-even expects its 1st input parameter to be of type tinyint, smallint, integer, bigint, float or double, but the actual input type is string (in line 36, at column 40)</expected-warn>
+        <expected-warn>Type mismatch: function round-half-to-even expects its 1st input parameter to be of type tinyint, smallint, integer, bigint, float or double, but the actual input type is string (in line 36, at column 79)</expected-warn>
         <source-location>false</source-location>
       </compilation-unit>
     </test-case>

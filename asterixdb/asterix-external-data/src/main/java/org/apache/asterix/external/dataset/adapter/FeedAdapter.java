@@ -21,7 +21,7 @@ package org.apache.asterix.external.dataset.adapter;
 import java.io.Closeable;
 import java.io.IOException;
 
-import org.apache.asterix.external.api.IDataSourceAdapter;
+import org.apache.asterix.common.external.IDataSourceAdapter;
 import org.apache.asterix.external.dataflow.AbstractFeedDataFlowController;
 import org.apache.hyracks.api.comm.IFrameWriter;
 import org.apache.hyracks.api.exceptions.HyracksDataException;
@@ -36,6 +36,11 @@ public class FeedAdapter implements IDataSourceAdapter, Closeable {
     @Override
     public void start(int partition, IFrameWriter writer) throws HyracksDataException, InterruptedException {
         controller.start(writer);
+    }
+
+    @Override
+    public long getProcessedTuples() {
+        return controller.getProcessedTuples();
     }
 
     public boolean stop(long timeout) throws HyracksDataException {

@@ -19,13 +19,17 @@
 package org.apache.asterix.external.input.record.converter;
 
 import java.io.IOException;
+import java.util.function.LongSupplier;
 
+import org.apache.asterix.common.exceptions.ErrorCode;
+import org.apache.asterix.common.exceptions.RuntimeDataException;
 import org.apache.asterix.external.api.IRawRecord;
 import org.apache.asterix.external.input.record.CharArrayRecord;
 import org.apache.asterix.external.input.record.RecordWithMetadataAndPK;
 import org.apache.asterix.external.util.ExternalDataConstants;
 import org.apache.asterix.om.types.ARecordType;
 import org.apache.asterix.om.types.IAType;
+import org.apache.hyracks.api.exceptions.IWarningCollector;
 import org.apache.hyracks.dataflow.std.file.FieldCursorForDelimitedDataParser;
 
 public class CSVToRecordWithMetadataAndPKConverter
@@ -35,13 +39,16 @@ public class CSVToRecordWithMetadataAndPKConverter
     private final int valueIndex;
     private final RecordWithMetadataAndPK<char[]> recordWithMetadata;
     private final CharArrayRecord record;
+    private LongSupplier lineNumber = ExternalDataConstants.NO_LINES;
 
     public CSVToRecordWithMetadataAndPKConverter(final int valueIndex, final char delimiter, final ARecordType metaType,
-            final ARecordType recordType, final int[] keyIndicator, final int[] keyIndexes, final IAType[] keyTypes) {
-        this.cursor = new FieldCursorForDelimitedDataParser(null, delimiter, ExternalDataConstants.QUOTE);
+            final ARecordType recordType, final int[] keyIndicator, final int[] keyIndexes, final IAType[] keyTypes,
+            IWarningCollector warningCollector) {
+        this.cursor = new FieldCursorForDelimitedDataParser(null, delimiter, ExternalDataConstants.QUOTE,
+                warningCollector, ExternalDataConstants.EMPTY_STRING);
         this.record = new CharArrayRecord();
         this.valueIndex = valueIndex;
-        this.recordWithMetadata = new RecordWithMetadataAndPK<char[]>(record, metaType.getFieldTypes(), recordType,
+        this.recordWithMetadata = new RecordWithMetadataAndPK<>(record, metaType.getFieldTypes(), recordType,
                 keyIndicator, keyIndexes, keyTypes);
     }
 
@@ -49,24 +56,32 @@ public class CSVToRecordWithMetadataAndPKConverter
     public RecordWithMetadataAndPK<char[]> convert(final IRawRecord<? extends char[]> input) throws IOException {
         record.reset();
         recordWithMetadata.reset();
-        cursor.nextRecord(input.get(), input.size());
+        cursor.nextRecord(input.get(), input.size(), lineNumber.getAsLong());
         int i = 0;
         int j = 0;
-        while (cursor.nextField()) {
-            if (cursor.isDoubleQuoteIncludedInThisField) {
-                cursor.eliminateDoubleQuote(cursor.buffer, cursor.fStart, cursor.fEnd - cursor.fStart);
-                cursor.fEnd -= cursor.doubleQuoteCount;
-                cursor.isDoubleQuoteIncludedInThisField = false;
+        FieldCursorForDelimitedDataParser.Result lastResult;
+        while ((lastResult = cursor.nextField()) == FieldCursorForDelimitedDataParser.Result.OK) {
+            if (cursor.fieldHasDoubleQuote()) {
+                cursor.eliminateDoubleQuote();
             }
             if (i == valueIndex) {
-                record.setValue(cursor.buffer, cursor.fStart, cursor.fEnd - cursor.fStart);
+                record.setValue(cursor.getBuffer(), cursor.getFieldStart(), cursor.getFieldLength());
                 record.endRecord();
             } else {
-                recordWithMetadata.setRawMetadata(j, cursor.buffer, cursor.fStart, cursor.fEnd - cursor.fStart);
+                recordWithMetadata.setRawMetadata(j, cursor.getBuffer(), cursor.getFieldStart(),
+                        cursor.getFieldLength());
                 j++;
             }
             i++;
         }
+        if (lastResult == FieldCursorForDelimitedDataParser.Result.ERROR) {
+            throw new RuntimeDataException(ErrorCode.FAILED_TO_PARSE_RECORD);
+        }
         return recordWithMetadata;
+    }
+
+    @Override
+    public void configure(LongSupplier lineNumber) {
+        this.lineNumber = lineNumber == null ? ExternalDataConstants.NO_LINES : lineNumber;
     }
 }

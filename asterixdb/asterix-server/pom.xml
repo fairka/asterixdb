@@ -169,8 +169,37 @@
               <url>https://raw.githubusercontent.com/mojohaus/appassembler/appassembler-2.0.0/LICENSE.txt</url>
             </override>
             <override>
-              <gav>io.netty:netty-all:4.1.46.Final</gav>
-              <noticeUrl>https://raw.githubusercontent.com/netty/netty/netty-4.1.46.Final/NOTICE.txt</noticeUrl>
+              <gav>io.netty:netty-all:4.1.48.Final</gav>
+              <noticeUrl>https://raw.githubusercontent.com/netty/netty/netty-4.1.48.Final/NOTICE.txt</noticeUrl>
+            </override>
+            <override>
+              <gav>org.reactivestreams:reactive-streams:1.0.2</gav>
+              <noticeUrl>https://raw.githubusercontent.com/reactive-streams/reactive-streams-jvm/v1.0.2/COPYING.txt</noticeUrl>
+              <url>https://raw.githubusercontent.com/reactive-streams/reactive-streams-jvm/v1.0.2/LICENSE.txt</url>
+            </override>
+            <override>
+              <gavs>
+                <gav>software.amazon.awssdk:sdk-core:2.10.83</gav>
+                <gav>software.amazon.awssdk:aws-core:2.10.83</gav>
+                <gav>software.amazon.awssdk:auth:2.10.83</gav>
+                <gav>software.amazon.awssdk:arns:2.10.83</gav>
+                <gav>software.amazon.awssdk:annotations:2.10.83</gav>
+                <gav>software.amazon.awssdk:utils:2.10.83</gav>
+                <gav>software.amazon.awssdk:aws-query-protocol:2.10.83</gav>
+                <gav>software.amazon.awssdk:profiles:2.10.83</gav>
+                <gav>software.amazon.awssdk:protocol-core:2.10.83</gav>
+                <gav>software.amazon.awssdk:s3:2.10.83</gav>
+                <gav>software.amazon.awssdk:netty-nio-client:2.10.83</gav>
+                <gav>software.amazon.awssdk:apache-client:2.10.83</gav>
+                <gav>software.amazon.awssdk:aws-xml-protocol:2.10.83</gav>
+                <gav>software.amazon.awssdk:regions:2.10.83</gav>
+                <gav>software.amazon.awssdk:http-client-spi:2.10.83</gav>
+              </gavs>
+              <noticeUrl>https://raw.githubusercontent.com/aws/aws-sdk-java-v2/2.10.83/NOTICE.txt</noticeUrl>
+            </override>
+            <override>
+              <gav>software.amazon.eventstream:eventstream:1.0.1</gav>
+              <noticeUrl>https://raw.githubusercontent.com/awslabs/aws-eventstream-java/7be2dd80e12f8835674c8ffb0f4a2efb64c7b585/NOTICE</noticeUrl>
             </override>
             <override>
               <gav>org.mindrot:jbcrypt:0.4</gav>
@@ -209,6 +238,7 @@
                 <aliasUrl>http://www.apache.org/licenses/LICENSE-2.0</aliasUrl>
                 <aliasUrl>https://www.apache.org/licenses/LICENSE-2.0.txt</aliasUrl>
                 <aliasUrl>http://www.apache.org/licenses/LICENSE-2.0.html</aliasUrl>
+                <aliasUrl>https://aws.amazon.com/apache2.0</aliasUrl>
               </aliasUrls>
               <metric>1</metric>
             </license>

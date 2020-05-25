@@ -18,7 +18,17 @@
  */
 package org.apache.asterix.external.util;
 
+import java.util.Collections;
+import java.util.HashSet;
+import java.util.Set;
+import java.util.function.LongSupplier;
+import java.util.function.Supplier;
+
 public class ExternalDataConstants {
+
+    private ExternalDataConstants() {
+    }
+
     // TODO: Remove unused variables.
     /**
      * Keys
@@ -62,6 +72,7 @@ public class ExternalDataConstants {
     public static final String KEY_LOCAL_SOCKET_PATH = "local-socket-path";
     public static final String KEY_FORMAT = "format";
     public static final String KEY_QUOTE = "quote";
+    public static final String KEY_ESCAPE = "escape";
     public static final String KEY_PARSER = "parser";
     public static final String KEY_DATASET_RECORD = "dataset-record";
     public static final String KEY_HIVE_SERDE = "hive-serde";
@@ -101,6 +112,9 @@ public class ExternalDataConstants {
     public static final String KEY_HTTP_PROXY_PORT = "http-proxy-port";
     public static final String KEY_HTTP_PROXY_USER = "http-proxy-user";
     public static final String KEY_HTTP_PROXY_PASSWORD = "http-proxy-password";
+    // a string representing the NULL value
+    public static final String KEY_NULL_STR = "null";
+    public static final String KEY_REDACT_WARNINGS = "redact-warnings";
 
     /**
      *  Keys for adapter name
@@ -114,6 +128,7 @@ public class ExternalDataConstants {
     public static final String KEY_ADAPTER_NAME_SOCKET = "socket";
     public static final String KEY_ALIAS_ADAPTER_NAME_SOCKET = "socket_adapter";
     public static final String KEY_ADAPTER_NAME_HTTP = "http_adapter";
+    public static final String KEY_ADAPTER_NAME_AWS_S3 = "S3";
 
     /**
      * HDFS class names
@@ -162,6 +177,26 @@ public class ExternalDataConstants {
     public static final String FORMAT_LINE_SEPARATED = "line-separated";
     public static final String FORMAT_HDFS_WRITABLE = "hdfs-writable";
     public static final String FORMAT_KV = "kv";
+    public static final String FORMAT_CSV = "csv";
+    public static final String FORMAT_TSV = "tsv";
+    public static final Set<String> ALL_FORMATS;
+    static {
+        Set<String> formats = new HashSet<>(13);
+        formats.add(FORMAT_HIVE);
+        formats.add(FORMAT_BINARY);
+        formats.add(FORMAT_ADM);
+        formats.add(FORMAT_JSON_LOWER_CASE);
+        formats.add(FORMAT_DELIMITED_TEXT);
+        formats.add(FORMAT_TWEET);
+        formats.add(FORMAT_RSS);
+        formats.add(FORMAT_SEMISTRUCTURED);
+        formats.add(FORMAT_LINE_SEPARATED);
+        formats.add(FORMAT_HDFS_WRITABLE);
+        formats.add(FORMAT_KV);
+        formats.add(FORMAT_CSV);
+        formats.add(FORMAT_TSV);
+        ALL_FORMATS = Collections.unmodifiableSet(formats);
+    }
 
     /**
      * input streams
@@ -187,6 +222,8 @@ public class ExternalDataConstants {
      */
     public static final String TRUE = "true";
     public static final String FALSE = "false";
+    public static final String TAB_STR = "\t";
+    public static final String NULL_STR = "\0";
 
     /**
      * Constant characters
@@ -199,6 +236,9 @@ public class ExternalDataConstants {
     public static final char CR = '\r';
     public static final char DEFAULT_RECORD_START = '{';
     public static final char DEFAULT_RECORD_END = '}';
+    public static final char OPEN_BRACKET = '[';
+    public static final char CLOSING_BRACKET = ']';
+    public static final char COMMA = ',';
 
     /**
      * Constant byte characters
@@ -213,6 +253,9 @@ public class ExternalDataConstants {
     public static final int DEFAULT_QUEUE_SIZE = 64;
     public static final int MAX_RECORD_SIZE = 32000000;
 
+    public static final Supplier<String> EMPTY_STRING = () -> "";
+    public static final LongSupplier NO_LINES = () -> -1;
+
     /**
      * Expected parameter values
      */
@@ -226,7 +269,22 @@ public class ExternalDataConstants {
     public static final String EXTERNAL = "external";
     public static final String KEY_READER_FACTORY = "reader-factory";
     public static final String READER_RSS = "rss_feed";
-    public static final String FORMAT_CSV = "csv";
 
     public static final String ERROR_PARSE_RECORD = "Parser failed to parse record";
+    public static final String MISSING_FIELDS = "some fields are missing";
+    public static final String REC_ENDED_AT_EOF = "malformed input record ended abruptly";
+    public static final String EMPTY_FIELD = "empty value";
+    public static final String INVALID_VAL = "invalid value";
+
+    public static class AwsS3Constants {
+        private AwsS3Constants() {
+        }
+
+        public static final String REGION_FIELD_NAME = "region";
+        public static final String ACCESS_KEY_ID_FIELD_NAME = "accessKeyId";
+        public static final String SECRET_ACCESS_KEY_FIELD_NAME = "secretAccessKey";
+        public static final String CONTAINER_NAME_FIELD_NAME = "container";
+        public static final String DEFINITION_FIELD_NAME = "definition";
+        public static final String SERVICE_END_POINT_FIELD_NAME = "serviceEndpoint";
+    }
 }

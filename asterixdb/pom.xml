@@ -70,17 +70,20 @@
     <test.includes>${global.test.includes}</test.includes>
     <test.excludes>${global.test.excludes}</test.excludes>
     <global.itest.includes>**/*IT.java,**/*IT.java,**/*ITCase.java</global.itest.includes>
-    <global.itest.excludes/>
+    <global.itest.excludes>**/ExternalPythonFunctionIT.java</global.itest.excludes>
     <itest.includes>${global.itest.includes}</itest.includes>
     <itest.excludes>${global.itest.excludes}</itest.excludes>
     <license.stage>compile</license.stage>
     <resource.stage>process-classes</resource.stage>
+    <pyro-shim.stage>none</pyro-shim.stage>
+    <pytestlib.stage>none</pytestlib.stage>
 
     <!-- Versions under dependencymanagement or used in many projects via properties -->
     <algebricks.version>0.3.5-SNAPSHOT</algebricks.version>
     <hyracks.version>0.3.5-SNAPSHOT</hyracks.version>
     <hadoop.version>2.8.5</hadoop.version>
     <jacoco.version>0.7.6.201602180812</jacoco.version>
+    <awsjavasdk.version>2.10.83</awsjavasdk.version>
 
     <implementation.title>Apache AsterixDB - ${project.name}</implementation.title>
     <implementation.url>https://asterixdb.apache.org/</implementation.url>
@@ -194,7 +197,6 @@
             <exclude>**/*.json</exclude>
             <exclude>**/*.adm</exclude>
             <exclude>**/*.template</exclude>
-            <exclude>**/.SpiderSilkWorkingDirectory/**</exclude>
             <exclude>asterix-installer/**</exclude> <!-- in case -DskipInstaller -->
           </excludes>
         </configuration>
@@ -262,9 +264,48 @@
       </plugin>
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
-        <artifactId>maven-enforcer-plugin</artifactId>
-        <version>3.0.0-M1</version>
+        <artifactId>maven-antrun-plugin</artifactId>
         <executions>
+          <execution>
+            <id>check-pom-packaging</id>
+            <phase>validate</phase>
+            <goals>
+              <goal>run</goal>
+            </goals>
+            <configuration>
+              <exportAntProperties>true</exportAntProperties>
+              <target xmlns:unless="ant:unless">
+                <condition property="skipPomEnforcement">
+                  <not><equals arg1="${project.packaging}" arg2="pom"/></not>
+                </condition>
+                <echo message="will enforce non-existence of test source dir due to ${project.packaging} packaging" unless:set="skipPomEnforcement"/>
+              </target>
+            </configuration>
+          </execution>
+        </executions>
+      </plugin>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-enforcer-plugin</artifactId>
+        <executions>
+          <execution>
+            <id>ensure-no-tests-for-pom-packaging</id>
+            <phase>validate</phase>
+            <goals>
+              <goal>enforce</goal>
+            </goals>
+            <configuration>
+              <rules>
+                <requireFilesDontExist>
+                  <files>
+                    <file>${project.build.testSourceDirectory}</file>
+                  </files>
+                  <message>#### Tests cannot exist in projects with '${project.packaging}' packaging!</message>
+                </requireFilesDontExist>
+              </rules>
+              <skip>${skipPomEnforcement}</skip>
+            </configuration>
+          </execution>
           <execution>
             <id>enforce-versions</id>
             <goals>
@@ -287,14 +328,6 @@
           <failOnWarning>true</failOnWarning>
           <outputXML>true</outputXML>
         </configuration>
-        <executions>
-          <execution>
-            <phase>process-test-classes</phase>
-            <goals>
-              <goal>analyze-only</goal>
-            </goals>
-          </execution>
-        </executions>
       </plugin>
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
@@ -586,6 +619,11 @@
           <artifactId>impsort-maven-plugin</artifactId>
           <version>1.2.0</version>
         </plugin>
+        <plugin>
+          <groupId>org.codehaus.mojo</groupId>
+          <artifactId>exec-maven-plugin</artifactId>
+          <version>1.6.0</version>
+        </plugin>
       </plugins>
     </pluginManagement>
   </build>
@@ -616,16 +654,16 @@
       </properties>
     </profile>
     <profile>
-      <id>skip-dashboard</id>
+      <id>python-udfs</id>
       <activation>
-        <property>
-          <name>skip.npm</name>
-          <value>true</value>
-        </property>
+        <file>
+          <exists>${python.path}</exists>
+        </file>
       </activation>
       <properties>
-        <license.stage>none</license.stage>
-        <resource.stage>none</resource.stage>
+        <pyro-shim.stage>process-classes</pyro-shim.stage>
+        <pytestlib.stage>generate-test-resources</pytestlib.stage>
+        <global.itest.excludes/>
       </properties>
     </profile>
     <profile>
@@ -1296,6 +1334,11 @@
         <version>1.14</version>
       </dependency>
       <dependency>
+        <groupId>commons-lang</groupId>
+        <artifactId>commons-lang</artifactId>
+        <version>2.4</version>
+      </dependency>
+      <dependency>
         <groupId>it.unimi.dsi</groupId>
         <artifactId>fastutil</artifactId>
         <version>8.3.0</version>
@@ -1341,6 +1384,84 @@
         <version>0.9.12</version>
       </dependency>
       <dependency>
+        <groupId>software.amazon.awssdk</groupId>
+        <artifactId>s3</artifactId>
+        <version>${awsjavasdk.version}</version>
+        <exclusions>
+          <exclusion>
+            <groupId>io.netty</groupId>
+            <artifactId>netty-codec-http</artifactId>
+          </exclusion>
+          <exclusion>
+            <groupId>io.netty</groupId>
+            <artifactId>netty-codec-http2</artifactId>
+          </exclusion>
+          <exclusion>
+            <groupId>io.netty</groupId>
+            <artifactId>netty-codec</artifactId>
+          </exclusion>
+          <exclusion>
+            <groupId>io.netty</groupId>
+            <artifactId>netty-transport</artifactId>
+          </exclusion>
+          <exclusion>
+            <groupId>io.netty</groupId>
+            <artifactId>netty-common</artifactId>
+          </exclusion>
+          <exclusion>
+            <groupId>io.netty</groupId>
+            <artifactId>netty-buffer</artifactId>
+          </exclusion>
+          <exclusion>
+            <groupId>io.netty</groupId>
+            <artifactId>netty-handler</artifactId>
+          </exclusion>
+          <exclusion>
+            <groupId>io.netty</groupId>
+            <artifactId>netty-transport-native-epoll</artifactId>
+          </exclusion>
+        </exclusions>
+      </dependency>
+      <dependency>
+        <groupId>software.amazon.awssdk</groupId>
+        <artifactId>regions</artifactId>
+        <version>${awsjavasdk.version}</version>
+        <exclusions>
+          <exclusion>
+            <groupId>org.slf4j</groupId>
+            <artifactId>slf4j-api</artifactId>
+          </exclusion>
+        </exclusions>
+      </dependency>
+      <dependency>
+        <groupId>software.amazon.awssdk</groupId>
+        <artifactId>auth</artifactId>
+        <version>${awsjavasdk.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>software.amazon.awssdk</groupId>
+        <artifactId>sdk-core</artifactId>
+        <version>${awsjavasdk.version}</version>
+        <exclusions>
+          <exclusion>
+            <groupId>org.slf4j</groupId>
+            <artifactId>slf4j-api</artifactId>
+          </exclusion>
+        </exclusions>
+      </dependency>
+      <!-- Mock for AWS S3 -->
+      <dependency>
+        <groupId>io.findify</groupId>
+        <artifactId>s3mock_2.12</artifactId>
+        <version>0.2.5</version>
+      </dependency>
+      <!-- Needed for the s3 mock -->
+      <dependency>
+        <groupId>com.typesafe.akka</groupId>
+        <artifactId>akka-http-core_2.12</artifactId>
+        <version>10.1.0</version>
+      </dependency>
+      <dependency>
         <groupId>org.mindrot</groupId>
         <artifactId>jbcrypt</artifactId>
         <version>0.4</version>
@@ -1359,6 +1480,21 @@
         <groupId>org.postgresql</groupId>
         <artifactId>postgresql</artifactId>
         <version>42.2.10</version>
+      </dependency>
+      <dependency>
+        <groupId>org.apache.httpcomponents</groupId>
+        <artifactId>httpmime</artifactId>
+        <version>4.5.11</version>
+      </dependency>
+      <dependency>
+        <groupId>net.razorvine</groupId>
+        <artifactId>pyrolite</artifactId>
+        <version>4.30</version>
+      </dependency>
+      <dependency>
+        <groupId>net.razorvine</groupId>
+        <artifactId>serpent</artifactId>
+        <version>1.23</version>
       </dependency>
     </dependencies>
   </dependencyManagement>

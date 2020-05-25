@@ -18,10 +18,16 @@
  */
 package org.apache.asterix.external.parser;
 
+import static org.apache.asterix.external.util.ExternalDataConstants.EMPTY_FIELD;
+import static org.apache.asterix.external.util.ExternalDataConstants.INVALID_VAL;
+import static org.apache.asterix.external.util.ExternalDataConstants.MISSING_FIELDS;
+
 import java.io.DataOutput;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
+import java.util.function.LongSupplier;
+import java.util.function.Supplier;
 
 import org.apache.asterix.builders.IARecordBuilder;
 import org.apache.asterix.builders.RecordBuilder;
@@ -31,11 +37,17 @@ import org.apache.asterix.external.api.IDataParser;
 import org.apache.asterix.external.api.IRawRecord;
 import org.apache.asterix.external.api.IRecordDataParser;
 import org.apache.asterix.external.api.IStreamDataParser;
+import org.apache.asterix.external.util.ExternalDataConstants;
+import org.apache.asterix.external.util.ParseUtil;
 import org.apache.asterix.om.base.AMutableString;
+import org.apache.asterix.om.typecomputer.impl.TypeComputeUtils;
 import org.apache.asterix.om.types.ARecordType;
 import org.apache.asterix.om.types.ATypeTag;
+import org.apache.asterix.om.types.IAType;
 import org.apache.asterix.om.utils.NonTaggedFormatUtil;
+import org.apache.hyracks.api.context.IHyracksTaskContext;
 import org.apache.hyracks.api.exceptions.HyracksDataException;
+import org.apache.hyracks.api.exceptions.IWarningCollector;
 import org.apache.hyracks.data.std.util.ArrayBackedValueStorage;
 import org.apache.hyracks.dataflow.common.data.parsers.IValueParser;
 import org.apache.hyracks.dataflow.common.data.parsers.IValueParserFactory;
@@ -43,23 +55,30 @@ import org.apache.hyracks.dataflow.std.file.FieldCursorForDelimitedDataParser;
 
 public class DelimitedDataParser extends AbstractDataParser implements IStreamDataParser, IRecordDataParser<char[]> {
 
+    private final IWarningCollector warnings;
     private final char fieldDelimiter;
     private final char quote;
     private final boolean hasHeader;
-    private ARecordType recordType;
-    private IARecordBuilder recBuilder;
-    private ArrayBackedValueStorage fieldValueBuffer;
-    private DataOutput fieldValueBufferOutput;
-    private IValueParser[] valueParsers;
+    private final ARecordType recordType;
+    private final IARecordBuilder recBuilder;
+    private final ArrayBackedValueStorage fieldValueBuffer;
+    private final DataOutput fieldValueBufferOutput;
+    private final IValueParser[] valueParsers;
     private FieldCursorForDelimitedDataParser cursor;
-    private byte[] fieldTypeTags;
-    private int[] fldIds;
-    private ArrayBackedValueStorage[] nameBuffers;
-    private boolean areAllNullFields;
+    private Supplier<String> dataSourceName;
+    private LongSupplier lineNumber;
+    private final byte[] fieldTypeTags;
+    private final int[] fldIds;
+    private final ArrayBackedValueStorage[] nameBuffers;
+    private final char[] nullChars;
 
-    public DelimitedDataParser(IValueParserFactory[] valueParserFactories, char fieldDelimter, char quote,
-            boolean hasHeader, ARecordType recordType, boolean isStreamParser) throws HyracksDataException {
-        this.fieldDelimiter = fieldDelimter;
+    public DelimitedDataParser(IHyracksTaskContext ctx, IValueParserFactory[] valueParserFactories, char fieldDelimiter,
+            char quote, boolean hasHeader, ARecordType recordType, boolean isStreamParser, String nullString)
+            throws HyracksDataException {
+        this.dataSourceName = ExternalDataConstants.EMPTY_STRING;
+        this.lineNumber = ExternalDataConstants.NO_LINES;
+        this.warnings = ctx.getWarningCollector();
+        this.fieldDelimiter = fieldDelimiter;
         this.quote = quote;
         this.hasHeader = hasHeader;
         this.recordType = recordType;
@@ -98,18 +117,22 @@ public class DelimitedDataParser extends AbstractDataParser implements IStreamDa
             }
         }
         if (!isStreamParser) {
-            cursor = new FieldCursorForDelimitedDataParser(null, fieldDelimiter, quote);
+            cursor = new FieldCursorForDelimitedDataParser(null, this.fieldDelimiter, quote, warnings,
+                    this::getDataSourceName);
         }
+        this.nullChars = nullString != null ? nullString.toCharArray() : null;
     }
 
     @Override
     public boolean parse(DataOutput out) throws HyracksDataException {
         try {
-            while (cursor.nextRecord()) {
-                parseRecord();
-                if (!areAllNullFields) {
+            if (cursor.nextRecord()) {
+                if (parseRecord()) {
                     recBuilder.write(out, true);
                     return true;
+                } else {
+                    // keeping the behaviour of throwing exception for stream parsers
+                    throw new RuntimeDataException(ErrorCode.FAILED_TO_PARSE_RECORD);
                 }
             }
             return false;
@@ -118,43 +141,53 @@ public class DelimitedDataParser extends AbstractDataParser implements IStreamDa
         }
     }
 
-    private void parseRecord() throws HyracksDataException {
+    private boolean parseRecord() throws HyracksDataException {
         recBuilder.reset(recordType);
         recBuilder.init();
-        areAllNullFields = true;
 
         for (int i = 0; i < valueParsers.length; ++i) {
             try {
-                if (!cursor.nextField()) {
-                    break;
+                FieldCursorForDelimitedDataParser.Result result = cursor.nextField();
+                switch (result) {
+                    case OK:
+                        break;
+                    case END:
+                        if (warnings.shouldWarn()) {
+                            ParseUtil.warn(warnings, dataSourceName.get(), cursor.getLineCount(),
+                                    cursor.getFieldCount(), MISSING_FIELDS);
+                        }
+                        return false;
+                    case ERROR:
+                        return false;
+                    default:
+                        throw new IllegalStateException();
                 }
-            } catch (IOException e) {
-                throw HyracksDataException.create(e);
-            }
-            fieldValueBuffer.reset();
+                fieldValueBuffer.reset();
 
-            try {
-                if (cursor.fStart == cursor.fEnd && recordType.getFieldTypes()[i].getTypeTag() != ATypeTag.STRING
-                        && recordType.getFieldTypes()[i].getTypeTag() != ATypeTag.NULL) {
-                    // if the field is empty and the type is optional, insert
-                    // NULL. Note that string type can also process empty field as an
-                    // empty string
-                    if (!NonTaggedFormatUtil.isOptional(recordType.getFieldTypes()[i])) {
-                        throw new RuntimeDataException(ErrorCode.PARSER_DELIMITED_NONOPTIONAL_NULL, cursor.recordCount,
-                                cursor.fieldCount);
-                    }
+                if (nullChars != null && NonTaggedFormatUtil.isOptional(recordType.getFieldTypes()[i]) && fieldNull()) {
                     fieldValueBufferOutput.writeByte(ATypeTag.SERIALIZED_NULL_TYPE_TAG);
                 } else {
-                    fieldValueBufferOutput.writeByte(fieldTypeTags[i]);
-                    // Eliminate doule quotes in the field that we are going to parse
-                    if (cursor.isDoubleQuoteIncludedInThisField) {
-                        cursor.eliminateDoubleQuote(cursor.buffer, cursor.fStart, cursor.fEnd - cursor.fStart);
-                        cursor.fEnd -= cursor.doubleQuoteCount;
-                        cursor.isDoubleQuoteIncludedInThisField = false;
+                    if (cursor.isFieldEmpty() && !canProcessEmptyField(recordType.getFieldTypes()[i])) {
+                        if (warnings.shouldWarn()) {
+                            ParseUtil.warn(warnings, dataSourceName.get(), cursor.getLineCount(),
+                                    cursor.getFieldCount(), EMPTY_FIELD);
+                        }
+                        return false;
                     }
-                    valueParsers[i].parse(cursor.buffer, cursor.fStart, cursor.fEnd - cursor.fStart,
-                            fieldValueBufferOutput);
-                    areAllNullFields = false;
+                    fieldValueBufferOutput.writeByte(fieldTypeTags[i]);
+                    // Eliminate double quotes in the field that we are going to parse
+                    if (cursor.fieldHasDoubleQuote()) {
+                        cursor.eliminateDoubleQuote();
+                    }
+                    boolean success = valueParsers[i].parse(cursor.getBuffer(), cursor.getFieldStart(),
+                            cursor.getFieldLength(), fieldValueBufferOutput);
+                    if (!success) {
+                        if (warnings.shouldWarn()) {
+                            ParseUtil.warn(warnings, dataSourceName.get(), cursor.getLineCount(),
+                                    cursor.getFieldCount(), INVALID_VAL);
+                        }
+                        return false;
+                    }
                 }
                 if (fldIds[i] < 0) {
                     recBuilder.addField(nameBuffers[i], fieldValueBuffer);
@@ -165,35 +198,81 @@ public class DelimitedDataParser extends AbstractDataParser implements IStreamDa
                 throw HyracksDataException.create(e);
             }
         }
-    }
-
-    @Override
-    public void parse(IRawRecord<? extends char[]> record, DataOutput out) throws HyracksDataException {
         try {
-            cursor.nextRecord(record.get(), record.size());
+            while (cursor.nextField() == FieldCursorForDelimitedDataParser.Result.OK) {
+                // keep reading and discarding the extra fields
+            }
+            return true;
         } catch (IOException e) {
             throw HyracksDataException.create(e);
         }
-        parseRecord();
-        if (!areAllNullFields) {
+    }
+
+    @Override
+    public boolean parse(IRawRecord<? extends char[]> record, DataOutput out) throws HyracksDataException {
+        cursor.nextRecord(record.get(), record.size(), lineNumber.getAsLong());
+        if (parseRecord()) {
             recBuilder.write(out, true);
+            return true;
         }
+        return false;
     }
 
     @Override
     public void setInputStream(InputStream in) throws IOException {
-        cursor = new FieldCursorForDelimitedDataParser(new InputStreamReader(in), fieldDelimiter, quote);
-        if (in != null && hasHeader) {
+        // TODO(ali): revisit this in regards to stream
+        cursor = new FieldCursorForDelimitedDataParser(new InputStreamReader(in), fieldDelimiter, quote, warnings,
+                this::getDataSourceName);
+        if (hasHeader) {
             cursor.nextRecord();
-            while (cursor.nextField()) {
-                ;
+            FieldCursorForDelimitedDataParser.Result result;
+            do {
+                result = cursor.nextField();
+            } while (result == FieldCursorForDelimitedDataParser.Result.OK);
+            if (result == FieldCursorForDelimitedDataParser.Result.ERROR) {
+                throw new RuntimeDataException(ErrorCode.FAILED_TO_PARSE_RECORD);
             }
         }
     }
 
     @Override
     public boolean reset(InputStream in) throws IOException {
-        cursor = new FieldCursorForDelimitedDataParser(new InputStreamReader(in), fieldDelimiter, quote);
+        // TODO(ali): revisit this in regards to stream
+        cursor = new FieldCursorForDelimitedDataParser(new InputStreamReader(in), fieldDelimiter, quote, warnings,
+                this::getDataSourceName);
+        return true;
+    }
+
+    @Override
+    public void configure(Supplier<String> dataSourceName, LongSupplier lineNumber) {
+        this.dataSourceName = dataSourceName == null ? ExternalDataConstants.EMPTY_STRING : dataSourceName;
+        this.lineNumber = lineNumber == null ? ExternalDataConstants.NO_LINES : lineNumber;
+
+    }
+
+    private String getDataSourceName() {
+        return dataSourceName.get();
+    }
+
+    private static boolean canProcessEmptyField(IAType fieldType) {
+        IAType type = TypeComputeUtils.getActualType(fieldType);
+        // TODO(ali): investigate what it means for a field to have type NULL. there is no parser implemented for it
+        return type.getTypeTag() == ATypeTag.STRING || type.getTypeTag() == ATypeTag.NULL;
+    }
+
+    private boolean fieldNull() {
+        int fieldLength = cursor.getFieldLength();
+        int nullStringLength = nullChars.length;
+        if (fieldLength != nullStringLength) {
+            return false;
+        }
+        char[] fieldChars = cursor.getBuffer();
+        int fieldStart = cursor.getFieldStart();
+        for (int i = 0; i < fieldLength; i++) {
+            if (fieldChars[fieldStart + i] != nullChars[i]) {
+                return false;
+            }
+        }
         return true;
     }
 }

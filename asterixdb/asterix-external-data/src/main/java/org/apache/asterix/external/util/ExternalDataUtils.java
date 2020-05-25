@@ -18,23 +18,33 @@
  */
 package org.apache.asterix.external.util;
 
+import static org.apache.asterix.external.util.ExternalDataConstants.KEY_DELIMITER;
+import static org.apache.asterix.external.util.ExternalDataConstants.KEY_ESCAPE;
+import static org.apache.asterix.external.util.ExternalDataConstants.KEY_QUOTE;
+import static org.apache.asterix.external.util.ExternalDataConstants.KEY_RECORD_END;
+import static org.apache.asterix.external.util.ExternalDataConstants.KEY_RECORD_START;
+
 import java.util.EnumMap;
 import java.util.Map;
 
 import org.apache.asterix.common.exceptions.AsterixException;
 import org.apache.asterix.common.exceptions.ErrorCode;
 import org.apache.asterix.common.exceptions.RuntimeDataException;
+import org.apache.asterix.common.functions.ExternalFunctionLanguage;
+import org.apache.asterix.common.library.ILibrary;
 import org.apache.asterix.common.library.ILibraryManager;
 import org.apache.asterix.common.metadata.DataverseName;
 import org.apache.asterix.external.api.IDataParserFactory;
 import org.apache.asterix.external.api.IExternalDataSourceFactory.DataSourceType;
 import org.apache.asterix.external.api.IInputStreamFactory;
 import org.apache.asterix.external.api.IRecordReaderFactory;
+import org.apache.asterix.external.library.JavaLibrary;
 import org.apache.asterix.om.types.ARecordType;
 import org.apache.asterix.om.types.ATypeTag;
 import org.apache.asterix.om.types.AUnionType;
 import org.apache.hyracks.algebricks.common.exceptions.NotImplementedException;
 import org.apache.hyracks.api.exceptions.HyracksDataException;
+import org.apache.hyracks.dataflow.common.data.parsers.BooleanParserFactory;
 import org.apache.hyracks.dataflow.common.data.parsers.DoubleParserFactory;
 import org.apache.hyracks.dataflow.common.data.parsers.FloatParserFactory;
 import org.apache.hyracks.dataflow.common.data.parsers.IValueParserFactory;
@@ -44,46 +54,42 @@ import org.apache.hyracks.dataflow.common.data.parsers.UTF8StringParserFactory;
 
 public class ExternalDataUtils {
 
+    private static final Map<ATypeTag, IValueParserFactory> valueParserFactoryMap = new EnumMap<>(ATypeTag.class);
+    static {
+        valueParserFactoryMap.put(ATypeTag.INTEGER, IntegerParserFactory.INSTANCE);
+        valueParserFactoryMap.put(ATypeTag.FLOAT, FloatParserFactory.INSTANCE);
+        valueParserFactoryMap.put(ATypeTag.DOUBLE, DoubleParserFactory.INSTANCE);
+        valueParserFactoryMap.put(ATypeTag.BIGINT, LongParserFactory.INSTANCE);
+        valueParserFactoryMap.put(ATypeTag.STRING, UTF8StringParserFactory.INSTANCE);
+        valueParserFactoryMap.put(ATypeTag.BOOLEAN, BooleanParserFactory.INSTANCE);
+    }
+
+    private ExternalDataUtils() {
+    }
+
     // Get a delimiter from the given configuration
-    public static char getDelimiter(Map<String, String> configuration) throws AsterixException {
-        String delimiterValue = configuration.get(ExternalDataConstants.KEY_DELIMITER);
-        if (delimiterValue == null) {
-            delimiterValue = ExternalDataConstants.DEFAULT_DELIMITER;
-        } else if (delimiterValue.length() != 1) {
-            throw new AsterixException(
-                    "'" + delimiterValue + "' is not a valid delimiter. The length of a delimiter should be 1.");
-        }
-        return delimiterValue.charAt(0);
+    public static char validateGetDelimiter(Map<String, String> configuration) throws HyracksDataException {
+        return validateCharOrDefault(configuration, KEY_DELIMITER, ExternalDataConstants.DEFAULT_DELIMITER.charAt(0));
     }
 
     // Get a quote from the given configuration when the delimiter is given
     // Need to pass delimiter to check whether they share the same character
-    public static char getQuote(Map<String, String> configuration, char delimiter) throws AsterixException {
-        String quoteValue = configuration.get(ExternalDataConstants.KEY_QUOTE);
-        if (quoteValue == null) {
-            quoteValue = ExternalDataConstants.DEFAULT_QUOTE;
-        } else if (quoteValue.length() != 1) {
-            throw new AsterixException("'" + quoteValue + "' is not a valid quote. The length of a quote should be 1.");
-        }
-
-        // Since delimiter (char type value) can't be null,
-        // we only check whether delimiter and quote use the same character
-        if (quoteValue.charAt(0) == delimiter) {
-            throw new AsterixException(
-                    "Quote '" + quoteValue + "' cannot be used with the delimiter '" + delimiter + "'. ");
-        }
-
-        return quoteValue.charAt(0);
+    public static char validateGetQuote(Map<String, String> configuration, char delimiter) throws HyracksDataException {
+        char quote = validateCharOrDefault(configuration, KEY_QUOTE, ExternalDataConstants.DEFAULT_QUOTE.charAt(0));
+        validateDelimiterAndQuote(delimiter, quote);
+        return quote;
     }
 
-    // Get the header flag
-    public static boolean getHasHeader(Map<String, String> configuration) {
-        return Boolean.parseBoolean(configuration.get(ExternalDataConstants.KEY_HEADER));
+    public static char validateGetEscape(Map<String, String> configuration) throws HyracksDataException {
+        return validateCharOrDefault(configuration, KEY_ESCAPE, ExternalDataConstants.ESCAPE);
     }
 
-    public static void validateParameters(Map<String, String> configuration) throws AsterixException {
-        validateDataSourceParameters(configuration);
-        validateDataParserParameters(configuration);
+    public static char validateGetRecordStart(Map<String, String> configuration) throws HyracksDataException {
+        return validateCharOrDefault(configuration, KEY_RECORD_START, ExternalDataConstants.DEFAULT_RECORD_START);
+    }
+
+    public static char validateGetRecordEnd(Map<String, String> configuration) throws HyracksDataException {
+        return validateCharOrDefault(configuration, KEY_RECORD_END, ExternalDataConstants.DEFAULT_RECORD_END);
     }
 
     public static void validateDataParserParameters(Map<String, String> configuration) throws AsterixException {
@@ -91,8 +97,8 @@ public class ExternalDataUtils {
         if (parser == null) {
             String parserFactory = configuration.get(ExternalDataConstants.KEY_PARSER_FACTORY);
             if (parserFactory == null) {
-                throw new AsterixException("The parameter " + ExternalDataConstants.KEY_FORMAT + " or "
-                        + ExternalDataConstants.KEY_PARSER_FACTORY + " must be specified.");
+                throw AsterixException.create(ErrorCode.PARAMETERS_REQUIRED,
+                        ExternalDataConstants.KEY_FORMAT + " or " + ExternalDataConstants.KEY_PARSER_FACTORY);
             }
         }
     }
@@ -100,7 +106,7 @@ public class ExternalDataUtils {
     public static void validateDataSourceParameters(Map<String, String> configuration) throws AsterixException {
         String reader = configuration.get(ExternalDataConstants.KEY_READER);
         if (reader == null) {
-            throw new AsterixException("The parameter " + ExternalDataConstants.KEY_READER + " must be specified.");
+            throw AsterixException.create(ErrorCode.PARAMETERS_REQUIRED, ExternalDataConstants.KEY_READER);
         }
     }
 
@@ -118,10 +124,6 @@ public class ExternalDataUtils {
                 && (aString.trim().length() > 1));
     }
 
-    public static ClassLoader getClassLoader(ILibraryManager libraryManager, DataverseName dataverse, String library) {
-        return libraryManager.getLibraryClassLoader(dataverse, library);
-    }
-
     public static String getLibraryName(String aString) {
         return aString.trim().split(FeedConstants.NamingConstants.LIBRARY_NAME_SEPARATOR)[0];
     }
@@ -135,7 +137,11 @@ public class ExternalDataUtils {
         try {
             String libraryName = getLibraryName(stream);
             String className = getExternalClassName(stream);
-            ClassLoader classLoader = getClassLoader(libraryManager, dataverse, libraryName);
+            ILibrary lib = libraryManager.getLibrary(dataverse, libraryName);
+            if (lib.getLanguage() != ExternalFunctionLanguage.JAVA) {
+                throw new HyracksDataException("Unexpected library language: " + lib.getLanguage());
+            }
+            ClassLoader classLoader = ((JavaLibrary) lib).getClassLoader();
             return ((IInputStreamFactory) (classLoader.loadClass(className).newInstance()));
         } catch (InstantiationException | IllegalAccessException | ClassNotFoundException e) {
             throw new RuntimeDataException(ErrorCode.UTIL_EXTERNAL_DATA_UTILS_FAIL_CREATE_STREAM_FACTORY, e);
@@ -146,30 +152,13 @@ public class ExternalDataUtils {
         return DataverseName.createFromCanonicalForm(configuration.get(ExternalDataConstants.KEY_DATAVERSE));
     }
 
-    public static String getRecordFormat(Map<String, String> configuration) {
-        String parserFormat = configuration.get(ExternalDataConstants.KEY_DATA_PARSER);
-        return parserFormat != null ? parserFormat : configuration.get(ExternalDataConstants.KEY_FORMAT);
-    }
-
-    public static void setRecordFormat(Map<String, String> configuration, String format) {
-        if (!configuration.containsKey(ExternalDataConstants.KEY_DATA_PARSER)) {
-            configuration.put(ExternalDataConstants.KEY_DATA_PARSER, format);
+    public static String getParserFactory(Map<String, String> configuration) {
+        String parserFactory = configuration.get(ExternalDataConstants.KEY_PARSER);
+        if (parserFactory != null) {
+            return parserFactory;
         }
-        if (!configuration.containsKey(ExternalDataConstants.KEY_FORMAT)) {
-            configuration.put(ExternalDataConstants.KEY_FORMAT, format);
-        }
-    }
-
-    private static Map<ATypeTag, IValueParserFactory> valueParserFactoryMap = initializeValueParserFactoryMap();
-
-    private static Map<ATypeTag, IValueParserFactory> initializeValueParserFactoryMap() {
-        Map<ATypeTag, IValueParserFactory> m = new EnumMap<>(ATypeTag.class);
-        m.put(ATypeTag.INTEGER, IntegerParserFactory.INSTANCE);
-        m.put(ATypeTag.FLOAT, FloatParserFactory.INSTANCE);
-        m.put(ATypeTag.DOUBLE, DoubleParserFactory.INSTANCE);
-        m.put(ATypeTag.BIGINT, LongParserFactory.INSTANCE);
-        m.put(ATypeTag.STRING, UTF8StringParserFactory.INSTANCE);
-        return m;
+        parserFactory = configuration.get(ExternalDataConstants.KEY_FORMAT);
+        return parserFactory != null ? parserFactory : configuration.get(ExternalDataConstants.KEY_PARSER_FACTORY);
     }
 
     public static IValueParserFactory[] getValueParserFactories(ARecordType recordType) {
@@ -202,16 +191,13 @@ public class ExternalDataUtils {
         return vpf;
     }
 
-    public static String getRecordReaderStreamName(Map<String, String> configuration) {
-        return configuration.get(ExternalDataConstants.KEY_READER_STREAM);
+    public static boolean hasHeader(Map<String, String> configuration) {
+        return isTrue(configuration, ExternalDataConstants.KEY_HEADER);
     }
 
-    public static boolean hasHeader(Map<String, String> configuration) {
-        String value = configuration.get(ExternalDataConstants.KEY_HEADER);
-        if (value != null) {
-            return Boolean.valueOf(value);
-        }
-        return false;
+    public static boolean isTrue(Map<String, String> configuration, String key) {
+        String value = configuration.get(key);
+        return value == null ? false : Boolean.valueOf(value);
     }
 
     public static IRecordReaderFactory<?> createExternalRecordReaderFactory(ILibraryManager libraryManager,
@@ -233,7 +219,11 @@ public class ExternalDataUtils {
         }
         DataverseName dataverseName = DataverseName.createSinglePartName(dataverseAndLibrary[0]); //TODO(MULTI_PART_DATAVERSE_NAME):REVISIT
         String libraryName = dataverseAndLibrary[1];
-        ClassLoader classLoader = libraryManager.getLibraryClassLoader(dataverseName, libraryName);
+        ILibrary lib = libraryManager.getLibrary(dataverseName, libraryName);
+        if (lib.getLanguage() != ExternalFunctionLanguage.JAVA) {
+            throw new AsterixException("Unexpected library language: " + lib.getLanguage());
+        }
+        ClassLoader classLoader = ((JavaLibrary) lib).getClassLoader();
         try {
             return (IRecordReaderFactory<?>) classLoader.loadClass(libraryAndFactory[1]).newInstance();
         } catch (InstantiationException | IllegalAccessException | ClassNotFoundException e) {
@@ -246,7 +236,11 @@ public class ExternalDataUtils {
         try {
             String library = parserFactoryName.substring(0,
                     parserFactoryName.indexOf(ExternalDataConstants.EXTERNAL_LIBRARY_SEPARATOR));
-            ClassLoader classLoader = libraryManager.getLibraryClassLoader(dataverse, library);
+            ILibrary lib = libraryManager.getLibrary(dataverse, library);
+            if (lib.getLanguage() != ExternalFunctionLanguage.JAVA) {
+                throw new AsterixException("Unexpected library language: " + lib.getLanguage());
+            }
+            ClassLoader classLoader = ((JavaLibrary) lib).getClassLoader();
             return (IDataParserFactory) classLoader
                     .loadClass(parserFactoryName
                             .substring(parserFactoryName.indexOf(ExternalDataConstants.EXTERNAL_LIBRARY_SEPARATOR) + 1))
@@ -283,12 +277,6 @@ public class ExternalDataUtils {
         return configuration.get(ExternalDataConstants.KEY_FEED_NAME);
     }
 
-    public static int getQueueSize(Map<String, String> configuration) {
-        return configuration.containsKey(ExternalDataConstants.KEY_QUEUE_SIZE)
-                ? Integer.parseInt(configuration.get(ExternalDataConstants.KEY_QUEUE_SIZE))
-                : ExternalDataConstants.DEFAULT_QUEUE_SIZE;
-    }
-
     public static boolean isRecordWithMeta(Map<String, String> configuration) {
         return configuration.containsKey(ExternalDataConstants.KEY_META_TYPE_NAME);
     }
@@ -308,8 +296,7 @@ public class ExternalDataUtils {
     public static int getNumberOfKeys(Map<String, String> configuration) throws AsterixException {
         String keyIndexes = configuration.get(ExternalDataConstants.KEY_KEY_INDEXES);
         if (keyIndexes == null) {
-            throw new AsterixException(
-                    "A change feed must have the parameter " + ExternalDataConstants.KEY_KEY_INDEXES);
+            throw AsterixException.create(ErrorCode.PARAMETERS_REQUIRED, ExternalDataConstants.KEY_KEY_INDEXES);
         }
         return keyIndexes.split(",").length;
     }
@@ -340,5 +327,126 @@ public class ExternalDataUtils {
             intIndicators[i] = Integer.parseInt(stringIndicators[i]);
         }
         return intIndicators;
+    }
+
+    /**
+     * Fills the configuration of the external dataset and its adapter with default values if not provided by user.
+     *
+     * @param configuration external data configuration
+     */
+    public static void defaultConfiguration(Map<String, String> configuration) {
+        String format = configuration.get(ExternalDataConstants.KEY_FORMAT);
+        if (format != null) {
+            // default quote, escape character for quote and fields delimiter for csv and tsv format
+            if (format.equals(ExternalDataConstants.FORMAT_CSV)) {
+                configuration.putIfAbsent(KEY_DELIMITER, ExternalDataConstants.DEFAULT_DELIMITER);
+                configuration.putIfAbsent(KEY_QUOTE, ExternalDataConstants.DEFAULT_QUOTE);
+                configuration.putIfAbsent(KEY_ESCAPE, ExternalDataConstants.DEFAULT_QUOTE);
+            } else if (format.equals(ExternalDataConstants.FORMAT_TSV)) {
+                configuration.putIfAbsent(KEY_DELIMITER, ExternalDataConstants.TAB_STR);
+                configuration.putIfAbsent(KEY_QUOTE, ExternalDataConstants.NULL_STR);
+                configuration.putIfAbsent(KEY_ESCAPE, ExternalDataConstants.NULL_STR);
+            }
+        }
+    }
+
+    /**
+     * Prepares the configuration of the external data and its adapter by filling the information required by
+     * adapters and parsers.
+     *
+     * @param adapterName adapter name
+     * @param configuration external data configuration
+     */
+    public static void prepare(String adapterName, Map<String, String> configuration) {
+        if (!configuration.containsKey(ExternalDataConstants.KEY_READER)) {
+            configuration.put(ExternalDataConstants.KEY_READER, adapterName);
+        }
+        if (!configuration.containsKey(ExternalDataConstants.KEY_PARSER)
+                && configuration.containsKey(ExternalDataConstants.KEY_FORMAT)) {
+            configuration.put(ExternalDataConstants.KEY_PARSER, configuration.get(ExternalDataConstants.KEY_FORMAT));
+        }
+    }
+
+    /**
+     * Normalizes the values of certain parameters of the adapter configuration. This should happen before persisting
+     * the metadata (e.g. when creating external datasets or feeds) and when creating an adapter factory.
+     *
+     * @param configuration external data configuration
+     */
+    public static void normalize(Map<String, String> configuration) {
+        // normalize the "format" parameter
+        String paramValue = configuration.get(ExternalDataConstants.KEY_FORMAT);
+        if (paramValue != null) {
+            String lowerCaseFormat = paramValue.toLowerCase().trim();
+            if (ExternalDataConstants.ALL_FORMATS.contains(lowerCaseFormat)) {
+                configuration.put(ExternalDataConstants.KEY_FORMAT, lowerCaseFormat);
+            }
+        }
+        // normalize "header" parameter
+        putToLowerIfExists(configuration, ExternalDataConstants.KEY_HEADER);
+        // normalize "redact-warnings" parameter
+        putToLowerIfExists(configuration, ExternalDataConstants.KEY_REDACT_WARNINGS);
+    }
+
+    /**
+     * Validates the parameter values of the adapter configuration. This should happen after normalizing the values.
+     *
+     * @param configuration external data configuration
+     * @throws HyracksDataException HyracksDataException
+     */
+    public static void validate(Map<String, String> configuration) throws HyracksDataException {
+        String format = configuration.get(ExternalDataConstants.KEY_FORMAT);
+        String header = configuration.get(ExternalDataConstants.KEY_HEADER);
+        if (format != null && isHeaderRequiredFor(format) && header == null) {
+            throw new RuntimeDataException(ErrorCode.PARAMETERS_REQUIRED, ExternalDataConstants.KEY_HEADER);
+        }
+        if (header != null && !isBoolean(header)) {
+            throw new RuntimeDataException(ErrorCode.INVALID_REQ_PARAM_VAL, ExternalDataConstants.KEY_HEADER, header);
+        }
+        char delimiter = validateGetDelimiter(configuration);
+        validateGetQuote(configuration, delimiter);
+        validateGetEscape(configuration);
+        String value = configuration.get(ExternalDataConstants.KEY_REDACT_WARNINGS);
+        if (value != null && !isBoolean(value)) {
+            throw new RuntimeDataException(ErrorCode.INVALID_REQ_PARAM_VAL, ExternalDataConstants.KEY_REDACT_WARNINGS,
+                    value);
+        }
+    }
+
+    private static boolean isHeaderRequiredFor(String format) {
+        return format.equals(ExternalDataConstants.FORMAT_CSV) || format.equals(ExternalDataConstants.FORMAT_TSV);
+    }
+
+    private static boolean isBoolean(String value) {
+        return value.equals(ExternalDataConstants.TRUE) || value.equals(ExternalDataConstants.FALSE);
+    }
+
+    private static void validateDelimiterAndQuote(char delimiter, char quote) throws RuntimeDataException {
+        if (quote == delimiter) {
+            throw new RuntimeDataException(ErrorCode.QUOTE_DELIMITER_MISMATCH, quote, delimiter);
+        }
+    }
+
+    private static char validateCharOrDefault(Map<String, String> configuration, String key, char defaultValue)
+            throws HyracksDataException {
+        String value = configuration.get(key);
+        if (value == null) {
+            return defaultValue;
+        }
+        validateChar(value, key);
+        return value.charAt(0);
+    }
+
+    public static void validateChar(String parameterValue, String parameterName) throws RuntimeDataException {
+        if (parameterValue.length() != 1) {
+            throw new RuntimeDataException(ErrorCode.INVALID_CHAR_LENGTH, parameterValue, parameterName);
+        }
+    }
+
+    private static void putToLowerIfExists(Map<String, String> configuration, String key) {
+        String paramValue = configuration.get(key);
+        if (paramValue != null) {
+            configuration.put(key, paramValue.toLowerCase().trim());
+        }
     }
 }

@@ -18,14 +18,15 @@
  */
 package org.apache.asterix.external.operators;
 
-import org.apache.asterix.external.api.IAdapterFactory;
-import org.apache.asterix.external.api.IDataSourceAdapter;
+import org.apache.asterix.common.external.IDataSourceAdapter;
+import org.apache.asterix.external.api.ITypedAdapterFactory;
 import org.apache.hyracks.api.context.IHyracksTaskContext;
 import org.apache.hyracks.api.dataflow.IOperatorNodePushable;
 import org.apache.hyracks.api.dataflow.value.IRecordDescriptorProvider;
 import org.apache.hyracks.api.dataflow.value.RecordDescriptor;
 import org.apache.hyracks.api.exceptions.HyracksDataException;
 import org.apache.hyracks.api.job.JobSpecification;
+import org.apache.hyracks.api.job.profiling.IOperatorStats;
 import org.apache.hyracks.dataflow.std.base.AbstractSingleActivityOperatorDescriptor;
 import org.apache.hyracks.dataflow.std.base.AbstractUnaryOutputSourceOperatorNodePushable;
 
@@ -37,10 +38,10 @@ public class ExternalScanOperatorDescriptor extends AbstractSingleActivityOperat
 
     private static final long serialVersionUID = 1L;
 
-    private IAdapterFactory adapterFactory;
+    private ITypedAdapterFactory adapterFactory;
 
     public ExternalScanOperatorDescriptor(JobSpecification spec, RecordDescriptor rDesc,
-            IAdapterFactory dataSourceAdapterFactory) {
+            ITypedAdapterFactory dataSourceAdapterFactory) {
         super(spec, 0, 1);
         outRecDescs[0] = rDesc;
         this.adapterFactory = dataSourceAdapterFactory;
@@ -53,13 +54,21 @@ public class ExternalScanOperatorDescriptor extends AbstractSingleActivityOperat
 
         return new AbstractUnaryOutputSourceOperatorNodePushable() {
 
+            private IOperatorStats stats;
+
             @Override
             public void initialize() throws HyracksDataException {
-                IDataSourceAdapter adapter = null;
+                IDataSourceAdapter adapter;
+                if (ctx.getStatsCollector() != null) {
+                    stats = ctx.getStatsCollector().getOrAddOperatorStats(getDisplayName());
+                }
                 try {
                     writer.open();
                     adapter = adapterFactory.createAdapter(ctx, partition);
                     adapter.start(partition, writer);
+                    if (stats != null) {
+                        stats.getTupleCounter().update(adapter.getProcessedTuples());
+                    }
                 } catch (Exception e) {
                     writer.fail();
                     throw HyracksDataException.create(e);

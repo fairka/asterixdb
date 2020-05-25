@@ -24,10 +24,13 @@ import org.apache.asterix.active.EntityId;
 import org.apache.asterix.common.api.INcApplicationContext;
 import org.apache.asterix.common.exceptions.ErrorCode;
 import org.apache.asterix.common.exceptions.RuntimeDataException;
+import org.apache.asterix.common.functions.ExternalFunctionLanguage;
+import org.apache.asterix.common.library.ILibrary;
 import org.apache.asterix.common.library.ILibraryManager;
-import org.apache.asterix.external.api.IAdapterFactory;
+import org.apache.asterix.external.api.ITypedAdapterFactory;
 import org.apache.asterix.external.feed.api.IFeed;
 import org.apache.asterix.external.feed.policy.FeedPolicyAccessor;
+import org.apache.asterix.external.library.JavaLibrary;
 import org.apache.asterix.om.types.ARecordType;
 import org.apache.hyracks.api.context.IHyracksTaskContext;
 import org.apache.hyracks.api.dataflow.IOperatorNodePushable;
@@ -57,7 +60,7 @@ public class FeedIntakeOperatorDescriptor extends AbstractSingleActivityOperator
     private final FeedPolicyAccessor policyAccessor;
     private final ARecordType adapterOutputType;
     /** The adaptor factory that is used to create an instance of the feed adaptor **/
-    private IAdapterFactory adaptorFactory;
+    private ITypedAdapterFactory adaptorFactory;
     /** The library that contains the adapter in use. **/
     private String adaptorLibraryName;
     /**
@@ -68,7 +71,7 @@ public class FeedIntakeOperatorDescriptor extends AbstractSingleActivityOperator
     /** The configuration parameters associated with the adapter. **/
     private Map<String, String> adaptorConfiguration;
 
-    public FeedIntakeOperatorDescriptor(JobSpecification spec, IFeed primaryFeed, IAdapterFactory adapterFactory,
+    public FeedIntakeOperatorDescriptor(JobSpecification spec, IFeed primaryFeed, ITypedAdapterFactory adapterFactory,
             ARecordType adapterOutputType, FeedPolicyAccessor policyAccessor, RecordDescriptor rDesc) {
         super(spec, 0, 1);
         this.feedId = new EntityId(FEED_EXTENSION_NAME, primaryFeed.getDataverseName(), primaryFeed.getFeedName());
@@ -100,15 +103,20 @@ public class FeedIntakeOperatorDescriptor extends AbstractSingleActivityOperator
         return new FeedIntakeOperatorNodePushable(ctx, feedId, adaptorFactory, partition, recordDescProvider, this);
     }
 
-    private IAdapterFactory createExternalAdapterFactory(IHyracksTaskContext ctx) throws HyracksDataException {
-        IAdapterFactory adapterFactory;
+    private ITypedAdapterFactory createExternalAdapterFactory(IHyracksTaskContext ctx) throws HyracksDataException {
+        ITypedAdapterFactory adapterFactory;
         INcApplicationContext runtimeCtx =
                 (INcApplicationContext) ctx.getJobletContext().getServiceContext().getApplicationContext();
         ILibraryManager libraryManager = runtimeCtx.getLibraryManager();
-        ClassLoader classLoader = libraryManager.getLibraryClassLoader(feedId.getDataverseName(), adaptorLibraryName);
+
+        ILibrary lib = libraryManager.getLibrary(feedId.getDataverseName(), adaptorLibraryName);
+        if (lib.getLanguage() != ExternalFunctionLanguage.JAVA) {
+            throw new HyracksDataException("Unexpected library language: " + lib.getLanguage());
+        }
+        ClassLoader classLoader = ((JavaLibrary) lib).getClassLoader();
         if (classLoader != null) {
             try {
-                adapterFactory = (IAdapterFactory) (classLoader.loadClass(adaptorFactoryClassName).newInstance());
+                adapterFactory = (ITypedAdapterFactory) (classLoader.loadClass(adaptorFactoryClassName).newInstance());
                 adapterFactory.setOutputType(adapterOutputType);
                 adapterFactory.configure(ctx.getJobletContext().getServiceContext(), adaptorConfiguration);
             } catch (Exception e) {
@@ -128,11 +136,11 @@ public class FeedIntakeOperatorDescriptor extends AbstractSingleActivityOperator
         return feedId;
     }
 
-    public IAdapterFactory getAdaptorFactory() {
+    public ITypedAdapterFactory getAdaptorFactory() {
         return this.adaptorFactory;
     }
 
-    public void setAdaptorFactory(IAdapterFactory factory) {
+    public void setAdaptorFactory(ITypedAdapterFactory factory) {
         this.adaptorFactory = factory;
     }
 
