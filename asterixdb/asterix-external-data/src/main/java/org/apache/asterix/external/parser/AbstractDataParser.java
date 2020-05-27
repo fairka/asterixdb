@@ -72,6 +72,7 @@ import org.apache.asterix.om.base.ATime;
 import org.apache.asterix.om.base.AUUID;
 import org.apache.asterix.om.base.AYearMonthDuration;
 import org.apache.asterix.om.base.temporal.ADateParserFactory;
+import org.apache.asterix.om.base.temporal.ADateTimeParserFactory;
 import org.apache.asterix.om.base.temporal.ADurationParserFactory;
 import org.apache.asterix.om.base.temporal.ADurationParserFactory.ADurationParseOption;
 import org.apache.asterix.om.base.temporal.ATimeParserFactory;
@@ -222,7 +223,7 @@ public abstract class AbstractDataParser implements IDataParser {
     }
 
     protected void parseDateTime(char[] buffer, int begin, int len, DataOutput out) throws HyracksDataException {
-        long chrononDatetimeInMs = ADateParserFactory.parseDatePart(buffer, begin, len);
+        long chrononDatetimeInMs = ADateTimeParserFactory.parseDateTimePart(buffer, begin, len);
         aDateTime.setValue(chrononDatetimeInMs);
         datetimeSerde.serialize(aDateTime, out);
     }

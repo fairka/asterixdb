@@ -44,26 +44,8 @@ public class ADateTimeParserFactory implements IValueParserFactory {
 
             @Override
             public boolean parse(char[] buffer, int start, int length, DataOutput out) throws HyracksDataException {
-                long chrononTimeInMs = 0;
-
-                short timeOffset = (short) ((buffer[start] == '-') ? 1 : 0);
-
-                timeOffset += 8;
-
-                if (buffer[start + timeOffset] != 'T') {
-                    timeOffset += 2;
-                    if (buffer[start + timeOffset] != 'T') {
-                        throw new HyracksDataException(dateTimeErrorMessage + ": missing T");
-                    }
-                }
-
-                chrononTimeInMs = ADateParserFactory.parseDatePart(buffer, start, timeOffset);
-
-                chrononTimeInMs +=
-                        ATimeParserFactory.parseTimePart(buffer, start + timeOffset + 1, length - timeOffset - 1);
-
                 try {
-                    out.writeLong(chrononTimeInMs);
+                    out.writeLong(parseDateTimePart(buffer, start, length));
                     return true;
                 } catch (IOException ex) {
                     throw HyracksDataException.create(ex);

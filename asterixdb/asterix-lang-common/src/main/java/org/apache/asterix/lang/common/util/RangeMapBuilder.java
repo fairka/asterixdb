@@ -39,7 +39,14 @@ import org.apache.asterix.lang.common.literal.FloatLiteral;
 import org.apache.asterix.lang.common.literal.IntegerLiteral;
 import org.apache.asterix.lang.common.literal.LongIntegerLiteral;
 import org.apache.asterix.lang.common.literal.StringLiteral;
-import org.apache.asterix.om.base.*;
+import org.apache.asterix.om.base.AMutableDate;
+import org.apache.asterix.om.base.AMutableDateTime;
+import org.apache.asterix.om.base.AMutableDouble;
+import org.apache.asterix.om.base.AMutableFloat;
+import org.apache.asterix.om.base.AMutableInt32;
+import org.apache.asterix.om.base.AMutableInt64;
+import org.apache.asterix.om.base.AMutableString;
+import org.apache.asterix.om.base.AMutableTime;
 import org.apache.asterix.om.base.temporal.ADateParserFactory;
 import org.apache.asterix.om.base.temporal.ADateTimeParserFactory;
 import org.apache.asterix.om.base.temporal.ATimeParserFactory;
@@ -79,6 +86,7 @@ public class RangeMapBuilder {
                 offsets[i] = abvs.getLength();
             } else if (item.getKind() == Kind.CALL_EXPRESSION) {
                 parseExpressionToBytes((CallExpr) item, out);
+                offsets[i] = abvs.getLength();
             } else {
                 throw new CompilationException(ErrorCode.RANGE_MAP_ERROR, expression.getSourceLocation());
             }
@@ -86,52 +94,6 @@ public class RangeMapBuilder {
         }
 
         return new RangeMap(1, abvs.getByteArray(), offsets);
-    }
-
-    @SuppressWarnings("unchecked")
-    private static void parseExpressionToBytes(CallExpr item, DataOutput out) throws CompilationException {
-        AMutableDate aDate = new AMutableDate(0);
-        AMutableTime aTime = new AMutableTime(0);
-        AMutableDateTime aDateTime = new AMutableDateTime(0L);
-        @SuppressWarnings("rawtypes")
-        ISerializerDeserializer serde;
-
-        if (!(item.getKind() == Kind.LITERAL_EXPRESSION)) {
-            throw new CompilationException(ErrorCode.RANGE_MAP_ERROR, item.getSourceLocation());
-        }
-        LiteralExpr argumentLiteralExpr = (LiteralExpr) item.getExprList().get(0);
-        String value = argumentLiteralExpr.getValue().toString();
-
-        try {
-            switch (item.getFunctionSignature().getName()) {
-                case "date":
-                    //Serialize a Date
-                    int chrononTimeInDays = ADateParserFactory.parseDatePartInDays(value, 0, value.length());
-                    serde = SerializerDeserializerProvider.INSTANCE.getSerializerDeserializer(BuiltinType.ADATE);
-                    aDate.setValue(chrononTimeInDays);
-                    serde.serialize(aDate, out);
-                    break;
-                case "time":
-                    //Serialize a Time
-                    int chrononTimeInMillis = ATimeParserFactory.parseTimePart(value, 0, value.length());
-                    serde = SerializerDeserializerProvider.INSTANCE.getSerializerDeserializer(BuiltinType.ATIME);
-                    aTime.setValue(chrononTimeInMillis);
-                    serde.serialize(aTime, out);
-                    break;
-                case "datetime":
-                    //Serialize a Datetime
-                    long chronoDatetimeInMills = ADateTimeParserFactory.parseDateTimePart(value, 0, value.length());
-                    aDateTime.setValue(chronoDatetimeInMills);
-                    serde = SerializerDeserializerProvider.INSTANCE.getSerializerDeserializer(BuiltinType.ADATETIME);
-                    serde.serialize(aDateTime, out);
-                    break;
-                default:
-                    throw new NotImplementedException("The range map builder has not been implemented for "
-                            + item.getFunctionSignature().getName() + " type of expressions.");
-            }
-        } catch (HyracksException e) {
-            throw new CompilationException(ErrorCode.RANGE_MAP_ERROR, e, item.getSourceLocation(), e.getMessage());
-        }
     }
 
     @SuppressWarnings("unchecked")
