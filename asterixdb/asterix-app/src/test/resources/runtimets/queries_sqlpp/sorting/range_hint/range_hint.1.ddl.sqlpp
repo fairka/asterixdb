@@ -16,11 +16,6 @@
  * specific language governing permissions and limitations
  * under the License.
  */
-/*
- * Test case name:
- * Description: verify insertion operation for date type
- * Expected result: success
- */
 
 drop  dataverse test if exists;
 create  dataverse test;
@@ -41,4 +36,3 @@ create type test.Schema as
 };
 
 create  dataset tsdata(Schema) primary key id;
-

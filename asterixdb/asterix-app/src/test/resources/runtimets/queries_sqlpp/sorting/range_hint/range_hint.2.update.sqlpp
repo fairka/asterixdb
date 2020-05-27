@@ -19,7 +19,6 @@
 
 use test;
 
-
 insert into tsdata
 select element {'id':(test.integer('1')),'double':(test.double('1.4')),'string':'werjk','long':(test.bigint('13334')),'float':(test.float('1.3')),'time':test.time('23:12:23.938'),'date':test.date('1904-01-06'),'datetime':test.datetime('2012-01-12T12:31:39')};
 insert into tsdata
