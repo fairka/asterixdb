@@ -18,14 +18,14 @@
  */
 package org.apache.asterix.om.base.temporal;
 
+import static org.apache.asterix.om.base.temporal.GregorianCalendarSystem.CHRONON_OF_DAY;
+
 import java.io.DataOutput;
 import java.io.IOException;
 
 import org.apache.hyracks.api.exceptions.HyracksDataException;
 import org.apache.hyracks.dataflow.common.data.parsers.IValueParser;
 import org.apache.hyracks.dataflow.common.data.parsers.IValueParserFactory;
-
-import static org.apache.asterix.om.base.temporal.GregorianCalendarSystem.CHRONON_OF_DAY;
 
 public class ADateParserFactory implements IValueParserFactory {
 
@@ -39,7 +39,8 @@ public class ADateParserFactory implements IValueParserFactory {
 
     }
 
-    @Override public IValueParser createValueParser() {
+    @Override
+    public IValueParser createValueParser() {
 
         return new IValueParser() {
 
@@ -59,9 +60,7 @@ public class ADateParserFactory implements IValueParserFactory {
      * Parse the given char sequence as a date string, and return the milliseconds represented by the date.
      *
      * @param dateString
-     *            accessor for the char sequence
      * @param start
-     *            indicating whether it is a single date string, or it is the date part of a datetime string
      * @param length
      * @return
      * @throws Exception

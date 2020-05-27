@@ -1,0 +1,66 @@
+diff a/asterixdb/asterix-lang-common/src/main/java/org/apache/asterix/lang/common/util/RangeMapBuilder.java b/asterixdb/asterix-lang-common/src/main/java/org/apache/asterix/lang/common/util/RangeMapBuilder.java	(rejected hunks)
+@@ -18,6 +18,8 @@
+  */
+ package org.apache.asterix.lang.common.util;
+ 
++import static org.apache.asterix.om.base.temporal.ATimeParserFactory.parseTimePart;
++
+ import java.io.DataOutput;
+ import java.util.List;
+ 
+@@ -29,6 +31,7 @@
+ import org.apache.asterix.lang.common.base.Expression;
+ import org.apache.asterix.lang.common.base.Expression.Kind;
+ import org.apache.asterix.lang.common.base.Literal;
++import org.apache.asterix.lang.common.expression.CallExpr;
+ import org.apache.asterix.lang.common.expression.ListConstructor;
+ import org.apache.asterix.lang.common.expression.LiteralExpr;
+ import org.apache.asterix.lang.common.literal.DoubleLiteral;
+@@ -36,11 +39,17 @@
+ import org.apache.asterix.lang.common.literal.IntegerLiteral;
+ import org.apache.asterix.lang.common.literal.LongIntegerLiteral;
+ import org.apache.asterix.lang.common.literal.StringLiteral;
++import org.apache.asterix.om.base.AMutableDate;
++import org.apache.asterix.om.base.AMutableDateTime;
+ import org.apache.asterix.om.base.AMutableDouble;
+ import org.apache.asterix.om.base.AMutableFloat;
+ import org.apache.asterix.om.base.AMutableInt32;
+ import org.apache.asterix.om.base.AMutableInt64;
+ import org.apache.asterix.om.base.AMutableString;
++import org.apache.asterix.om.base.AMutableTime;
++import org.apache.asterix.om.base.temporal.ADateParserFactory;
++import org.apache.asterix.om.base.temporal.ADateTimeParserFactory;
++import org.apache.asterix.om.base.temporal.ATimeParserFactory;
+ import org.apache.asterix.om.types.ATypeTag;
+ import org.apache.asterix.om.types.BuiltinType;
+ import org.apache.hyracks.algebricks.common.exceptions.NotImplementedException;
+@@ -48,6 +57,7 @@
+ import org.apache.hyracks.api.dataflow.value.IBinaryComparatorFactory;
+ import org.apache.hyracks.api.dataflow.value.ISerializerDeserializer;
+ import org.apache.hyracks.api.exceptions.HyracksDataException;
++import org.apache.hyracks.api.exceptions.HyracksException;
+ import org.apache.hyracks.api.exceptions.SourceLocation;
+ import org.apache.hyracks.data.std.util.ArrayBackedValueStorage;
+ import org.apache.hyracks.dataflow.common.data.partition.range.RangeMap;
+@@ -59,7 +69,7 @@
+ 
+     public static RangeMap parseHint(Expression expression) throws CompilationException {
+         if (expression.getKind() != Kind.LIST_CONSTRUCTOR_EXPRESSION) {
+-            throw new CompilationException("The range hint must be a list.");
++            throw new CompilationException(ErrorCode.RANGE_MAP_ERROR, expression.getSourceLocation());
+         }
+ 
+         ArrayBackedValueStorage abvs = new ArrayBackedValueStorage();
+@@ -74,8 +84,11 @@
+             if (item.getKind() == Kind.LITERAL_EXPRESSION) {
+                 parseLiteralToBytes((LiteralExpr) item, out);
+                 offsets[i] = abvs.getLength();
++            } else if (item.getKind() == Kind.CALL_EXPRESSION) {
++                parseExpressionToBytes((CallExpr) item, out);
++                offsets[i] = abvs.getLength();
+             } else {
+-                throw new CompilationException("Expected literal in the range hint");
++                throw new CompilationException(ErrorCode.RANGE_MAP_ERROR, expression.getSourceLocation());
+             }
+             // TODO Add support for composite fields.
+         }
