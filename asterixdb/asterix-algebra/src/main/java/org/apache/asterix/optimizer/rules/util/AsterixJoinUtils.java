@@ -101,10 +101,14 @@ public class AsterixJoinUtils {
         if (fi != null) {
             ArrayBackedValueStorage abvs = new ArrayBackedValueStorage();
             int[] offset = { 0 };
-            RangeMap rangeMap = new RangeMap(1, abvs.getByteArray(), offset);
+            RangeMap rangeMap = getRangeMap(abvs, offset);
             LOGGER.fine("Interval Join - Forward Scan");
             setIntervalForwardScanJoinOp(op, fi, sideLeft, sideRight, rangeMap, context);
         }
+    }
+
+    private static RangeMap getRangeMap(ArrayBackedValueStorage abvs, int[] offset){
+        return new RangeMap(1, abvs.getByteArray(), offset);
     }
 
     private static IntervalJoinExpressionAnnotation getIntervalJoinAnnotation(AbstractFunctionCallExpression fexp) {
