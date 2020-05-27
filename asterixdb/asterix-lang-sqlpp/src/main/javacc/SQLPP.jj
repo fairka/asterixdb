@@ -268,7 +268,7 @@ class SQLPPParser extends ScopeChecker implements IParser {
        public DataverseName dataverse;
        public String library;
        public String function;
-       public SqlppHint hint;
+       public Token hint;
        public SourceLocation sourceLoc;
     }
 
@@ -2272,14 +2272,14 @@ UnorderedListTypeDefinition UnorderedListTypeDef() throws ParseException:
 
 FunctionName FunctionName() throws ParseException:
 {
-  Triple<List<String>, SourceLocation, SqlppHint> prefix = null;
+  Triple<List<String>, SourceLocation, Token> prefix = null;
   String suffix = null;
 }
 {
   // Note: there's a copy of this production in PrimaryExpr() (LOOKAHEAD for FunctionCallExpr())
   //       that copy must be kept in sync with this code
   prefix = MultipartIdentifierWithHints(SqlppHint.INDEXED_NESTED_LOOP_JOIN_HINT,
-    SqlppHint.SKIP_SECONDARY_INDEX_SEARCH_HINT)
+    SqlppHint.SKIP_SECONDARY_INDEX_SEARCH_HINT, SqlppHint.RANGE_HINT)
   (<SHARP> suffix = Identifier())?
   {
     FunctionName result = new FunctionName();
@@ -2428,7 +2428,7 @@ String StringLiteral() throws ParseException:
 
 List<String> MultipartIdentifier() throws ParseException:
 {
-  Triple<List<String>, SourceLocation, SqlppHint> result = null;
+  Triple<List<String>, SourceLocation, Token> result = null;
 }
 {
   result = MultipartIdentifierWithHints(null)
@@ -2437,12 +2437,12 @@ List<String> MultipartIdentifier() throws ParseException:
   }
 }
 
-Triple<List<String>, SourceLocation, SqlppHint> MultipartIdentifierWithHints(SqlppHint... expectedHints)
+Triple<List<String>, SourceLocation, Token> MultipartIdentifierWithHints(SqlppHint... expectedHints)
   throws ParseException:
 {
   List<String> list = new ArrayList<String>();
   SourceLocation sourceLoc = null;
-  SqlppHint hint = null;
+  Token hint = null;
   String item = null;
 }
 {
@@ -2459,7 +2459,7 @@ Triple<List<String>, SourceLocation, SqlppHint> MultipartIdentifierWithHints(Sql
   }
   (<DOT> item = Identifier() { list.add(item); } )*
   {
-    return new Triple<List<String>, SourceLocation, SqlppHint>(list, sourceLoc, hint);
+    return new Triple<List<String>, SourceLocation, Token>(list, sourceLoc, hint);
   }
 }
 
@@ -3420,12 +3420,21 @@ Expression FunctionCallExpr() throws ParseException:
       }
       callExpr = FunctionMapUtil.normalizedListInputFunctions(new CallExpr(signature,argList));
       if (funcName.hint != null) {
-        switch (funcName.hint) {
+        switch (funcName.hint.hint) {
           case INDEXED_NESTED_LOOP_JOIN_HINT:
             callExpr.addHint(IndexedNLJoinExpressionAnnotation.INSTANCE);
             break;
           case SKIP_SECONDARY_INDEX_SEARCH_HINT:
             callExpr.addHint(SkipSecondaryIndexSearchExpressionAnnotation.INSTANCE);
+            break;
+          case RANGE_HINT:
+            try {
+              RangeAnnotation rangeAnn = RangeAnnotation.INSTANCE;
+              rangeAnn.setRangeMap(RangeMapBuilder.parseHint(parseExpression(funcName.hint.hintParams)));
+              callExpr.addHint(rangeAnn);
+            } catch (CompilationException e) {
+              {if (true) throw new SqlppParseException(getSourceLocation(funcName.hint), e.getMessage());}
+            }
             break;
         }
       }
