@@ -2453,7 +2453,7 @@ Triple<List<String>, SourceLocation, Token> MultipartIdentifierWithHints(SqlppHi
     if (expectedHints != null && expectedHints.length > 0) {
       Token hintToken = fetchHint(token, expectedHints);
       if (hintToken != null) {
-        hint = hintToken.hint;
+        hint = hintToken;
       }
     }
   }
