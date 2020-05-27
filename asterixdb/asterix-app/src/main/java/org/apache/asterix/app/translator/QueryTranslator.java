@@ -607,7 +607,7 @@ public class QueryTranslator extends AbstractLangTranslator implements IStatemen
                 break;
             default:
                 throw new CompilationException(ErrorCode.COMPILATION_ILLEGAL_STATE, stmt.getSourceLocation(),
-                    String.valueOf(itemTypeExpr.getTypeKind()));
+                        String.valueOf(itemTypeExpr.getTypeKind()));
         }
 
         TypeExpression metaItemTypeExpr = dd.getMetaItemType();
@@ -713,7 +713,7 @@ public class QueryTranslator extends AbstractLangTranslator implements IStatemen
             }
             String ngName = ngNameId != null ? ngNameId.getValue()
                     : configureNodegroupForDataset(appCtx, dd.getHints(), dataverseName, datasetName, metadataProvider,
-                    sourceLoc);
+                            sourceLoc);
 
             if (compactionPolicy == null) {
                 compactionPolicy = StorageConstants.DEFAULT_COMPACTION_POLICY_NAME;
