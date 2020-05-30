@@ -50,6 +50,7 @@ import org.apache.asterix.om.base.AMutableTime;
 import org.apache.asterix.om.base.temporal.ADateParserFactory;
 import org.apache.asterix.om.base.temporal.ADateTimeParserFactory;
 import org.apache.asterix.om.base.temporal.ATimeParserFactory;
+import org.apache.asterix.om.functions.BuiltinFunctions;
 import org.apache.asterix.om.types.ATypeTag;
 import org.apache.asterix.om.types.BuiltinType;
 import org.apache.hyracks.algebricks.common.exceptions.NotImplementedException;
@@ -104,35 +105,37 @@ public class RangeMapBuilder {
         @SuppressWarnings("rawtypes")
         ISerializerDeserializer serde;
 
+        //Check if Literal
         if (!(item.getExprList().get(0).getKind() == Kind.LITERAL_EXPRESSION)) {
             throw new CompilationException(ErrorCode.RANGE_MAP_ERROR, item.getSourceLocation());
         }
         LiteralExpr argumentLiteralExpr = (LiteralExpr) item.getExprList().get(0);
+
+        //Make Sure Literal is String Type
+        if (!(argumentLiteralExpr.getValue().getLiteralType() == Literal.Type.STRING)) {
+            throw new CompilationException(ErrorCode.RANGE_MAP_ERROR, item.getSourceLocation());
+        }
         String value = argumentLiteralExpr.getValue().toString();
 
         try {
-            switch (item.getFunctionSignature().getName()) {
-                case "date":
-                    int chrononTimeInDays = ADateParserFactory.parseDatePartInDays(value, 0, value.length());
-                    serde = SerializerDeserializerProvider.INSTANCE.getSerializerDeserializer(BuiltinType.ADATE);
-                    aDate.setValue(chrononTimeInDays);
-                    serde.serialize(aDate, out);
-                    break;
-                case "time":
-                    int chrononTimeInMillis = ATimeParserFactory.parseTimePart(value, 0, value.length());
-                    serde = SerializerDeserializerProvider.INSTANCE.getSerializerDeserializer(BuiltinType.ATIME);
-                    aTime.setValue(chrononTimeInMillis);
-                    serde.serialize(aTime, out);
-                    break;
-                case "datetime":
-                    long chronoDatetimeInMills = ADateTimeParserFactory.parseDateTimePart(value, 0, value.length());
-                    aDateTime.setValue(chronoDatetimeInMills);
-                    serde = SerializerDeserializerProvider.INSTANCE.getSerializerDeserializer(BuiltinType.ADATETIME);
-                    serde.serialize(aDateTime, out);
-                    break;
-                default:
-                    throw new NotImplementedException("The range map builder has not been implemented for "
-                            + item.getFunctionSignature().getName() + " type of expressions.");
+            if (BuiltinFunctions.DATE_CONSTRUCTOR.getName().equals(item.getFunctionSignature().getName())) {
+                int chrononTimeInDays = ADateParserFactory.parseDatePartInDays(value, 0, value.length());
+                serde = SerializerDeserializerProvider.INSTANCE.getSerializerDeserializer(BuiltinType.ADATE);
+                aDate.setValue(chrononTimeInDays);
+                serde.serialize(aDate, out);
+            } else if (BuiltinFunctions.TIME_CONSTRUCTOR.getName().equals(item.getFunctionSignature().getName())) {
+                int chrononTimeInMillis = ATimeParserFactory.parseTimePart(value, 0, value.length());
+                serde = SerializerDeserializerProvider.INSTANCE.getSerializerDeserializer(BuiltinType.ATIME);
+                aTime.setValue(chrononTimeInMillis);
+                serde.serialize(aTime, out);
+            } else if (BuiltinFunctions.DATETIME_CONSTRUCTOR.getName().equals(item.getFunctionSignature().getName())) {
+                long chronoDatetimeInMills = ADateTimeParserFactory.parseDateTimePart(value, 0, value.length());
+                aDateTime.setValue(chronoDatetimeInMills);
+                serde = SerializerDeserializerProvider.INSTANCE.getSerializerDeserializer(BuiltinType.ADATETIME);
+                serde.serialize(aDateTime, out);
+            } else {
+                throw new NotImplementedException("The range map builder has not been implemented for "
+                        + item.getFunctionSignature().getName() + " type of expressions.");
             }
         } catch (HyracksException e) {
             throw new CompilationException(ErrorCode.RANGE_MAP_ERROR, e, item.getSourceLocation(), e.getMessage());

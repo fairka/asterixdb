@@ -18,7 +18,7 @@
  */
 
 use test;
-select value v
+select value v.date
 from tsdata as v
 /*+ range [date('2000-01-06'), date('2003-01-06'), date('2200-01-06')] */
 order by v.date;

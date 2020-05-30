@@ -22,10 +22,10 @@ create  dataverse test;
 
 use test;
 
-
 create type test.Schema as
  closed {
   id : int,
+  int : int,
   double : double,
   string : string,
   long : bigint,

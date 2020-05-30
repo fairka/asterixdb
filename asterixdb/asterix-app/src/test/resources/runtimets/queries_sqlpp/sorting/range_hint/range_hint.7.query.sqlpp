@@ -18,7 +18,7 @@
  */
 
 use test;
-select value v
+select value v.float
 from tsdata as v
 /*+ range [2.0F, 4.0F, 10.0F] */
 order by v.float;
