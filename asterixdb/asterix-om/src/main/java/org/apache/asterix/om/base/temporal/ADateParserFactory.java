@@ -354,15 +354,7 @@ public class ADateParserFactory implements IValueParserFactory {
      */
     public static int parseDatePartInDays(String dateString, int start, int length) throws HyracksDataException {
         long chronon = parseDatePart(dateString, start, length);
-        if (chronon >= 0) {
-            return (int) (chronon / CHRONON_OF_DAY);
-        } else {
-            if (chronon % CHRONON_OF_DAY != 0) {
-                return (int) (chronon / CHRONON_OF_DAY - 1);
-            } else {
-                return (int) (chronon / CHRONON_OF_DAY);
-            }
-        }
+        return convertParsedMillisecondsToDays(chronon);
     }
 
     /**
@@ -376,6 +368,10 @@ public class ADateParserFactory implements IValueParserFactory {
      */
     public static int parseDatePartInDays(char[] dateString, int start, int length) throws HyracksDataException {
         long chronon = parseDatePart(dateString, start, length);
+        return convertParsedMillisecondsToDays(chronon);
+    }
+
+    public static int convertParsedMillisecondsToDays(long chronon) throws HyracksDataException {
         if (chronon >= 0) {
             return (int) (chronon / CHRONON_OF_DAY);
         } else {

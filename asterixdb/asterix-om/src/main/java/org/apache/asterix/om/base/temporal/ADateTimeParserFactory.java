@@ -44,13 +44,13 @@ public class ADateTimeParserFactory implements IValueParserFactory {
 
             @Override
             public boolean parse(char[] buffer, int start, int length, DataOutput out) throws HyracksDataException {
+                long parsedDateTime = parseDateTimePart(buffer, start, length);
                 try {
-                    out.writeLong(parseDateTimePart(buffer, start, length));
+                    out.writeLong(parsedDateTime);
                     return true;
                 } catch (IOException ex) {
                     throw HyracksDataException.create(ex);
                 }
-
             }
         };
     }
@@ -84,7 +84,6 @@ public class ADateTimeParserFactory implements IValueParserFactory {
                 + ATimeParserFactory.parseTimePart(dateTimeString, start + timeOffset + 1, length - timeOffset - 1);
     }
 
-    //Fix Documentation
     /**
      * A copy-and-paste of {@link #parseDateTimePart(String, int, int)} but for a char array, in order
      * to avoid object creation.

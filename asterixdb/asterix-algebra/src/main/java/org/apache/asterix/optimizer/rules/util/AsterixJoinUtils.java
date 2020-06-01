@@ -23,6 +23,7 @@ import java.util.logging.Logger;
 
 import org.apache.asterix.algebra.operators.physical.IntervalForwardScanJoinPOperator;
 import org.apache.asterix.common.annotations.IntervalJoinExpressionAnnotation;
+import org.apache.asterix.common.annotations.RangeAnnotation;
 import org.apache.asterix.lang.common.util.FunctionUtil;
 import org.apache.asterix.om.functions.BuiltinFunctions;
 import org.apache.asterix.runtime.operators.joins.AfterIntervalMergeJoinCheckerFactory;
@@ -101,14 +102,22 @@ public class AsterixJoinUtils {
         if (fi != null) {
             ArrayBackedValueStorage abvs = new ArrayBackedValueStorage();
             int[] offset = { 0 };
-            RangeMap rangeMap = getRangeMap(abvs, offset);
+            RangeAnnotation rangeAnnotation = IntervalJoinRangeMapAnnotation(fexp);
+            RangeMap rangeMap = rangeAnnotation.getRangeMap();
             LOGGER.fine("Interval Join - Forward Scan");
             setIntervalForwardScanJoinOp(op, fi, sideLeft, sideRight, rangeMap, context);
         }
     }
 
-    private static RangeMap getRangeMap(ArrayBackedValueStorage abvs, int[] offset){
-        return new RangeMap(1, abvs.getByteArray(), offset);
+    private static RangeAnnotation IntervalJoinRangeMapAnnotation(AbstractFunctionCallExpression fexp) {
+        Iterator<IExpressionAnnotation> annotationIter = fexp.getAnnotations().values().iterator();
+        while (annotationIter.hasNext()) {
+            IExpressionAnnotation annotation = annotationIter.next();
+            if (annotation instanceof RangeAnnotation) {
+                return (RangeAnnotation) annotation;
+            }
+        }
+        return null;
     }
 
     private static IntervalJoinExpressionAnnotation getIntervalJoinAnnotation(AbstractFunctionCallExpression fexp) {
