@@ -53,7 +53,6 @@ import org.apache.hyracks.algebricks.core.algebra.operators.logical.OrderOperato
 import org.apache.hyracks.algebricks.core.algebra.operators.physical.AbstractJoinPOperator.JoinPartitioningType;
 import org.apache.hyracks.algebricks.core.algebra.operators.physical.AssignPOperator;
 import org.apache.hyracks.algebricks.core.algebra.properties.IntervalColumn;
-import org.apache.hyracks.data.std.util.ArrayBackedValueStorage;
 import org.apache.hyracks.dataflow.common.data.partition.range.RangeMap;
 
 public class AsterixJoinUtils {
@@ -99,14 +98,16 @@ public class AsterixJoinUtils {
         List<LogicalVariable> varsRight = op.getInputs().get(RIGHT).getValue().getSchema();
         AbstractFunctionCallExpression fexp = (AbstractFunctionCallExpression) conditionLE;
         FunctionIdentifier fi = isIntervalJoinCondition(fexp, varsLeft, varsRight, sideLeft, sideRight);
-        if (fi != null) {
-            ArrayBackedValueStorage abvs = new ArrayBackedValueStorage();
-            int[] offset = { 0 };
-            RangeAnnotation rangeAnnotation = IntervalJoinRangeMapAnnotation(fexp);
-            RangeMap rangeMap = rangeAnnotation.getRangeMap();
-            LOGGER.fine("Interval Join - Forward Scan");
-            setIntervalForwardScanJoinOp(op, fi, sideLeft, sideRight, rangeMap, context);
+        if (fi == null) {
+            return;
         }
+        RangeAnnotation rangeAnnotation = IntervalJoinRangeMapAnnotation(fexp);
+        if (rangeAnnotation == null) {
+            return;
+        }
+        RangeMap rangeMap = rangeAnnotation.getRangeMap();
+        LOGGER.fine("Interval Join - Forward Scan");
+        setIntervalForwardScanJoinOp(op, fi, sideLeft, sideRight, rangeMap, context);
     }
 
     private static RangeAnnotation IntervalJoinRangeMapAnnotation(AbstractFunctionCallExpression fexp) {
