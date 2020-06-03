@@ -25,7 +25,6 @@ import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
-import java.util.Map.Entry;
 import java.util.Set;
 import java.util.stream.Collectors;
 
@@ -226,6 +225,11 @@ public abstract class FormatPrintVisitor implements ILangVisitor<Void, Integer> 
                 callExpr.getFunctionSignature().getName()) + "(");
         printDelimitedExpressions(callExpr.getExprList(), COMMA, step);
         out.print(")");
+        if (callExpr.hasAggregateFilterExpr()) {
+            out.println(" FILTER ( WHERE ");
+            callExpr.getAggregateFilterExpr().accept(this, step + 1);
+            out.println(skip(step) + ")");
+        }
         return null;
     }
 
@@ -791,8 +795,8 @@ public abstract class FormatPrintVisitor implements ILangVisitor<Void, Integer> 
         out.print(this.generateFullName(cfs.getFunctionSignature().getDataverseName(),
                 cfs.getFunctionSignature().getName()));
         out.print("(");
-        printDelimitedStrings(cfs.getArgs().stream().map(v -> v.getFirst().getValue()).collect(Collectors.toList()),
-                COMMA);
+        printDelimitedStrings(
+                cfs.getParameters().stream().map(v -> v.getFirst().getValue()).collect(Collectors.toList()), COMMA);
         out.println(") {");
         out.println(cfs.getFunctionBody());
         out.println("}" + SEMICOLON);

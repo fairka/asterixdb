@@ -18,7 +18,7 @@
  */
 
 use test;
-select value v
+select value v.time
 from tsdata as v
 /*+ range [time('05:28:10.2'), time('12:28:10.2'), time('23:28:10.2')] */
 order by v.time;

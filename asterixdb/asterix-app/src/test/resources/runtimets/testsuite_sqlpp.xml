@@ -255,6 +255,11 @@
       </compilation-unit>
     </test-case>
     <test-case FilePath="sorting">
+      <compilation-unit name="range_hint">
+        <output-dir compare="Text">range_hint</output-dir>
+      </compilation-unit>
+    </test-case>
+    <test-case FilePath="sorting">
       <compilation-unit name="records">
         <output-dir compare="Text">records</output-dir>
       </compilation-unit>
@@ -2862,6 +2867,23 @@
       </compilation-unit>
     </test-case>
   </test-group>
+  <test-group name="aggregate-subclause">
+    <test-case FilePath="aggregate-subclause">
+      <compilation-unit name="agg_filter_01">
+        <output-dir compare="Text">agg_filter_01</output-dir>
+      </compilation-unit>
+    </test-case>
+    <test-case FilePath="aggregate-subclause">
+      <compilation-unit name="agg_filter_02_neg">
+        <output-dir compare="Text">agg_filter_01</output-dir>
+        <expected-error>ASX1116: Illegal use of aggregate FILTER clause</expected-error>
+        <expected-error>ASX1116: Illegal use of aggregate FILTER clause</expected-error>
+        <expected-error>ASX1073: Cannot resolve alias reference for undefined identifier r</expected-error>
+        <expected-error>ASX1116: Illegal use of aggregate FILTER clause</expected-error>
+        <expected-error>ASX1116: Illegal use of aggregate FILTER clause</expected-error>
+      </compilation-unit>
+    </test-case>
+  </test-group>
   <test-group name="array_fun">
     <test-case FilePath="array_fun">
       <compilation-unit name="array_prepend">
@@ -3948,6 +3970,12 @@
       <compilation-unit name="create-index-5">
         <output-dir compare="Text">create-index-5</output-dir>
         <expected-error>Syntax error: In line 53 >>create  primary index if exists sec_primary_idx1  on LineItem;&lt;&lt; Encountered "exists" at column 26.</expected-error>
+      </compilation-unit>
+    </test-case>
+    <test-case FilePath="ddl">
+      <compilation-unit name="bad-type-ddl">
+        <output-dir compare="Text">none</output-dir>
+        <expected-error>ASX1079: Compilation error: Reserved type name $x</expected-error>
       </compilation-unit>
     </test-case>
     <test-case FilePath="ddl">
@@ -5395,7 +5423,7 @@
     <test-case FilePath="global-aggregate">
       <compilation-unit name="q12_error">
         <output-dir compare="Text">q01</output-dir>
-        <expected-error>The parameter * can only be used in COUNT().</expected-error>
+        <expected-error>The parameter * can only be used in count().</expected-error>
       </compilation-unit>
     </test-case>
     <test-case FilePath="global-aggregate">
@@ -5600,14 +5628,14 @@
     <test-case FilePath="group-by">
       <compilation-unit name="grouping-sets-3-negative">
         <output-dir compare="Text">grouping-sets-2</output-dir>
-        <expected-error>ASX1113: Unexpected alias: v21</expected-error>
-        <expected-error>ASX1113: Unexpected alias: v22</expected-error>
-        <expected-error>ASX1113: Unexpected alias: v23</expected-error>
+        <expected-error>ASX1115: Unexpected alias: v21</expected-error>
+        <expected-error>ASX1115: Unexpected alias: v22</expected-error>
+        <expected-error>ASX1115: Unexpected alias: v23</expected-error>
         <expected-error>ASX1087: Invalid number of arguments for function grouping</expected-error>
-        <expected-error>ASX1112: Invalid argument to grouping() function</expected-error>
-        <expected-error>ASX1112: Invalid argument to grouping() function</expected-error>
-        <expected-error>ASX1112: Invalid argument to grouping() function</expected-error>
-        <expected-error>ASX1111: Too many grouping sets in group by clause: 512. Maximum allowed: 128.</expected-error>
+        <expected-error>ASX1114: Invalid argument to grouping() function</expected-error>
+        <expected-error>ASX1114: Invalid argument to grouping() function</expected-error>
+        <expected-error>ASX1114: Invalid argument to grouping() function</expected-error>
+        <expected-error>ASX1113: Too many grouping sets in group by clause: 512. Maximum allowed: 128.</expected-error>
       </compilation-unit>
     </test-case>
     <test-case FilePath="group-by">
@@ -11687,13 +11715,20 @@
     <test-case FilePath="user-defined-functions">
       <compilation-unit name="bad-function-ddl-9">
         <output-dir compare="Text">bad-function-ddl-9</output-dir>
-        <expected-error>function experiments.function_that_does_not_exist@0 is not defined</expected-error>
+        <expected-error>function experiments.function_that_does_not_exist@0 which is undefined</expected-error>
       </compilation-unit>
     </test-case>
     <test-case FilePath="user-defined-functions">
       <compilation-unit name="bad-function-ddl-10">
         <output-dir compare="Text">bad-function-ddl-10</output-dir>
-        <expected-error>function experiments.f0@2 is not defined</expected-error>
+        <expected-error>function experiments.f0@2 which is undefined</expected-error>
+      </compilation-unit>
+    </test-case>
+    <test-case FilePath="user-defined-functions">
+      <compilation-unit name="bad-function-ddl-11">
+        <output-dir compare="Text">bad-function-ddl-11</output-dir>
+        <expected-error>ASX1001: Syntax error: Unexpected type declaration for parameter a in function myfn001</expected-error>
+        <expected-error>ASX1001: Syntax error: Unexpected return type declaration for function myfn002</expected-error>
       </compilation-unit>
     </test-case>
     <test-case FilePath="user-defined-functions">
