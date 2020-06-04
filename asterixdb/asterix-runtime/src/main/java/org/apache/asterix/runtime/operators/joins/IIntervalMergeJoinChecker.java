@@ -22,7 +22,6 @@ import org.apache.asterix.om.pointables.nonvisitor.AIntervalPointable;
 import org.apache.hyracks.api.comm.IFrameTupleAccessor;
 import org.apache.hyracks.api.exceptions.HyracksDataException;
 import org.apache.hyracks.dataflow.std.buffermanager.ITupleAccessor;
-import org.apache.hyracks.dataflow.std.join.IMergeJoinChecker;
 
 public interface IIntervalMergeJoinChecker extends IMergeJoinChecker {
 

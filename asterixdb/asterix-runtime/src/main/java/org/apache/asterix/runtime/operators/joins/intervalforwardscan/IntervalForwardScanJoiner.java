@@ -136,6 +136,7 @@ public class IntervalForwardScanJoiner extends AbstractStreamJoiner {
     private static final Logger LOGGER = Logger.getLogger(IntervalForwardScanJoiner.class.getName());
 
     private final IPartitionedDeletableTupleBufferManager bufferManager;
+    private final IFrameWriter writer;
 
     private final ForwardScanActiveManager[] activeManager;
     private final ITupleAccessor[] memoryAccessor;
@@ -169,11 +170,12 @@ public class IntervalForwardScanJoiner extends AbstractStreamJoiner {
     private final boolean DEBUG = false;
 
     public IntervalForwardScanJoiner(IHyracksTaskContext ctx, IConsumerFrame leftCF, IConsumerFrame rightCF,
-            int memorySize, int partition, IIntervalMergeJoinCheckerFactory imjcf, int[] leftKeys, int[] rightKeys)
-            throws HyracksDataException {
+            int memorySize, int partition, IIntervalMergeJoinCheckerFactory imjcf, int[] leftKeys, int[] rightKeys,
+            IFrameWriter writer) throws HyracksDataException {
         super(ctx, partition, leftCF, rightCF);
         this.partition = partition;
         this.memorySize = memorySize;
+        this.writer = writer;
 
         this.imjc = imjcf.createMergeJoinChecker(leftKeys, rightKeys, ctx);
         this.imjcInverse = imjcf.createInverseMergeJoinChecker(leftKeys, rightKeys, ctx);
@@ -270,11 +272,7 @@ public class IntervalForwardScanJoiner extends AbstractStreamJoiner {
     }
 
     @Override
-    public void processJoin() {
-        //Do Nothing for now
-    }
-
-    public void processJoin(IFrameWriter writer) throws HyracksDataException {
+    public void processJoin() throws HyracksDataException {
         TupleStatus leftTs = loadTuple(LEFT_PARTITION);
         TupleStatus rightTs = loadTuple(RIGHT_PARTITION);
 

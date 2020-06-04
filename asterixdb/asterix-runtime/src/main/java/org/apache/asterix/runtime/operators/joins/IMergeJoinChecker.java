@@ -16,7 +16,7 @@
  * specific language governing permissions and limitations
  * under the License.
  */
-package org.apache.hyracks.dataflow.std.join;
+package org.apache.asterix.runtime.operators.joins;
 
 import java.io.Serializable;
 

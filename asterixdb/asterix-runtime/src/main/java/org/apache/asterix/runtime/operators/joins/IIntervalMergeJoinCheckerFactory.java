@@ -22,7 +22,6 @@ import java.io.Serializable;
 
 import org.apache.hyracks.api.context.IHyracksTaskContext;
 import org.apache.hyracks.api.exceptions.HyracksDataException;
-import org.apache.hyracks.dataflow.std.join.IMergeJoinCheckerFactory;
 
 public interface IIntervalMergeJoinCheckerFactory extends IMergeJoinCheckerFactory, Serializable {
 

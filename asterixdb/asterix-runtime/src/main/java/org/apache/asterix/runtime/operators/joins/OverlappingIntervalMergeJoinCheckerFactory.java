@@ -18,8 +18,8 @@
  */
 package org.apache.asterix.runtime.operators.joins;
 
+import org.apache.hyracks.algebricks.core.algebra.properties.IPartitioningProperty.PartitioningType;
 import org.apache.hyracks.api.context.IHyracksTaskContext;
-import org.apache.hyracks.api.dataflow.value.IRangePartitionType.RangePartitioningType;
 import org.apache.hyracks.api.exceptions.HyracksDataException;
 import org.apache.hyracks.dataflow.common.data.partition.range.RangeMap;
 
@@ -68,8 +68,8 @@ public class OverlappingIntervalMergeJoinCheckerFactory extends AbstractInterval
     }
 
     @Override
-    public RangePartitioningType getRightPartitioningType() {
-        return RangePartitioningType.SPLIT;
+    public PartitioningType getRightPartitioningType() {
+        return PartitioningType.PARTIAL_BROADCAST_ORDERED_INTERSECT;
     }
 
 }

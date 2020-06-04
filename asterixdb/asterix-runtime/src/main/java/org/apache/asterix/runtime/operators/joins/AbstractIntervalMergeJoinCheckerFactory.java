@@ -18,20 +18,20 @@
  */
 package org.apache.asterix.runtime.operators.joins;
 
-import org.apache.hyracks.api.dataflow.value.IRangePartitionType.RangePartitioningType;
+import org.apache.hyracks.algebricks.core.algebra.properties.IPartitioningProperty.PartitioningType;
 
 public abstract class AbstractIntervalMergeJoinCheckerFactory implements IIntervalMergeJoinCheckerFactory {
 
     private static final long serialVersionUID = 1L;
 
     @Override
-    public RangePartitioningType getLeftPartitioningType() {
-        return RangePartitioningType.SPLIT;
+    public PartitioningType getLeftPartitioningType() {
+        return PartitioningType.PARTIAL_BROADCAST_ORDERED_INTERSECT;
     }
 
     @Override
-    public RangePartitioningType getRightPartitioningType() {
-        return RangePartitioningType.PROJECT;
+    public PartitioningType getRightPartitioningType() {
+        return PartitioningType.ORDERED_PARTITIONED;
     }
 
     @Override

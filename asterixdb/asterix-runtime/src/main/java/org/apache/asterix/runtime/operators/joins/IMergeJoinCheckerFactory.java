@@ -16,12 +16,12 @@
  * specific language governing permissions and limitations
  * under the License.
  */
-package org.apache.hyracks.dataflow.std.join;
+package org.apache.asterix.runtime.operators.joins;
 
 import java.io.Serializable;
 
+import org.apache.hyracks.algebricks.core.algebra.properties.IPartitioningProperty.PartitioningType;
 import org.apache.hyracks.api.context.IHyracksTaskContext;
-import org.apache.hyracks.api.dataflow.value.IRangePartitionType.RangePartitioningType;
 import org.apache.hyracks.api.exceptions.HyracksDataException;
 
 public interface IMergeJoinCheckerFactory extends Serializable {
@@ -29,9 +29,9 @@ public interface IMergeJoinCheckerFactory extends Serializable {
     IMergeJoinChecker createMergeJoinChecker(int[] keys0, int[] keys1, IHyracksTaskContext ctx)
             throws HyracksDataException;
 
-    RangePartitioningType getLeftPartitioningType();
+    PartitioningType getLeftPartitioningType();
 
-    RangePartitioningType getRightPartitioningType();
+    PartitioningType getRightPartitioningType();
 
     boolean isOrderAsc();
 

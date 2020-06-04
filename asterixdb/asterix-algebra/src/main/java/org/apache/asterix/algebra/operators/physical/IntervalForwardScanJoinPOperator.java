@@ -41,6 +41,7 @@ import org.apache.hyracks.algebricks.core.jobgen.impl.JobGenContext;
 import org.apache.hyracks.algebricks.core.jobgen.impl.JobGenHelper;
 import org.apache.hyracks.api.dataflow.IOperatorDescriptor;
 import org.apache.hyracks.api.dataflow.value.RecordDescriptor;
+import org.apache.hyracks.api.exceptions.HyracksDataException;
 import org.apache.hyracks.api.job.IOperatorDescriptorRegistry;
 import org.apache.hyracks.dataflow.common.data.partition.range.RangeMap;
 
@@ -118,7 +119,7 @@ public class IntervalForwardScanJoinPOperator extends AbstractJoinPOperator {
 
     @Override
     public PhysicalRequirements getRequiredPropertiesForChildren(ILogicalOperator iop,
-            IPhysicalPropertiesVector reqdByParent, IOptimizationContext context) {
+            IPhysicalPropertiesVector reqdByParent, IOptimizationContext context) throws HyracksDataException{
         StructuralPropertiesVector[] pv = new StructuralPropertiesVector[2];
         AbstractLogicalOperator op = (AbstractLogicalOperator) iop;
 
@@ -132,10 +133,37 @@ public class IntervalForwardScanJoinPOperator extends AbstractJoinPOperator {
 
         if (op.getExecutionMode() == AbstractLogicalOperator.ExecutionMode.PARTITIONED) {
             INodeDomain targetNodeDomain = context.getComputationNodeDomain();
-            ppLeft = new PartialBroadcastOrderedIntersectProperty(intervalColumnLeft, targetNodeDomain, rangeMapHint);
-            ppRight = new PartialBroadcastOrderedIntersectProperty(intervalColumnRight, targetNodeDomain, rangeMapHint);
+            //Left Partition
+            switch (mjcf.getLeftPartitioningType()) {
+                case ORDERED_PARTITIONED:
+                    ppLeft = new OrderedPartitionedProperty(intervalColumnLeft, targetNodeDomain, rangeMapHint);
+                    break;
+                case PARTIAL_BROADCAST_ORDERED_FOLLOWING:
+                    ppLeft = new PartialBroadcastOrderedFollowingProperty(intervalColumnLeft, targetNodeDomain, rangeMapHint);
+                    break;
+                case PARTIAL_BROADCAST_ORDERED_INTERSECT:
+                    ppLeft = new PartialBroadcastOrderedIntersectProperty(intervalColumnLeft, targetNodeDomain, rangeMapHint);
+                    break;
+                default:
+                    //Do Nothing
+                    break;
+            }
+            //Right Partition
+            switch (mjcf.getRightPartitioningType()) {
+                case ORDERED_PARTITIONED:
+                    ppRight = new OrderedPartitionedProperty(intervalColumnRight, targetNodeDomain, rangeMapHint);
+                    break;
+                case PARTIAL_BROADCAST_ORDERED_FOLLOWING:
+                    ppRight = new PartialBroadcastOrderedFollowingProperty(intervalColumnRight, targetNodeDomain, rangeMapHint);
+                    break;
+                case PARTIAL_BROADCAST_ORDERED_INTERSECT:
+                    ppRight = new PartialBroadcastOrderedIntersectProperty(intervalColumnRight, targetNodeDomain, rangeMapHint);
+                    break;
+                default:
+                    //Do Nothing
+                    break;
+            }
         }
-
         pv[0] = new StructuralPropertiesVector(ppLeft, ispLeft);
         pv[1] = new StructuralPropertiesVector(ppRight, ispRight);
         IPartitioningRequirementsCoordinator prc = IPartitioningRequirementsCoordinator.NO_COORDINATION;
