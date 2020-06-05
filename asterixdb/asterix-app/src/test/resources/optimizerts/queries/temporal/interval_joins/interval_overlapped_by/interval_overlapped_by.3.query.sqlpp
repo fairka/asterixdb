@@ -45,4 +45,6 @@ primary key name;
 
 select element { "staff" : f.name, "student" : d.name }
 from Staff as f, Students as d
-where interval_overlapped_by(f.employment, d.attendance);
+where
+/*+ range [date("2003-06-30"), date("2005-12-31"), date("2008-06-30")] */
+interval_overlapped_by(f.employment, d.attendance);
