@@ -318,8 +318,6 @@ public class RemoveUnusedAssignAndAggregateRule implements IAlgebraicRewriteRule
                 LogicalVariable v = varIter.next();
                 exprIter.next();
                 if (toRemove.contains(v)) {
-                    varIter.remove();
-                    exprIter.remove();
                     assignedVarSet.remove(v);
                     changed = true;
                 }

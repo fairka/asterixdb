@@ -1,21 +1,66 @@
+distribute result [$$27]
 -- DISTRIBUTE_RESULT  |PARTITIONED|
+  exchange
   -- ONE_TO_ONE_EXCHANGE  |PARTITIONED|
+    project ([$$27])
     -- STREAM_PROJECT  |PARTITIONED|
+      assign [$$27] <- [{"staff": $$28, "student": $$29}]
       -- ASSIGN  |PARTITIONED|
-        -- STREAM_PROJECT  |PARTITIONED|
-          -- ONE_TO_ONE_EXCHANGE  |PARTITIONED|
-            -- NESTED_LOOP  |PARTITIONED|
-              -- ONE_TO_ONE_EXCHANGE  |PARTITIONED|
-                -- STREAM_PROJECT  |PARTITIONED|
-                  -- ASSIGN  |PARTITIONED|
-                    -- ONE_TO_ONE_EXCHANGE  |PARTITIONED|
-                      -- DATASOURCE_SCAN  |PARTITIONED|
-                        -- ONE_TO_ONE_EXCHANGE  |PARTITIONED|
-                          -- EMPTY_TUPLE_SOURCE  |PARTITIONED|
-              -- BROADCAST_EXCHANGE  |PARTITIONED|
-                -- STREAM_PROJECT  |PARTITIONED|
-                  -- ASSIGN  |PARTITIONED|
-                    -- ONE_TO_ONE_EXCHANGE  |PARTITIONED|
-                      -- DATASOURCE_SCAN  |PARTITIONED|
-                        -- ONE_TO_ONE_EXCHANGE  |PARTITIONED|
-                          -- EMPTY_TUPLE_SOURCE  |PARTITIONED|
+        exchange
+        -- ONE_TO_ONE_EXCHANGE  |PARTITIONED|
+          join (interval-covered-by($$28, $$29))
+          -- INTERVAL_FORWARD_SCAN_JOIN [$$28] [$$29]  |PARTITIONED|
+            exchange
+            -- ONE_TO_ONE_EXCHANGE  |PARTITIONED|
+              order (ASC, $$28)
+              -- STABLE_SORT [$$28(ASC)]  |PARTITIONED|
+                exchange
+                -- ONE_TO_ONE_EXCHANGE  |PARTITIONED|
+                  project ([$$28])
+                  -- STREAM_PROJECT  |PARTITIONED|
+                    exchange
+                    -- RANGE_PARTITION_EXCHANGE [$$32(ASC)] RANGE_MAP:{SPLIT:3}  |PARTITIONED|
+                      project ([$$28, $$32])
+                      -- STREAM_PROJECT  |PARTITIONED|
+                        assign [$$32, $$33] <- [get-interval-start($$28), get-interval-end($$28)]
+                        -- ASSIGN  |PARTITIONED|
+                          project ([$$28])
+                          -- STREAM_PROJECT  |PARTITIONED|
+                            assign [$$28] <- [$$f.getField(2)]
+                            -- ASSIGN  |PARTITIONED|
+                              project ([$$f])
+                              -- STREAM_PROJECT  |PARTITIONED|
+                                exchange
+                                -- ONE_TO_ONE_EXCHANGE  |PARTITIONED|
+                                  data-scan []<-[$$30, $$f] <- TinyCollege.Staff
+                                  -- DATASOURCE_SCAN  |PARTITIONED|
+                                    exchange
+                                    -- ONE_TO_ONE_EXCHANGE  |PARTITIONED|
+                                      empty-tuple-source
+                                      -- EMPTY_TUPLE_SOURCE  |PARTITIONED|
+            exchange
+            -- ONE_TO_ONE_EXCHANGE  |PARTITIONED|
+              order (ASC, $$29)
+              -- STABLE_SORT [$$29(ASC)]  |PARTITIONED|
+                exchange
+                -- ONE_TO_ONE_EXCHANGE  |PARTITIONED|
+                  project ([$$29])
+                  -- STREAM_PROJECT  |PARTITIONED|
+                    exchange
+                    -- PARTIAL_BROADCAST_RANGE_INTERSECT_EXCHANGE [{$$34,$$35,ASC}] RANGE_MAP:{SPLIT:3}  |PARTITIONED|
+                      assign [$$34, $$35] <- [get-interval-start($$29), get-interval-end($$29)]
+                      -- ASSIGN  |PARTITIONED|
+                        project ([$$29])
+                        -- STREAM_PROJECT  |PARTITIONED|
+                          assign [$$29] <- [$$d.getField(2)]
+                          -- ASSIGN  |PARTITIONED|
+                            project ([$$d])
+                            -- STREAM_PROJECT  |PARTITIONED|
+                              exchange
+                              -- ONE_TO_ONE_EXCHANGE  |PARTITIONED|
+                                data-scan []<-[$$31, $$d] <- TinyCollege.Students
+                                -- DATASOURCE_SCAN  |PARTITIONED|
+                                  exchange
+                                  -- ONE_TO_ONE_EXCHANGE  |PARTITIONED|
+                                    empty-tuple-source
+                                    -- EMPTY_TUPLE_SOURCE  |PARTITIONED|
