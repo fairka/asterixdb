@@ -35,9 +35,12 @@ public class MeetsIntervalMergeJoinCheckerFactory extends AbstractIntervalMergeJ
     }
 
     @Override
-    //RangePartitioningType.PROJECT_END
     public PartitioningType getLeftPartitioningType() {
         return PartitioningType.ORDERED_PARTITIONED;
     }
 
+    @Override
+    public boolean isOrderAsc() {
+        return false;
+    }
 }

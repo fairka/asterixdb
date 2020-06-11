@@ -35,8 +35,12 @@ public class MetByIntervalMergeJoinCheckerFactory extends AbstractIntervalInvers
     }
 
     @Override
-    //PartitioningType Project_END?
     public PartitioningType getRightPartitioningType() {
         return PartitioningType.ORDERED_PARTITIONED;
+    }
+
+    @Override
+    public boolean isOrderAsc() {
+        return false;
     }
 }

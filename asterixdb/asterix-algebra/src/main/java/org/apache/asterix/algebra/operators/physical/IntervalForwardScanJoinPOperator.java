@@ -19,6 +19,7 @@
 package org.apache.asterix.algebra.operators.physical;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.logging.Logger;
 
@@ -132,13 +133,25 @@ public class IntervalForwardScanJoinPOperator extends AbstractJoinPOperator {
 
         if (op.getExecutionMode() == AbstractLogicalOperator.ExecutionMode.PARTITIONED) {
             INodeDomain targetNodeDomain = context.getComputationNodeDomain();
+
+            //Get Order Column
+            IntervalColumn leftIntervalColumn = intervalColumnLeft.get(0);
+            IntervalColumn rightIntervalColumn = intervalColumnRight.get(0);
+            LogicalVariable leftColumn = leftIntervalColumn.getStartColumn();
+            LogicalVariable rightStartColumn = rightIntervalColumn.getStartColumn();
+            List<OrderColumn> leftOrderColumn =
+                    Arrays.asList(new OrderColumn(leftColumn, mjcf.isOrderAsc() ? OrderKind.ASC : OrderKind.DESC));
+            List<OrderColumn> rightOrderColumn = Arrays
+                    .asList(new OrderColumn(rightStartColumn, mjcf.isOrderAsc() ? OrderKind.ASC : OrderKind.DESC));
+
             //Left Partition
             switch (mjcf.getLeftPartitioningType()) {
                 case ORDERED_PARTITIONED:
-                    //ppLeft = new OrderedPartitionedProperty(intervalColumnLeft, targetNodeDomain, rangeMapHint);
+                    ppLeft = new OrderedPartitionedProperty(leftOrderColumn, targetNodeDomain, rangeMapHint);
                     break;
                 case PARTIAL_BROADCAST_ORDERED_FOLLOWING:
-                    //ppLeft = new PartialBroadcastOrderedFollowingProperty(intervalColumnLeft, targetNodeDomain, rangeMapHint);
+                    ppLeft = new PartialBroadcastOrderedFollowingProperty(leftOrderColumn, targetNodeDomain,
+                            rangeMapHint);
                     break;
                 case PARTIAL_BROADCAST_ORDERED_INTERSECT:
                     ppLeft = new PartialBroadcastOrderedIntersectProperty(intervalColumnLeft, targetNodeDomain,
@@ -151,10 +164,11 @@ public class IntervalForwardScanJoinPOperator extends AbstractJoinPOperator {
             //Right Partition
             switch (mjcf.getRightPartitioningType()) {
                 case ORDERED_PARTITIONED:
-                    ppRight = new OrderedPartitionedProperty(intervalColumnRight, targetNodeDomain, rangeMapHint);
+                    ppRight = new OrderedPartitionedProperty(rightOrderColumn, targetNodeDomain, rangeMapHint);
                     break;
                 case PARTIAL_BROADCAST_ORDERED_FOLLOWING:
-                    ppRight = new PartialBroadcastOrderedFollowingProperty(intervalColumnRight, targetNodeDomain, rangeMapHint);
+                    ppRight = new PartialBroadcastOrderedFollowingProperty(rightOrderColumn, targetNodeDomain,
+                            rangeMapHint);
                     break;
                 case PARTIAL_BROADCAST_ORDERED_INTERSECT:
                     ppRight = new PartialBroadcastOrderedIntersectProperty(intervalColumnRight, targetNodeDomain,
@@ -164,8 +178,6 @@ public class IntervalForwardScanJoinPOperator extends AbstractJoinPOperator {
                     //Do Nothing
                     break;
             }
-            //ppLeft = new PartialBroadcastOrderedIntersectProperty(intervalColumnLeft, targetNodeDomain, rangeMapHint);
-            //ppRight = new PartialBroadcastOrderedIntersectProperty(intervalColumnRight, targetNodeDomain, rangeMapHint);
         }
         pv[0] = new StructuralPropertiesVector(ppLeft, ispLeft);
         pv[1] = new StructuralPropertiesVector(ppRight, ispRight);
