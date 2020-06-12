@@ -58,16 +58,18 @@ public class AsterixJoinUtils {
         List<LogicalVariable> varsRight = op.getInputs().get(RIGHT).getValue().getSchema();
         AbstractFunctionCallExpression fexp = (AbstractFunctionCallExpression) conditionLE;
         FunctionIdentifier fi =
-                AsterixIntervalJoinUtils.isIntervalJoinCondition(fexp, varsLeft, varsRight, sideLeft, sideRight);
+                IntervalJoinUtils.isIntervalJoinCondition(fexp, varsLeft, varsRight, sideLeft, sideRight);
         if (fi == null) {
             return;
         }
-        RangeAnnotation rangeAnnotation = AsterixIntervalJoinUtils.IntervalJoinRangeMapAnnotation(fexp);
+        RangeAnnotation rangeAnnotation = IntervalJoinUtils.IntervalJoinRangeMapAnnotation(fexp);
         if (rangeAnnotation == null) {
             return;
         }
         RangeMap rangeMap = rangeAnnotation.getRangeMap();
         LOGGER.fine("Interval Join - Forward Scan");
-        AsterixIntervalJoinUtils.setIntervalForwardScanJoinOp(op, fi, sideLeft, sideRight, rangeMap, context);
+        IntervalPartitions intervalPartitions =
+                IntervalJoinUtils.getIntervalPartitions(op, fi, sideLeft, sideRight, rangeMap, context);
+        IntervalJoinUtils.setIntervalForwardScanJoinOp(op, fi, sideLeft, sideRight, context, intervalPartitions);
     }
 }

@@ -64,17 +64,18 @@ import org.apache.hyracks.algebricks.core.algebra.operators.logical.AssignOperat
 import org.apache.hyracks.algebricks.core.algebra.operators.logical.OrderOperator;
 import org.apache.hyracks.algebricks.core.algebra.operators.physical.AbstractJoinPOperator;
 import org.apache.hyracks.algebricks.core.algebra.operators.physical.AssignPOperator;
+import org.apache.hyracks.algebricks.core.algebra.properties.IPartitioningProperty.PartitioningType;
 import org.apache.hyracks.algebricks.core.algebra.properties.IntervalColumn;
 import org.apache.hyracks.dataflow.common.data.partition.range.RangeMap;
 
-public class AsterixIntervalJoinUtils {
+public class IntervalJoinUtils {
 
     private static final int LEFT = 0;
     private static final int RIGHT = 1;
 
     private static final Map<FunctionIdentifier, FunctionIdentifier> INTERVAL_JOIN_CONDITIONS = new HashMap<>();
 
-    AsterixIntervalJoinUtils() {
+    IntervalJoinUtils() {
     }
 
     static {
@@ -105,6 +106,17 @@ public class AsterixIntervalJoinUtils {
     }
 
     protected static void setIntervalForwardScanJoinOp(AbstractBinaryJoinOperator op, FunctionIdentifier fi,
+            List<LogicalVariable> sideLeft, List<LogicalVariable> sideRight, IOptimizationContext context,
+            IntervalPartitions intervalPartitions) {
+
+        IIntervalMergeJoinCheckerFactory mjcf =
+                getIntervalMergeJoinCheckerFactory(fi, intervalPartitions.getRangeMap());
+        op.setPhysicalOperator(new IntervalForwardScanJoinPOperator(op.getJoinKind(),
+                AbstractJoinPOperator.JoinPartitioningType.BROADCAST, sideLeft, sideRight,
+                context.getPhysicalOptimizationConfig().getMaxFramesForJoin(), mjcf, intervalPartitions));
+    }
+
+    protected static IntervalPartitions getIntervalPartitions(AbstractBinaryJoinOperator op, FunctionIdentifier fi,
             List<LogicalVariable> sideLeft, List<LogicalVariable> sideRight, RangeMap rangeMap,
             IOptimizationContext context) throws AlgebricksException {
 
@@ -118,27 +130,39 @@ public class AsterixIntervalJoinUtils {
         List<IntervalColumn> rightIC = Arrays.asList(new IntervalColumn(rightPartitionVar.get(0),
                 rightPartitionVar.get(1), OrderOperator.IOrder.OrderKind.ASC));
 
-        IIntervalMergeJoinCheckerFactory mjcf = getIntervalMergeJoinCheckerFactory(fi, rangeMap);
-        op.setPhysicalOperator(new IntervalForwardScanJoinPOperator(op.getJoinKind(),
-                AbstractJoinPOperator.JoinPartitioningType.BROADCAST, sideLeft, sideRight,
-                context.getPhysicalOptimizationConfig().getMaxFramesForJoin(), mjcf, rangeMap, leftIC, rightIC));
+        //If statement for partitioning types
+        PartitioningType leftPartitioningType = PartitioningType.ORDERED_PARTITIONED;
+        PartitioningType rightPartitioningType = PartitioningType.PARTIAL_BROADCAST_ORDERED_INTERSECT;
+        if (fi.equals(BuiltinFunctions.INTERVAL_OVERLAPPED_BY)) {
+            //default
+        } else if (fi.equals(BuiltinFunctions.INTERVAL_OVERLAPS)) {
+            //default
+        } else if (fi.equals(BuiltinFunctions.INTERVAL_OVERLAPPING)) {
+            //default
+        } else if (fi.equals(BuiltinFunctions.INTERVAL_COVERS)) {
+            //default
+        } else if (fi.equals(BuiltinFunctions.INTERVAL_COVERED_BY)) {
+            //default
+        } else if (fi.equals(BuiltinFunctions.INTERVAL_STARTS)) {
+            //default
+        } else if (fi.equals(BuiltinFunctions.INTERVAL_STARTED_BY)) {
+            rightPartitioningType = PartitioningType.ORDERED_PARTITIONED;
+        } else if (fi.equals(BuiltinFunctions.INTERVAL_ENDS)) {
+            //default
+        } else if (fi.equals(BuiltinFunctions.INTERVAL_ENDED_BY)) {
+            rightPartitioningType = PartitioningType.ORDERED_PARTITIONED;
+        } else if (fi.equals(BuiltinFunctions.INTERVAL_MEETS)) {
+            //default
+        } else if (fi.equals(BuiltinFunctions.INTERVAL_MET_BY)) {
+            rightPartitioningType = PartitioningType.ORDERED_PARTITIONED;
+        } else if (fi.equals(BuiltinFunctions.INTERVAL_BEFORE)) {
+            leftPartitioningType = PartitioningType.PARTIAL_BROADCAST_ORDERED_FOLLOWING;
+            rightPartitioningType = PartitioningType.ORDERED_PARTITIONED;
+        } else if (fi.equals(BuiltinFunctions.INTERVAL_AFTER)) {
+            rightPartitioningType = PartitioningType.PARTIAL_BROADCAST_ORDERED_FOLLOWING;
+        }
+        return new IntervalPartitions(rangeMap, leftIC, rightIC, leftPartitioningType, rightPartitioningType);
     }
-
-    //    private static IntervalParitions getIntervalPartitions(){
-    //        List<LogicalVariable> leftPartitionVar = Arrays.asList(context.newVar(), context.newVar());
-    //        List<LogicalVariable> rightPartitionVar = Arrays.asList(context.newVar(), context.newVar());
-    //        insertPartitionSortKey(op, LEFT, leftPartitionVar, sideLeft.get(0), context);
-    //        insertPartitionSortKey(op, RIGHT, rightPartitionVar, sideRight.get(0), context);
-    //
-    //        List<IntervalColumn> leftIC = Arrays.asList(new IntervalColumn(leftPartitionVar.get(0), leftPartitionVar.get(1),
-    //                OrderOperator.IOrder.OrderKind.ASC));
-    //        List<IntervalColumn> rightIC = Arrays.asList(new IntervalColumn(rightPartitionVar.get(0),
-    //                rightPartitionVar.get(1), OrderOperator.IOrder.OrderKind.ASC));
-    //
-    //        //If statement
-    //
-    //        return null;
-    //    }
 
     protected static FunctionIdentifier isIntervalJoinCondition(ILogicalExpression e,
             Collection<LogicalVariable> inLeftAll, Collection<LogicalVariable> inRightAll,

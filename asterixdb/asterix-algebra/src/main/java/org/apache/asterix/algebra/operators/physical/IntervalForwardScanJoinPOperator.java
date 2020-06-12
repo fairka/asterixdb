@@ -23,6 +23,7 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.logging.Logger;
 
+import org.apache.asterix.optimizer.rules.util.IntervalPartitions;
 import org.apache.asterix.runtime.operators.joins.IIntervalMergeJoinCheckerFactory;
 import org.apache.asterix.runtime.operators.joins.intervalforwardscan.IntervalForwardScanJoinOperatorDescriptor;
 import org.apache.hyracks.algebricks.common.exceptions.AlgebricksException;
@@ -61,24 +62,19 @@ public class IntervalForwardScanJoinPOperator extends AbstractJoinPOperator {
     private final List<LogicalVariable> keysLeftBranch;
     private final List<LogicalVariable> keysRightBranch;
     protected final IIntervalMergeJoinCheckerFactory mjcf;
-    private final RangeMap rangeMapHint;
-    private final List<IntervalColumn> intervalColumnLeft;
-    private final List<IntervalColumn> intervalColumnRight;
+    protected final IntervalPartitions intervalPartitions;
 
     private final int memSizeInFrames;
     private static final Logger LOGGER = Logger.getLogger(IntervalForwardScanJoinPOperator.class.getName());
 
     public IntervalForwardScanJoinPOperator(JoinKind kind, JoinPartitioningType partitioningType,
             List<LogicalVariable> sideLeftOfEqualities, List<LogicalVariable> sideRightOfEqualities,
-            int memSizeInFrames, IIntervalMergeJoinCheckerFactory mjcf, RangeMap rangeMapHint,
-            List<IntervalColumn> intervalColumnLeft, List<IntervalColumn> intervalColumnRight) {
+            int memSizeInFrames, IIntervalMergeJoinCheckerFactory mjcf, IntervalPartitions intervalPartitions) {
         super(kind, partitioningType);
         this.keysLeftBranch = sideLeftOfEqualities;
         this.keysRightBranch = sideRightOfEqualities;
         this.mjcf = mjcf;
-        this.rangeMapHint = rangeMapHint;
-        this.intervalColumnLeft = intervalColumnLeft;
-        this.intervalColumnRight = intervalColumnRight;
+        this.intervalPartitions = intervalPartitions;
         this.memSizeInFrames = memSizeInFrames;
 
         LOGGER.fine("IntervalForwardScanJoinPOperator constructed with: JoinKind=" + kind + ", JoinPartitioningType="
@@ -100,7 +96,7 @@ public class IntervalForwardScanJoinPOperator extends AbstractJoinPOperator {
     }
 
     public RangeMap getRangeMapHint() {
-        return rangeMapHint;
+        return intervalPartitions.getRangeMap();
     }
 
     @Override
@@ -122,7 +118,7 @@ public class IntervalForwardScanJoinPOperator extends AbstractJoinPOperator {
     public void computeDeliveredProperties(ILogicalOperator iop, IOptimizationContext context) {
         ArrayList<OrderColumn> order = getLeftRangeOrderColumn();
 
-        IPartitioningProperty pp = new OrderedPartitionedProperty(order, null, rangeMapHint);
+        IPartitioningProperty pp = new OrderedPartitionedProperty(order, null, intervalPartitions.getRangeMap());
         List<ILocalStructuralProperty> propsLocal = new ArrayList<>();
         propsLocal.add(new LocalOrderProperty(getLeftLocalSortOrderColumn()));
         deliveredProperties = new StructuralPropertiesVector(pp, propsLocal);
@@ -145,9 +141,11 @@ public class IntervalForwardScanJoinPOperator extends AbstractJoinPOperator {
         if (op.getExecutionMode() == AbstractLogicalOperator.ExecutionMode.PARTITIONED) {
             INodeDomain targetNodeDomain = context.getComputationNodeDomain();
 
+            RangeMap rangeMapHint = intervalPartitions.getRangeMap();
+
             //Get Order Column
-            IntervalColumn leftIntervalColumn = intervalColumnLeft.get(0);
-            IntervalColumn rightIntervalColumn = intervalColumnRight.get(0);
+            IntervalColumn leftIntervalColumn = intervalPartitions.getLeftIntervalColumn().get(0);
+            IntervalColumn rightIntervalColumn = intervalPartitions.getRightIntervalColumn().get(0);
             LogicalVariable leftColumn = leftIntervalColumn.getStartColumn();
             LogicalVariable rightStartColumn = rightIntervalColumn.getStartColumn();
             List<OrderColumn> leftOrderColumn =
@@ -156,7 +154,7 @@ public class IntervalForwardScanJoinPOperator extends AbstractJoinPOperator {
                     .asList(new OrderColumn(rightStartColumn, mjcf.isOrderAsc() ? OrderKind.ASC : OrderKind.DESC));
 
             //Left Partition
-            switch (mjcf.getLeftPartitioningType()) {
+            switch (intervalPartitions.getLeftPartitioningType()) {
                 case ORDERED_PARTITIONED:
                     ppLeft = new OrderedPartitionedProperty(leftOrderColumn, targetNodeDomain, rangeMapHint);
                     break;
@@ -165,15 +163,15 @@ public class IntervalForwardScanJoinPOperator extends AbstractJoinPOperator {
                             rangeMapHint);
                     break;
                 case PARTIAL_BROADCAST_ORDERED_INTERSECT:
-                    ppLeft = new PartialBroadcastOrderedIntersectProperty(intervalColumnLeft, targetNodeDomain,
-                            rangeMapHint);
+                    ppLeft = new PartialBroadcastOrderedIntersectProperty(intervalPartitions.getLeftIntervalColumn(),
+                            targetNodeDomain, rangeMapHint);
                     break;
                 default:
                     //Do Nothing
                     break;
             }
             //Right Partition
-            switch (mjcf.getRightPartitioningType()) {
+            switch (intervalPartitions.getRightPartitioningType()) {
                 case ORDERED_PARTITIONED:
                     ppRight = new OrderedPartitionedProperty(rightOrderColumn, targetNodeDomain, rangeMapHint);
                     break;
@@ -182,8 +180,8 @@ public class IntervalForwardScanJoinPOperator extends AbstractJoinPOperator {
                             rangeMapHint);
                     break;
                 case PARTIAL_BROADCAST_ORDERED_INTERSECT:
-                    ppRight = new PartialBroadcastOrderedIntersectProperty(intervalColumnRight, targetNodeDomain,
-                            rangeMapHint);
+                    ppRight = new PartialBroadcastOrderedIntersectProperty(intervalPartitions.getRightIntervalColumn(),
+                            targetNodeDomain, rangeMapHint);
                     break;
                 default:
                     //Do Nothing
