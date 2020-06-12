@@ -39,8 +39,4 @@ public class MetByIntervalMergeJoinCheckerFactory extends AbstractIntervalInvers
         return PartitioningType.ORDERED_PARTITIONED;
     }
 
-    @Override
-    public boolean isOrderAsc() {
-        return false;
-    }
 }
