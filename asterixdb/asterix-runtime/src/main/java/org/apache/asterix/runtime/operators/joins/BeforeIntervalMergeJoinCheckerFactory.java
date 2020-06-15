@@ -18,7 +18,6 @@
  */
 package org.apache.asterix.runtime.operators.joins;
 
-import org.apache.hyracks.algebricks.core.algebra.properties.IPartitioningProperty.PartitioningType;
 import org.apache.hyracks.api.context.IHyracksTaskContext;
 
 public class BeforeIntervalMergeJoinCheckerFactory extends AbstractIntervalMergeJoinCheckerFactory {
@@ -33,15 +32,4 @@ public class BeforeIntervalMergeJoinCheckerFactory extends AbstractIntervalMerge
     public IIntervalMergeJoinChecker createInverseMergeJoinChecker(int[] keys0, int[] keys1, IHyracksTaskContext ctx) {
         return new AfterIntervalMergeJoinChecker(keys0, keys1);
     }
-
-    @Override
-    public PartitioningType getLeftPartitioningType() {
-        return PartitioningType.PARTIAL_BROADCAST_ORDERED_FOLLOWING;
-    }
-
-    @Override
-    public PartitioningType getRightPartitioningType() {
-        return PartitioningType.ORDERED_PARTITIONED;
-    }
-
 }

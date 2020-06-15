@@ -131,34 +131,36 @@ public class IntervalJoinUtils {
                 rightPartitionVar.get(1), OrderOperator.IOrder.OrderKind.ASC));
 
         //If statement for partitioning types
-        PartitioningType leftPartitioningType = PartitioningType.ORDERED_PARTITIONED;
-        PartitioningType rightPartitioningType = PartitioningType.PARTIAL_BROADCAST_ORDERED_INTERSECT;
+        PartitioningType leftPartitioningType = PartitioningType.PARTIAL_BROADCAST_ORDERED_INTERSECT;
+        PartitioningType rightPartitioningType = PartitioningType.ORDERED_PARTITIONED;
         if (fi.equals(BuiltinFunctions.INTERVAL_OVERLAPPED_BY)) {
-            //default
+            leftPartitioningType = PartitioningType.ORDERED_PARTITIONED;
+            rightPartitioningType = PartitioningType.PARTIAL_BROADCAST_ORDERED_INTERSECT;
         } else if (fi.equals(BuiltinFunctions.INTERVAL_OVERLAPS)) {
             //default
         } else if (fi.equals(BuiltinFunctions.INTERVAL_OVERLAPPING)) {
-            //default
+            rightPartitioningType = PartitioningType.PARTIAL_BROADCAST_ORDERED_INTERSECT;
         } else if (fi.equals(BuiltinFunctions.INTERVAL_COVERS)) {
             //default
         } else if (fi.equals(BuiltinFunctions.INTERVAL_COVERED_BY)) {
-            //default
+            leftPartitioningType = PartitioningType.ORDERED_PARTITIONED;
+            rightPartitioningType = PartitioningType.PARTIAL_BROADCAST_ORDERED_INTERSECT;
         } else if (fi.equals(BuiltinFunctions.INTERVAL_STARTS)) {
-            //default
+            leftPartitioningType = PartitioningType.ORDERED_PARTITIONED;
         } else if (fi.equals(BuiltinFunctions.INTERVAL_STARTED_BY)) {
-            rightPartitioningType = PartitioningType.ORDERED_PARTITIONED;
+            //default
         } else if (fi.equals(BuiltinFunctions.INTERVAL_ENDS)) {
-            //default
+            leftPartitioningType = PartitioningType.ORDERED_PARTITIONED;
         } else if (fi.equals(BuiltinFunctions.INTERVAL_ENDED_BY)) {
-            rightPartitioningType = PartitioningType.ORDERED_PARTITIONED;
+            //Default
         } else if (fi.equals(BuiltinFunctions.INTERVAL_MEETS)) {
-            //default
+            leftPartitioningType = PartitioningType.ORDERED_PARTITIONED;
         } else if (fi.equals(BuiltinFunctions.INTERVAL_MET_BY)) {
             rightPartitioningType = PartitioningType.ORDERED_PARTITIONED;
         } else if (fi.equals(BuiltinFunctions.INTERVAL_BEFORE)) {
             leftPartitioningType = PartitioningType.PARTIAL_BROADCAST_ORDERED_FOLLOWING;
-            rightPartitioningType = PartitioningType.ORDERED_PARTITIONED;
         } else if (fi.equals(BuiltinFunctions.INTERVAL_AFTER)) {
+            leftPartitioningType = PartitioningType.ORDERED_PARTITIONED;
             rightPartitioningType = PartitioningType.PARTIAL_BROADCAST_ORDERED_FOLLOWING;
         }
         return new IntervalPartitions(rangeMap, leftIC, rightIC, leftPartitioningType, rightPartitioningType);

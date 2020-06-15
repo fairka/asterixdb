@@ -20,7 +20,6 @@ package org.apache.asterix.runtime.operators.joins;
 
 import java.io.Serializable;
 
-import org.apache.hyracks.algebricks.core.algebra.properties.IPartitioningProperty.PartitioningType;
 import org.apache.hyracks.api.context.IHyracksTaskContext;
 import org.apache.hyracks.api.exceptions.HyracksDataException;
 
@@ -28,10 +27,6 @@ public interface IMergeJoinCheckerFactory extends Serializable {
 
     IMergeJoinChecker createMergeJoinChecker(int[] keys0, int[] keys1, IHyracksTaskContext ctx)
             throws HyracksDataException;
-
-    PartitioningType getLeftPartitioningType();
-
-    PartitioningType getRightPartitioningType();
 
     boolean isOrderAsc();
 
