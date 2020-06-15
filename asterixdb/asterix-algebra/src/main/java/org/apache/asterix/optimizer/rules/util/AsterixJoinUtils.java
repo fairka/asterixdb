@@ -52,6 +52,7 @@ public class AsterixJoinUtils {
         if (conditionLE.getExpressionTag() != LogicalExpressionTag.FUNCTION_CALL) {
             return;
         }
+        //Don't used linked list
         List<LogicalVariable> sideLeft = new LinkedList<>();
         List<LogicalVariable> sideRight = new LinkedList<>();
         List<LogicalVariable> varsLeft = op.getInputs().get(LEFT).getValue().getSchema();

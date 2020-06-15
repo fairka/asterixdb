@@ -318,15 +318,10 @@ public class RemoveUnusedAssignAndAggregateRule implements IAlgebraicRewriteRule
                 LogicalVariable v = varIter.next();
                 exprIter.next();
                 if (toRemove.contains(v)) {
-                    //Needs Fixing
-                    if (varIter.getClass().getName().equals("java.util.Arrays$ArrayItr")) {
-                        //Do nothing. Need a remove for ArrayItr?
-                    } else {
-                        varIter.remove();
-                        exprIter.remove();
-                        assignedVarSet.remove(v);
-                        changed = true;
-                    }
+                    varIter.remove();
+                    exprIter.remove();
+                    assignedVarSet.remove(v);
+                    changed = true;
                 }
             }
         }

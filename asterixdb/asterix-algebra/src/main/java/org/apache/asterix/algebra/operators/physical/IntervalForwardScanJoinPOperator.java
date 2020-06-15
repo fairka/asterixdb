@@ -148,6 +148,9 @@ public class IntervalForwardScanJoinPOperator extends AbstractJoinPOperator {
             IntervalColumn rightIntervalColumn = intervalPartitions.getRightIntervalColumn().get(0);
             LogicalVariable leftColumn = leftIntervalColumn.getStartColumn();
             LogicalVariable rightStartColumn = rightIntervalColumn.getStartColumn();
+            //Change to an Array list
+            //List<OrderColumn> leftOrderColumn = new ArrayList<>(1);
+
             List<OrderColumn> leftOrderColumn =
                     Arrays.asList(new OrderColumn(leftColumn, mjcf.isOrderAsc() ? OrderKind.ASC : OrderKind.DESC));
             List<OrderColumn> rightOrderColumn = Arrays

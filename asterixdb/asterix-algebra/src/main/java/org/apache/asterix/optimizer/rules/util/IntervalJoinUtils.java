@@ -120,8 +120,15 @@ public class IntervalJoinUtils {
             List<LogicalVariable> sideLeft, List<LogicalVariable> sideRight, RangeMap rangeMap,
             IOptimizationContext context) throws AlgebricksException {
 
-        List<LogicalVariable> leftPartitionVar = Arrays.asList(context.newVar(), context.newVar());
-        List<LogicalVariable> rightPartitionVar = Arrays.asList(context.newVar(), context.newVar());
+        List<LogicalVariable> leftPartitionVar = new ArrayList<>(2);
+        leftPartitionVar.add(context.newVar());
+        leftPartitionVar.add(context.newVar());
+        List<LogicalVariable> rightPartitionVar = new ArrayList<>(2);
+        rightPartitionVar.add(context.newVar());
+        rightPartitionVar.add(context.newVar());
+        //        List<LogicalVariable> leftPartitionVar = new Arrays.asList(context.newVar(), context.newVar());
+        //        List<LogicalVariable> rightPartitionVar = Arrays.asList(context.newVar(), context.newVar());
+
         insertPartitionSortKey(op, LEFT, leftPartitionVar, sideLeft.get(0), context);
         insertPartitionSortKey(op, RIGHT, rightPartitionVar, sideRight.get(0), context);
 
