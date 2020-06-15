@@ -33,7 +33,7 @@ public class OverlappingIntervalMergeJoinCheckerFactory extends AbstractInterval
     }
 
     @Override
-    public IIntervalMergeJoinChecker createMergeJoinChecker(int[] keys0, int[] keys1, IHyracksTaskContext ctx)
+    public IIntervalMergeJoinChecker createIntervalMergeJoinChecker(int[] keys0, int[] keys1, IHyracksTaskContext ctx)
             throws HyracksDataException {
         //        int fieldIndex = 0;
         //        RangeForwardTaskState rangeState = RangeForwardTaskState.getRangeState(rangeId.getId(), ctx);
@@ -61,8 +61,8 @@ public class OverlappingIntervalMergeJoinCheckerFactory extends AbstractInterval
     }
 
     @Override
-    public IIntervalMergeJoinChecker createInverseMergeJoinChecker(int[] keys0, int[] keys1, IHyracksTaskContext ctx)
-            throws HyracksDataException {
-        return createMergeJoinChecker(keys0, keys1, ctx);
+    public IIntervalMergeJoinChecker createIntervalInverseMergeJoinChecker(int[] keys0, int[] keys1,
+            IHyracksTaskContext ctx) throws HyracksDataException {
+        return createIntervalMergeJoinChecker(keys0, keys1, ctx);
     }
 }

@@ -177,8 +177,8 @@ public class IntervalForwardScanJoiner extends AbstractStreamJoiner {
         this.memorySize = memorySize;
         this.writer = writer;
 
-        this.imjc = imjcf.createMergeJoinChecker(leftKeys, rightKeys, ctx);
-        this.imjcInverse = imjcf.createInverseMergeJoinChecker(leftKeys, rightKeys, ctx);
+        this.imjc = imjcf.createIntervalMergeJoinChecker(leftKeys, rightKeys, ctx);
+        this.imjcInverse = imjcf.createIntervalInverseMergeJoinChecker(leftKeys, rightKeys, ctx);
 
         this.leftKey = leftKeys[0];
         this.rightKey = rightKeys[0];

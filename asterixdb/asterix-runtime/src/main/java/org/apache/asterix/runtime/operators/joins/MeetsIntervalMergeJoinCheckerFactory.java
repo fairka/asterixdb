@@ -24,12 +24,13 @@ public class MeetsIntervalMergeJoinCheckerFactory extends AbstractIntervalMergeJ
     private static final long serialVersionUID = 1L;
 
     @Override
-    public IIntervalMergeJoinChecker createMergeJoinChecker(int[] keys0, int[] keys1, IHyracksTaskContext ctx) {
+    public IIntervalMergeJoinChecker createIntervalMergeJoinChecker(int[] keys0, int[] keys1, IHyracksTaskContext ctx) {
         return new MeetsIntervalMergeJoinChecker(keys0, keys1);
     }
 
     @Override
-    public IIntervalMergeJoinChecker createInverseMergeJoinChecker(int[] keys0, int[] keys1, IHyracksTaskContext ctx) {
+    public IIntervalMergeJoinChecker createIntervalInverseMergeJoinChecker(int[] keys0, int[] keys1,
+            IHyracksTaskContext ctx) {
         return new MetByIntervalMergeJoinChecker(keys0, keys1);
     }
 }

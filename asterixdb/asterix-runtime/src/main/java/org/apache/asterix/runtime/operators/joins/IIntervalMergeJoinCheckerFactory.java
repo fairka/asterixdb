@@ -23,13 +23,13 @@ import java.io.Serializable;
 import org.apache.hyracks.api.context.IHyracksTaskContext;
 import org.apache.hyracks.api.exceptions.HyracksDataException;
 
-public interface IIntervalMergeJoinCheckerFactory extends IMergeJoinCheckerFactory, Serializable {
+public interface IIntervalMergeJoinCheckerFactory extends Serializable {
 
-    @Override
-    public IIntervalMergeJoinChecker createMergeJoinChecker(int[] keys0, int[] keys1, IHyracksTaskContext ctx)
+    public IIntervalMergeJoinChecker createIntervalMergeJoinChecker(int[] keys0, int[] keys1, IHyracksTaskContext ctx)
             throws HyracksDataException;
 
-    public IIntervalMergeJoinChecker createInverseMergeJoinChecker(int[] keys0, int[] keys1, IHyracksTaskContext ctx)
-            throws HyracksDataException;
+    public IIntervalMergeJoinChecker createIntervalInverseMergeJoinChecker(int[] keys0, int[] keys1,
+            IHyracksTaskContext ctx) throws HyracksDataException;
 
+    boolean isOrderAsc();
 }

@@ -208,7 +208,7 @@ public class IntervalMergeJoinOperatorDescriptor extends AbstractOperatorDescrip
             locks.setPartitions(nPartitions);
             RecordDescriptor inRecordDesc = recordDescProvider.getInputRecordDescriptor(getActivityId(), 0);
             final IIntervalMergeJoinChecker mjc =
-                    mergeJoinCheckerFactory.createMergeJoinChecker(leftKeys, rightKeys, ctx);
+                    mergeJoinCheckerFactory.createIntervalMergeJoinChecker(leftKeys, rightKeys, ctx);
             return new RightDataOperator(ctx, partition, inRecordDesc, mjc);
         }
 
