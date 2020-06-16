@@ -136,6 +136,7 @@ public class IntervalForwardScanJoinPOperator extends AbstractJoinPOperator {
 
         IPartitioningProperty ppRight = null;
         List<ILocalStructuralProperty> ispRight = new ArrayList<>();
+        //Needs to add both start and end
         ispRight.add(new LocalOrderProperty(getRightLocalSortOrderColumn()));
 
         if (op.getExecutionMode() == AbstractLogicalOperator.ExecutionMode.PARTITIONED) {
@@ -146,15 +147,14 @@ public class IntervalForwardScanJoinPOperator extends AbstractJoinPOperator {
             //Get Order Column
             IntervalColumn leftIntervalColumn = intervalPartitions.getLeftIntervalColumn().get(0);
             IntervalColumn rightIntervalColumn = intervalPartitions.getRightIntervalColumn().get(0);
-            LogicalVariable leftColumn = leftIntervalColumn.getStartColumn();
-            LogicalVariable rightStartColumn = rightIntervalColumn.getStartColumn();
             //Change to an Array list
             //List<OrderColumn> leftOrderColumn = new ArrayList<>(1);
 
             List<OrderColumn> leftOrderColumn =
-                    Arrays.asList(new OrderColumn(leftColumn, mjcf.isOrderAsc() ? OrderKind.ASC : OrderKind.DESC));
+                    Arrays.asList(new OrderColumn(leftIntervalColumn.getStartColumn(), leftIntervalColumn.getOrder());
+            //Add the other collumn
             List<OrderColumn> rightOrderColumn = Arrays
-                    .asList(new OrderColumn(rightStartColumn, mjcf.isOrderAsc() ? OrderKind.ASC : OrderKind.DESC));
+                    .asList(new OrderColumn(rightIntervalColumn.getStartColumn(), rightIntervalColumn.getOrder());
 
             //Left Partition
             switch (intervalPartitions.getLeftPartitioningType()) {

@@ -138,6 +138,8 @@ public class IntervalJoinUtils {
                 rightPartitionVar.get(1), OrderOperator.IOrder.OrderKind.ASC));
 
         //If statement for partitioning types
+        //Defaults ordered by
+        //Make a note which ones arent defined
         PartitioningType leftPartitioningType = PartitioningType.PARTIAL_BROADCAST_ORDERED_INTERSECT;
         PartitioningType rightPartitioningType = PartitioningType.ORDERED_PARTITIONED;
         if (fi.equals(BuiltinFunctions.INTERVAL_OVERLAPPED_BY)) {
