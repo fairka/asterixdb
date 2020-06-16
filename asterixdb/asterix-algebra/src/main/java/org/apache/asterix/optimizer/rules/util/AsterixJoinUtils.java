@@ -18,7 +18,7 @@
  */
 package org.apache.asterix.optimizer.rules.util;
 
-import java.util.LinkedList;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.logging.Logger;
 
@@ -53,8 +53,8 @@ public class AsterixJoinUtils {
             return;
         }
         //Don't used linked list
-        List<LogicalVariable> sideLeft = new LinkedList<>();
-        List<LogicalVariable> sideRight = new LinkedList<>();
+        List<LogicalVariable> sideLeft = new ArrayList<>(1);
+        List<LogicalVariable> sideRight = new ArrayList<>(1);
         List<LogicalVariable> varsLeft = op.getInputs().get(LEFT).getValue().getSchema();
         List<LogicalVariable> varsRight = op.getInputs().get(RIGHT).getValue().getSchema();
         AbstractFunctionCallExpression fexp = (AbstractFunctionCallExpression) conditionLE;

@@ -22,7 +22,7 @@ package org.apache.asterix.runtime.operators.joins.intervalforwardscan;
 import java.nio.ByteBuffer;
 import java.util.logging.Logger;
 
-import org.apache.asterix.runtime.operators.joins.IIntervalMergeJoinCheckerFactory;
+import org.apache.asterix.runtime.operators.joins.IIntervalJoinCheckerFactory;
 import org.apache.hyracks.api.comm.IFrameWriter;
 import org.apache.hyracks.api.context.IHyracksTaskContext;
 import org.apache.hyracks.api.dataflow.ActivityId;
@@ -45,15 +45,14 @@ public class IntervalForwardScanJoinOperatorDescriptor extends AbstractOperatorD
     private static final int LEFT_INPUT_INDEX = 0;
     private static final int RIGHT_INPUT_INDEX = 1;
     private final int memoryForJoinInFrames;
-    private final IIntervalMergeJoinCheckerFactory imjcf;
+    private final IIntervalJoinCheckerFactory imjcf;
 
     private static final Logger LOGGER = Logger.getLogger(IntervalForwardScanJoinOperatorDescriptor.class.getName());
     private final int[] leftKeys;
     private final int[] rightKeys;
 
     public IntervalForwardScanJoinOperatorDescriptor(IOperatorDescriptorRegistry spec, int memoryInFrames,
-            int[] leftKeys, int[] rightKeys, RecordDescriptor recordDescriptor,
-            IIntervalMergeJoinCheckerFactory imjcf) {
+            int[] leftKeys, int[] rightKeys, RecordDescriptor recordDescriptor, IIntervalJoinCheckerFactory imjcf) {
         super(spec, 2, 1);
         outRecDescs[0] = recordDescriptor;
         this.leftKeys = leftKeys;

@@ -20,7 +20,6 @@
 package org.apache.asterix.optimizer.rules.util;
 
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.Iterator;
@@ -31,20 +30,20 @@ import org.apache.asterix.algebra.operators.physical.IntervalForwardScanJoinPOpe
 import org.apache.asterix.common.annotations.RangeAnnotation;
 import org.apache.asterix.lang.common.util.FunctionUtil;
 import org.apache.asterix.om.functions.BuiltinFunctions;
-import org.apache.asterix.runtime.operators.joins.AfterIntervalMergeJoinCheckerFactory;
-import org.apache.asterix.runtime.operators.joins.BeforeIntervalMergeJoinCheckerFactory;
-import org.apache.asterix.runtime.operators.joins.CoveredByIntervalMergeJoinCheckerFactory;
-import org.apache.asterix.runtime.operators.joins.CoversIntervalMergeJoinCheckerFactory;
-import org.apache.asterix.runtime.operators.joins.EndedByIntervalMergeJoinCheckerFactory;
-import org.apache.asterix.runtime.operators.joins.EndsIntervalMergeJoinCheckerFactory;
-import org.apache.asterix.runtime.operators.joins.IIntervalMergeJoinCheckerFactory;
-import org.apache.asterix.runtime.operators.joins.MeetsIntervalMergeJoinCheckerFactory;
-import org.apache.asterix.runtime.operators.joins.MetByIntervalMergeJoinCheckerFactory;
-import org.apache.asterix.runtime.operators.joins.OverlappedByIntervalMergeJoinCheckerFactory;
-import org.apache.asterix.runtime.operators.joins.OverlappingIntervalMergeJoinCheckerFactory;
-import org.apache.asterix.runtime.operators.joins.OverlapsIntervalMergeJoinCheckerFactory;
-import org.apache.asterix.runtime.operators.joins.StartedByIntervalMergeJoinCheckerFactory;
-import org.apache.asterix.runtime.operators.joins.StartsIntervalMergeJoinCheckerFactory;
+import org.apache.asterix.runtime.operators.joins.AfterIntervalJoinCheckerFactory;
+import org.apache.asterix.runtime.operators.joins.BeforeIntervalJoinCheckerFactory;
+import org.apache.asterix.runtime.operators.joins.CoveredByIntervalJoinCheckerFactory;
+import org.apache.asterix.runtime.operators.joins.CoversIntervalJoinCheckerFactory;
+import org.apache.asterix.runtime.operators.joins.EndedByIntervalJoinCheckerFactory;
+import org.apache.asterix.runtime.operators.joins.EndsIntervalJoinCheckerFactory;
+import org.apache.asterix.runtime.operators.joins.IIntervalJoinCheckerFactory;
+import org.apache.asterix.runtime.operators.joins.MeetsIntervalJoinCheckerFactory;
+import org.apache.asterix.runtime.operators.joins.MetByIntervalJoinCheckerFactory;
+import org.apache.asterix.runtime.operators.joins.OverlappedByIntervalJoinCheckerFactory;
+import org.apache.asterix.runtime.operators.joins.OverlappingIntervalJoinCheckerFactory;
+import org.apache.asterix.runtime.operators.joins.OverlapsIntervalJoinCheckerFactory;
+import org.apache.asterix.runtime.operators.joins.StartedByIntervalJoinCheckerFactory;
+import org.apache.asterix.runtime.operators.joins.StartsIntervalJoinCheckerFactory;
 import org.apache.commons.lang3.mutable.Mutable;
 import org.apache.commons.lang3.mutable.MutableObject;
 import org.apache.hyracks.algebricks.common.exceptions.AlgebricksException;
@@ -109,13 +108,17 @@ public class IntervalJoinUtils {
             List<LogicalVariable> sideLeft, List<LogicalVariable> sideRight, IOptimizationContext context,
             IntervalPartitions intervalPartitions) {
 
-        IIntervalMergeJoinCheckerFactory mjcf =
-                getIntervalMergeJoinCheckerFactory(fi, intervalPartitions.getRangeMap());
+        IIntervalJoinCheckerFactory mjcf = getIntervalMergeJoinCheckerFactory(fi, intervalPartitions.getRangeMap());
         op.setPhysicalOperator(new IntervalForwardScanJoinPOperator(op.getJoinKind(),
                 AbstractJoinPOperator.JoinPartitioningType.BROADCAST, sideLeft, sideRight,
                 context.getPhysicalOptimizationConfig().getMaxFramesForJoin(), mjcf, intervalPartitions));
     }
 
+    /**
+     * Certain Relations not yet supported as seen below. Will default to Hybrid Has Join
+     *
+     * @see org.apache.asterix.optimizer.rules.temporal.TranslateIntervalExpressionRule
+     */
     protected static IntervalPartitions getIntervalPartitions(AbstractBinaryJoinOperator op, FunctionIdentifier fi,
             List<LogicalVariable> sideLeft, List<LogicalVariable> sideRight, RangeMap rangeMap,
             IOptimizationContext context) throws AlgebricksException {
@@ -126,50 +129,50 @@ public class IntervalJoinUtils {
         List<LogicalVariable> rightPartitionVar = new ArrayList<>(2);
         rightPartitionVar.add(context.newVar());
         rightPartitionVar.add(context.newVar());
-        //        List<LogicalVariable> leftPartitionVar = new Arrays.asList(context.newVar(), context.newVar());
-        //        List<LogicalVariable> rightPartitionVar = Arrays.asList(context.newVar(), context.newVar());
 
         insertPartitionSortKey(op, LEFT, leftPartitionVar, sideLeft.get(0), context);
         insertPartitionSortKey(op, RIGHT, rightPartitionVar, sideRight.get(0), context);
 
-        List<IntervalColumn> leftIC = Arrays.asList(new IntervalColumn(leftPartitionVar.get(0), leftPartitionVar.get(1),
+        List<IntervalColumn> leftIC = new ArrayList<>(1);
+        leftIC.add(new IntervalColumn(leftPartitionVar.get(0), leftPartitionVar.get(1),
                 OrderOperator.IOrder.OrderKind.ASC));
-        List<IntervalColumn> rightIC = Arrays.asList(new IntervalColumn(rightPartitionVar.get(0),
-                rightPartitionVar.get(1), OrderOperator.IOrder.OrderKind.ASC));
+        List<IntervalColumn> rightIC = new ArrayList<>(1);
+        rightIC.add(new IntervalColumn(rightPartitionVar.get(0), rightPartitionVar.get(1),
+                OrderOperator.IOrder.OrderKind.ASC));
 
-        //If statement for partitioning types
-        //Defaults ordered by
-        //Make a note which ones arent defined
-        PartitioningType leftPartitioningType = PartitioningType.PARTIAL_BROADCAST_ORDERED_INTERSECT;
+        //Set Partitioning Types
+        PartitioningType leftPartitioningType = PartitioningType.ORDERED_PARTITIONED;
         PartitioningType rightPartitioningType = PartitioningType.ORDERED_PARTITIONED;
         if (fi.equals(BuiltinFunctions.INTERVAL_OVERLAPPED_BY)) {
-            leftPartitioningType = PartitioningType.ORDERED_PARTITIONED;
             rightPartitioningType = PartitioningType.PARTIAL_BROADCAST_ORDERED_INTERSECT;
         } else if (fi.equals(BuiltinFunctions.INTERVAL_OVERLAPS)) {
-            //default
+            leftPartitioningType = PartitioningType.PARTIAL_BROADCAST_ORDERED_INTERSECT;
         } else if (fi.equals(BuiltinFunctions.INTERVAL_OVERLAPPING)) {
+            leftPartitioningType = PartitioningType.PARTIAL_BROADCAST_ORDERED_INTERSECT;
             rightPartitioningType = PartitioningType.PARTIAL_BROADCAST_ORDERED_INTERSECT;
         } else if (fi.equals(BuiltinFunctions.INTERVAL_COVERS)) {
-            //default
+            leftPartitioningType = PartitioningType.PARTIAL_BROADCAST_ORDERED_INTERSECT;
         } else if (fi.equals(BuiltinFunctions.INTERVAL_COVERED_BY)) {
-            leftPartitioningType = PartitioningType.ORDERED_PARTITIONED;
             rightPartitioningType = PartitioningType.PARTIAL_BROADCAST_ORDERED_INTERSECT;
         } else if (fi.equals(BuiltinFunctions.INTERVAL_STARTS)) {
-            leftPartitioningType = PartitioningType.ORDERED_PARTITIONED;
+            //Not implemented
         } else if (fi.equals(BuiltinFunctions.INTERVAL_STARTED_BY)) {
-            //default
+            //Not implemented
+            leftPartitioningType = PartitioningType.PARTIAL_BROADCAST_ORDERED_INTERSECT;
         } else if (fi.equals(BuiltinFunctions.INTERVAL_ENDS)) {
-            leftPartitioningType = PartitioningType.ORDERED_PARTITIONED;
+            //Not implemented
         } else if (fi.equals(BuiltinFunctions.INTERVAL_ENDED_BY)) {
-            //Default
+            //Not implemented
+            leftPartitioningType = PartitioningType.PARTIAL_BROADCAST_ORDERED_INTERSECT;
         } else if (fi.equals(BuiltinFunctions.INTERVAL_MEETS)) {
-            leftPartitioningType = PartitioningType.ORDERED_PARTITIONED;
+            //Is not implemented
         } else if (fi.equals(BuiltinFunctions.INTERVAL_MET_BY)) {
+            //Is not implemented
+            leftPartitioningType = PartitioningType.PARTIAL_BROADCAST_ORDERED_INTERSECT;
             rightPartitioningType = PartitioningType.ORDERED_PARTITIONED;
         } else if (fi.equals(BuiltinFunctions.INTERVAL_BEFORE)) {
             leftPartitioningType = PartitioningType.PARTIAL_BROADCAST_ORDERED_FOLLOWING;
         } else if (fi.equals(BuiltinFunctions.INTERVAL_AFTER)) {
-            leftPartitioningType = PartitioningType.ORDERED_PARTITIONED;
             rightPartitioningType = PartitioningType.PARTIAL_BROADCAST_ORDERED_FOLLOWING;
         }
         return new IntervalPartitions(rangeMap, leftIC, rightIC, leftPartitioningType, rightPartitioningType);
@@ -218,34 +221,44 @@ public class IntervalJoinUtils {
         }
     }
 
-    private static IIntervalMergeJoinCheckerFactory getIntervalMergeJoinCheckerFactory(FunctionIdentifier fi,
+    /**
+     * Certain Relations not yet supported as seen below. Will default to Hybrid Has Join
+     *
+     * @see org.apache.asterix.optimizer.rules.temporal.TranslateIntervalExpressionRule
+     */
+    private static IIntervalJoinCheckerFactory getIntervalMergeJoinCheckerFactory(FunctionIdentifier fi,
             RangeMap rangeMap) {
-        //Not supported for... @Translateinterval expression rule
-        IIntervalMergeJoinCheckerFactory mjcf = new OverlappingIntervalMergeJoinCheckerFactory(rangeMap);
+        IIntervalJoinCheckerFactory mjcf = new OverlappingIntervalJoinCheckerFactory(rangeMap);
         if (fi.equals(BuiltinFunctions.INTERVAL_OVERLAPPED_BY)) {
-            mjcf = new OverlappedByIntervalMergeJoinCheckerFactory();
+            mjcf = new OverlappedByIntervalJoinCheckerFactory();
         } else if (fi.equals(BuiltinFunctions.INTERVAL_OVERLAPS)) {
-            mjcf = new OverlapsIntervalMergeJoinCheckerFactory();
+            mjcf = new OverlapsIntervalJoinCheckerFactory();
         } else if (fi.equals(BuiltinFunctions.INTERVAL_COVERS)) {
-            mjcf = new CoversIntervalMergeJoinCheckerFactory();
+            mjcf = new CoversIntervalJoinCheckerFactory();
         } else if (fi.equals(BuiltinFunctions.INTERVAL_COVERED_BY)) {
-            mjcf = new CoveredByIntervalMergeJoinCheckerFactory();
+            mjcf = new CoveredByIntervalJoinCheckerFactory();
         } else if (fi.equals(BuiltinFunctions.INTERVAL_STARTS)) {
-            mjcf = new StartsIntervalMergeJoinCheckerFactory();
+            //Not Implemented
+            mjcf = new StartsIntervalJoinCheckerFactory();
         } else if (fi.equals(BuiltinFunctions.INTERVAL_STARTED_BY)) {
-            mjcf = new StartedByIntervalMergeJoinCheckerFactory();
+            //Not Implemented
+            mjcf = new StartedByIntervalJoinCheckerFactory();
         } else if (fi.equals(BuiltinFunctions.INTERVAL_ENDS)) {
-            mjcf = new EndsIntervalMergeJoinCheckerFactory();
+            //Not Implemented
+            mjcf = new EndsIntervalJoinCheckerFactory();
         } else if (fi.equals(BuiltinFunctions.INTERVAL_ENDED_BY)) {
-            mjcf = new EndedByIntervalMergeJoinCheckerFactory();
+            //Not Implemented
+            mjcf = new EndedByIntervalJoinCheckerFactory();
         } else if (fi.equals(BuiltinFunctions.INTERVAL_MEETS)) {
-            mjcf = new MeetsIntervalMergeJoinCheckerFactory();
+            //Not Implemented
+            mjcf = new MeetsIntervalJoinCheckerFactory();
         } else if (fi.equals(BuiltinFunctions.INTERVAL_MET_BY)) {
-            mjcf = new MetByIntervalMergeJoinCheckerFactory();
+            //Not Implemented
+            mjcf = new MetByIntervalJoinCheckerFactory();
         } else if (fi.equals(BuiltinFunctions.INTERVAL_BEFORE)) {
-            mjcf = new BeforeIntervalMergeJoinCheckerFactory();
+            mjcf = new BeforeIntervalJoinCheckerFactory();
         } else if (fi.equals(BuiltinFunctions.INTERVAL_AFTER)) {
-            mjcf = new AfterIntervalMergeJoinCheckerFactory();
+            mjcf = new AfterIntervalJoinCheckerFactory();
         }
         return mjcf;
     }

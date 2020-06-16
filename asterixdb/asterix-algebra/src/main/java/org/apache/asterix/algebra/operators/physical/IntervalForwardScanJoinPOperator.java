@@ -19,12 +19,11 @@
 package org.apache.asterix.algebra.operators.physical;
 
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
 import java.util.logging.Logger;
 
 import org.apache.asterix.optimizer.rules.util.IntervalPartitions;
-import org.apache.asterix.runtime.operators.joins.IIntervalMergeJoinCheckerFactory;
+import org.apache.asterix.runtime.operators.joins.IIntervalJoinCheckerFactory;
 import org.apache.asterix.runtime.operators.joins.intervalforwardscan.IntervalForwardScanJoinOperatorDescriptor;
 import org.apache.hyracks.algebricks.common.exceptions.AlgebricksException;
 import org.apache.hyracks.algebricks.core.algebra.base.IHyracksJobBuilder;
@@ -61,7 +60,7 @@ public class IntervalForwardScanJoinPOperator extends AbstractJoinPOperator {
 
     private final List<LogicalVariable> keysLeftBranch;
     private final List<LogicalVariable> keysRightBranch;
-    protected final IIntervalMergeJoinCheckerFactory mjcf;
+    protected final IIntervalJoinCheckerFactory mjcf;
     protected final IntervalPartitions intervalPartitions;
 
     private final int memSizeInFrames;
@@ -69,7 +68,7 @@ public class IntervalForwardScanJoinPOperator extends AbstractJoinPOperator {
 
     public IntervalForwardScanJoinPOperator(JoinKind kind, JoinPartitioningType partitioningType,
             List<LogicalVariable> sideLeftOfEqualities, List<LogicalVariable> sideRightOfEqualities,
-            int memSizeInFrames, IIntervalMergeJoinCheckerFactory mjcf, IntervalPartitions intervalPartitions) {
+            int memSizeInFrames, IIntervalJoinCheckerFactory mjcf, IntervalPartitions intervalPartitions) {
         super(kind, partitioningType);
         this.keysLeftBranch = sideLeftOfEqualities;
         this.keysRightBranch = sideRightOfEqualities;
@@ -91,7 +90,7 @@ public class IntervalForwardScanJoinPOperator extends AbstractJoinPOperator {
         return keysRightBranch;
     }
 
-    public IIntervalMergeJoinCheckerFactory getIntervalMergeJoinCheckerFactory() {
+    public IIntervalJoinCheckerFactory getIntervalMergeJoinCheckerFactory() {
         return mjcf;
     }
 
@@ -135,7 +134,7 @@ public class IntervalForwardScanJoinPOperator extends AbstractJoinPOperator {
         ispLeft.add(new LocalOrderProperty(getLeftLocalSortOrderColumn()));
 
         IPartitioningProperty ppRight = null;
-        List<ILocalStructuralProperty> ispRight = new ArrayList<>();
+        List<ILocalStructuralProperty> ispRight = new ArrayList<>(1);
         //Needs to add both start and end
         ispRight.add(new LocalOrderProperty(getRightLocalSortOrderColumn()));
 
@@ -147,14 +146,11 @@ public class IntervalForwardScanJoinPOperator extends AbstractJoinPOperator {
             //Get Order Column
             IntervalColumn leftIntervalColumn = intervalPartitions.getLeftIntervalColumn().get(0);
             IntervalColumn rightIntervalColumn = intervalPartitions.getRightIntervalColumn().get(0);
-            //Change to an Array list
-            //List<OrderColumn> leftOrderColumn = new ArrayList<>(1);
 
-            List<OrderColumn> leftOrderColumn =
-                    Arrays.asList(new OrderColumn(leftIntervalColumn.getStartColumn(), leftIntervalColumn.getOrder());
-            //Add the other collumn
-            List<OrderColumn> rightOrderColumn = Arrays
-                    .asList(new OrderColumn(rightIntervalColumn.getStartColumn(), rightIntervalColumn.getOrder());
+            List<OrderColumn> leftOrderColumn = new ArrayList<>(1);
+            leftOrderColumn.add(new OrderColumn(leftIntervalColumn.getStartColumn(), leftIntervalColumn.getOrder()));
+            List<OrderColumn> rightOrderColumn = new ArrayList<>(1);
+            rightOrderColumn.add(new OrderColumn(rightIntervalColumn.getStartColumn(), rightIntervalColumn.getOrder()));
 
             //Left Partition
             switch (intervalPartitions.getLeftPartitioningType()) {
@@ -246,7 +242,7 @@ public class IntervalForwardScanJoinPOperator extends AbstractJoinPOperator {
     }
 
     IOperatorDescriptor getIntervalOperatorDescriptor(int[] keysLeft, int[] keysRight, IOperatorDescriptorRegistry spec,
-            RecordDescriptor recordDescriptor, IIntervalMergeJoinCheckerFactory mjcf) {
+            RecordDescriptor recordDescriptor, IIntervalJoinCheckerFactory mjcf) {
         return new IntervalForwardScanJoinOperatorDescriptor(spec, memSizeInFrames, keysLeft, keysRight,
                 recordDescriptor, mjcf);
     }

@@ -20,8 +20,8 @@ package org.apache.asterix.runtime.operators.joins.intervalmergejoin;
 
 import java.nio.ByteBuffer;
 
-import org.apache.asterix.runtime.operators.joins.IIntervalMergeJoinChecker;
-import org.apache.asterix.runtime.operators.joins.IIntervalMergeJoinCheckerFactory;
+import org.apache.asterix.runtime.operators.joins.IIntervalJoinChecker;
+import org.apache.asterix.runtime.operators.joins.IIntervalJoinCheckerFactory;
 import org.apache.asterix.runtime.operators.joins.intervalmergejoin.IntervalMergeBranchStatus.Stage;
 import org.apache.hyracks.api.context.IHyracksTaskContext;
 import org.apache.hyracks.api.dataflow.ActivityId;
@@ -51,11 +51,11 @@ public class IntervalMergeJoinOperatorDescriptor extends AbstractOperatorDescrip
     private final int[] leftKeys;
     private final int[] rightKeys;
     private final int memoryForJoin;
-    private final IIntervalMergeJoinCheckerFactory mergeJoinCheckerFactory;
+    private final IIntervalJoinCheckerFactory mergeJoinCheckerFactory;
 
     public IntervalMergeJoinOperatorDescriptor(IOperatorDescriptorRegistry spec, int memoryForJoin,
             RecordDescriptor recordDescriptor, int[] leftKeys, int[] rightKeys,
-            IIntervalMergeJoinCheckerFactory mergeJoinCheckerFactory) {
+            IIntervalJoinCheckerFactory mergeJoinCheckerFactory) {
         super(spec, 2, 1);
         this.leftKeys = leftKeys;
         this.rightKeys = rightKeys;
@@ -207,7 +207,7 @@ public class IntervalMergeJoinOperatorDescriptor extends AbstractOperatorDescrip
                 throws HyracksDataException {
             locks.setPartitions(nPartitions);
             RecordDescriptor inRecordDesc = recordDescProvider.getInputRecordDescriptor(getActivityId(), 0);
-            final IIntervalMergeJoinChecker mjc =
+            final IIntervalJoinChecker mjc =
                     mergeJoinCheckerFactory.createIntervalMergeJoinChecker(leftKeys, rightKeys, ctx);
             return new RightDataOperator(ctx, partition, inRecordDesc, mjc);
         }
@@ -217,13 +217,13 @@ public class IntervalMergeJoinOperatorDescriptor extends AbstractOperatorDescrip
             private int partition;
             private IHyracksTaskContext ctx;
             private final RecordDescriptor rightRd;
-            private final IIntervalMergeJoinChecker mjc;
+            private final IIntervalJoinChecker mjc;
             private IntervalMergeJoinTaskState state;
             private boolean first = true;
             int count = 0;
 
             public RightDataOperator(IHyracksTaskContext ctx, int partition, RecordDescriptor inRecordDesc,
-                    IIntervalMergeJoinChecker mjc) {
+                    IIntervalJoinChecker mjc) {
                 this.ctx = ctx;
                 this.partition = partition;
                 this.rightRd = inRecordDesc;

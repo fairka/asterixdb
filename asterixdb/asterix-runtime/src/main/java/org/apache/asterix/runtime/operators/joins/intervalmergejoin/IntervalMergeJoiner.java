@@ -23,7 +23,7 @@ import java.util.LinkedList;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
-import org.apache.asterix.runtime.operators.joins.IIntervalMergeJoinChecker;
+import org.apache.asterix.runtime.operators.joins.IIntervalJoinChecker;
 import org.apache.asterix.runtime.operators.joins.TuplePrinterUtil;
 import org.apache.hyracks.api.comm.IFrameTupleAccessor;
 import org.apache.hyracks.api.comm.IFrameWriter;
@@ -49,9 +49,9 @@ class IntervalSideTuple {
     int frameIndex = -1;
 
     // Join details
-    final IIntervalMergeJoinChecker imjc;
+    final IIntervalJoinChecker imjc;
 
-    public IntervalSideTuple(IIntervalMergeJoinChecker imjc, ITupleAccessor accessor, int fieldId) {
+    public IntervalSideTuple(IIntervalJoinChecker imjc, ITupleAccessor accessor, int fieldId) {
         this.imjc = imjc;
         this.accessor = accessor;
         this.fieldId = fieldId;
@@ -117,7 +117,7 @@ public class IntervalMergeJoiner extends AbstractIntervalMergeJoiner {
     private IntervalSideTuple memoryTuple;
     private IntervalSideTuple[] inputTuple;
 
-    private final IIntervalMergeJoinChecker mjc;
+    private final IIntervalJoinChecker mjc;
 
     private long joinComparisonCount = 0;
     private long joinResultCount = 0;
@@ -132,7 +132,7 @@ public class IntervalMergeJoiner extends AbstractIntervalMergeJoiner {
     private final boolean DEBUG = false;
 
     public IntervalMergeJoiner(IHyracksTaskContext ctx, int memorySize, int partition, IntervalMergeStatus status,
-            IntervalMergeJoinLocks locks, IIntervalMergeJoinChecker mjc, int[] leftKeys, int[] rightKeys,
+            IntervalMergeJoinLocks locks, IIntervalJoinChecker mjc, int[] leftKeys, int[] rightKeys,
             RecordDescriptor leftRd, RecordDescriptor rightRd) throws HyracksDataException {
         super(ctx, partition, status, locks, leftRd, rightRd);
         this.mjc = mjc;

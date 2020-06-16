@@ -25,8 +25,8 @@ import java.util.logging.Logger;
 
 import org.apache.asterix.dataflow.data.nontagged.serde.AIntervalSerializerDeserializer;
 import org.apache.asterix.runtime.operators.joins.AbstractStreamJoiner;
-import org.apache.asterix.runtime.operators.joins.IIntervalMergeJoinChecker;
-import org.apache.asterix.runtime.operators.joins.IIntervalMergeJoinCheckerFactory;
+import org.apache.asterix.runtime.operators.joins.IIntervalJoinChecker;
+import org.apache.asterix.runtime.operators.joins.IIntervalJoinCheckerFactory;
 import org.apache.asterix.runtime.operators.joins.IntervalJoinUtil;
 import org.apache.asterix.runtime.operators.joins.TuplePrinterUtil;
 import org.apache.hyracks.api.comm.IFrameTupleAccessor;
@@ -52,13 +52,13 @@ class IntervalSideTuple {
     int frameIndex = -1;
 
     // Join details
-    final IIntervalMergeJoinChecker imjc;
+    final IIntervalJoinChecker imjc;
 
     // Interval details
     long start;
     long end;
 
-    public IntervalSideTuple(IIntervalMergeJoinChecker imjc, ITupleAccessor accessor, int fieldId) {
+    public IntervalSideTuple(IIntervalJoinChecker imjc, ITupleAccessor accessor, int fieldId) {
         this.imjc = imjc;
         this.accessor = accessor;
         this.fieldId = fieldId;
@@ -147,8 +147,8 @@ public class IntervalForwardScanJoiner extends AbstractStreamJoiner {
     private IntervalSideTuple[] memoryTuple;
     private IntervalSideTuple[] inputTuple;
 
-    private final IIntervalMergeJoinChecker imjc;
-    private final IIntervalMergeJoinChecker imjcInverse;
+    private final IIntervalJoinChecker imjc;
+    private final IIntervalJoinChecker imjcInverse;
 
     private final int leftKey;
     private final int rightKey;
@@ -170,7 +170,7 @@ public class IntervalForwardScanJoiner extends AbstractStreamJoiner {
     private final boolean DEBUG = false;
 
     public IntervalForwardScanJoiner(IHyracksTaskContext ctx, IConsumerFrame leftCF, IConsumerFrame rightCF,
-            int memorySize, int partition, IIntervalMergeJoinCheckerFactory imjcf, int[] leftKeys, int[] rightKeys,
+            int memorySize, int partition, IIntervalJoinCheckerFactory imjcf, int[] leftKeys, int[] rightKeys,
             IFrameWriter writer) throws HyracksDataException {
         super(ctx, partition, leftCF, rightCF);
         this.partition = partition;
