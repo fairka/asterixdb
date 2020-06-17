@@ -85,9 +85,6 @@ public final class SetAsterixPhysicalOperatorsRule extends SetAlgebricksPhysical
         public IPhysicalOperator visitInnerJoinOperator(InnerJoinOperator op, Boolean topLevelOp)
                 throws AlgebricksException {
             AsterixJoinUtils.setJoinAlgorithmAndExchangeAlgo(op, topLevelOp, context);
-            if (op.getPhysicalOperator() != null) {
-                return op.getPhysicalOperator();
-            }
             return visitAbstractBinaryJoinOperator(op, topLevelOp);
         }
 
@@ -95,9 +92,6 @@ public final class SetAsterixPhysicalOperatorsRule extends SetAlgebricksPhysical
         public IPhysicalOperator visitLeftOuterJoinOperator(LeftOuterJoinOperator op, Boolean topLevelOp)
                 throws AlgebricksException {
             AsterixJoinUtils.setJoinAlgorithmAndExchangeAlgo(op, topLevelOp, context);
-            if (op.getPhysicalOperator() != null) {
-                return op.getPhysicalOperator();
-            }
             return visitAbstractBinaryJoinOperator(op, topLevelOp);
         }
 
@@ -117,8 +111,7 @@ public final class SetAsterixPhysicalOperatorsRule extends SetAlgebricksPhysical
             }
 
             // if serializable, use external group-by
-            // now check whether the serialized version aggregation function has
-            // corresponding intermediate agg
+            // now check whether the serialized version aggregation function has corresponding intermediate agg
             IMergeAggregationExpressionFactory mergeAggregationExpressionFactory =
                     context.getMergeAggregationExpressionFactory();
             List<LogicalVariable> originalVariables = aggOp.getVariables();

@@ -140,8 +140,8 @@ public class RunFileStream {
         // Create reader
         runFileReader = runFileWriter.createReader();
         runFileReader.open();
-        previousReadPointer = 0;
         runFileReader.seek(startOffset);
+        previousReadPointer = 0;
 
         // Load first frame
         loadNextBuffer(accessor);
@@ -173,6 +173,7 @@ public class RunFileStream {
     public void closeRunFileReading() throws HyracksDataException {
         status.setRunFileReading(false);
         runFileReader.close();
+        previousReadPointer = -1;
     }
 
     public void close() throws HyracksDataException {
