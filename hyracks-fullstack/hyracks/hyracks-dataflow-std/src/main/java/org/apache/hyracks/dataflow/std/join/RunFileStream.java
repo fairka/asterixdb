@@ -52,9 +52,8 @@ public class RunFileStream {
     private long runFileCounter = 0;
     private long readCount = 0;
     private long writeCount = 0;
-    private long frameTupleCount = 0;
     private long totalTupleCount = 0;
-    private long readPreviousPtr;
+    private long previousReadPointer;
 
     /**
      * The RunFileSream uses two frames to buffer read and write operations.
@@ -141,6 +140,7 @@ public class RunFileStream {
         // Create reader
         runFileReader = runFileWriter.createReader();
         runFileReader.open();
+        previousReadPointer = 0;
         runFileReader.seek(startOffset);
 
         // Load first frame
@@ -148,7 +148,9 @@ public class RunFileStream {
     }
 
     public boolean loadNextBuffer(ITupleAccessor accessor) throws HyracksDataException {
+        final long tempFrame = runFileReader.position();
         if (runFileReader.nextFrame(runFileBuffer)) {
+            previousReadPointer = tempFrame;
             accessor.reset(runFileBuffer.getBuffer());
             accessor.next();
             readCount++;
@@ -198,7 +200,7 @@ public class RunFileStream {
 
     public long getReadPointer() {
         if (runFileReader != null) {
-            return runFileReader.getReadPointer();
+            return previousReadPointer;
         }
         return -1;
     }

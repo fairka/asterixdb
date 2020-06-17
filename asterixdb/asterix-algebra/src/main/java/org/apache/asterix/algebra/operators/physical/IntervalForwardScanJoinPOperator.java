@@ -34,14 +34,12 @@ import org.apache.hyracks.algebricks.core.algebra.base.PhysicalOperatorTag;
 import org.apache.hyracks.algebricks.core.algebra.operators.logical.AbstractBinaryJoinOperator.JoinKind;
 import org.apache.hyracks.algebricks.core.algebra.operators.logical.AbstractLogicalOperator;
 import org.apache.hyracks.algebricks.core.algebra.operators.logical.IOperatorSchema;
-import org.apache.hyracks.algebricks.core.algebra.operators.logical.OrderOperator.IOrder.OrderKind;
 import org.apache.hyracks.algebricks.core.algebra.operators.physical.AbstractJoinPOperator;
 import org.apache.hyracks.algebricks.core.algebra.properties.ILocalStructuralProperty;
 import org.apache.hyracks.algebricks.core.algebra.properties.INodeDomain;
 import org.apache.hyracks.algebricks.core.algebra.properties.IPartitioningProperty;
 import org.apache.hyracks.algebricks.core.algebra.properties.IPartitioningRequirementsCoordinator;
 import org.apache.hyracks.algebricks.core.algebra.properties.IPhysicalPropertiesVector;
-import org.apache.hyracks.algebricks.core.algebra.properties.IntervalColumn;
 import org.apache.hyracks.algebricks.core.algebra.properties.LocalOrderProperty;
 import org.apache.hyracks.algebricks.core.algebra.properties.OrderColumn;
 import org.apache.hyracks.algebricks.core.algebra.properties.OrderedPartitionedProperty;
@@ -119,7 +117,7 @@ public class IntervalForwardScanJoinPOperator extends AbstractJoinPOperator {
 
         IPartitioningProperty pp = new OrderedPartitionedProperty(order, null, intervalPartitions.getRangeMap());
         List<ILocalStructuralProperty> propsLocal = new ArrayList<>();
-        propsLocal.add(new LocalOrderProperty(getLeftLocalSortOrderColumn()));
+        propsLocal.add(new LocalOrderProperty(getLeftRangeOrderColumn()));
         deliveredProperties = new StructuralPropertiesVector(pp, propsLocal);
     }
 
@@ -131,28 +129,19 @@ public class IntervalForwardScanJoinPOperator extends AbstractJoinPOperator {
 
         IPartitioningProperty ppLeft = null;
         List<ILocalStructuralProperty> ispLeft = new ArrayList<>();
-        ispLeft.add(new LocalOrderProperty(getLeftLocalSortOrderColumn()));
-
+        ispLeft.add(new LocalOrderProperty(getLeftRangeOrderColumn()));
         IPartitioningProperty ppRight = null;
         List<ILocalStructuralProperty> ispRight = new ArrayList<>(1);
-        //Needs to add both start and end
-        ispRight.add(new LocalOrderProperty(getRightLocalSortOrderColumn()));
+        ispRight.add(new LocalOrderProperty(getRightRangeOrderColumn()));
 
         if (op.getExecutionMode() == AbstractLogicalOperator.ExecutionMode.PARTITIONED) {
             INodeDomain targetNodeDomain = context.getComputationNodeDomain();
 
             RangeMap rangeMapHint = intervalPartitions.getRangeMap();
+            ArrayList<OrderColumn> leftOrderColumn = getLeftRangeOrderColumn();
+            ArrayList<OrderColumn> rightOrderColumn = getRightRangeOrderColumn();
 
-            //Get Order Column
-            IntervalColumn leftIntervalColumn = intervalPartitions.getLeftIntervalColumn().get(0);
-            IntervalColumn rightIntervalColumn = intervalPartitions.getRightIntervalColumn().get(0);
-
-            List<OrderColumn> leftOrderColumn = new ArrayList<>(1);
-            leftOrderColumn.add(new OrderColumn(leftIntervalColumn.getStartColumn(), leftIntervalColumn.getOrder()));
-            List<OrderColumn> rightOrderColumn = new ArrayList<>(1);
-            rightOrderColumn.add(new OrderColumn(rightIntervalColumn.getStartColumn(), rightIntervalColumn.getOrder()));
-
-            //Left Partition
+            //Assign Property
             switch (intervalPartitions.getLeftPartitioningType()) {
                 case ORDERED_PARTITIONED:
                     ppLeft = new OrderedPartitionedProperty(leftOrderColumn, targetNodeDomain, rangeMapHint);
@@ -165,11 +154,7 @@ public class IntervalForwardScanJoinPOperator extends AbstractJoinPOperator {
                     ppLeft = new PartialBroadcastOrderedIntersectProperty(intervalPartitions.getLeftIntervalColumn(),
                             targetNodeDomain, rangeMapHint);
                     break;
-                default:
-                    //Do Nothing
-                    break;
             }
-            //Right Partition
             switch (intervalPartitions.getRightPartitioningType()) {
                 case ORDERED_PARTITIONED:
                     ppRight = new OrderedPartitionedProperty(rightOrderColumn, targetNodeDomain, rangeMapHint);
@@ -182,9 +167,6 @@ public class IntervalForwardScanJoinPOperator extends AbstractJoinPOperator {
                     ppRight = new PartialBroadcastOrderedIntersectProperty(intervalPartitions.getRightIntervalColumn(),
                             targetNodeDomain, rangeMapHint);
                     break;
-                default:
-                    //Do Nothing
-                    break;
             }
         }
         pv[0] = new StructuralPropertiesVector(ppLeft, ispLeft);
@@ -193,26 +175,22 @@ public class IntervalForwardScanJoinPOperator extends AbstractJoinPOperator {
         return new PhysicalRequirements(pv, prc);
     }
 
-    protected ArrayList<OrderColumn> getLeftLocalSortOrderColumn() {
-        return getLeftRangeOrderColumn();
-    }
-
-    protected ArrayList<OrderColumn> getRightLocalSortOrderColumn() {
-        return getRightRangeOrderColumn();
-    }
-
     protected ArrayList<OrderColumn> getLeftRangeOrderColumn() {
         ArrayList<OrderColumn> order = new ArrayList<>();
+        int count = 0;
         for (LogicalVariable v : keysLeftBranch) {
-            order.add(new OrderColumn(v, mjcf.isOrderAsc() ? OrderKind.ASC : OrderKind.DESC));
+            order.add(new OrderColumn(v, intervalPartitions.getLeftIntervalColumn().get(count).getOrder()));
+            count++;
         }
         return order;
     }
 
     protected ArrayList<OrderColumn> getRightRangeOrderColumn() {
         ArrayList<OrderColumn> orderRight = new ArrayList<>();
+        int count = 0;
         for (LogicalVariable v : keysRightBranch) {
-            orderRight.add(new OrderColumn(v, mjcf.isOrderAsc() ? OrderKind.ASC : OrderKind.DESC));
+            orderRight.add(new OrderColumn(v, intervalPartitions.getRightIntervalColumn().get(count).getOrder()));
+            count++;
         }
         return orderRight;
     }
