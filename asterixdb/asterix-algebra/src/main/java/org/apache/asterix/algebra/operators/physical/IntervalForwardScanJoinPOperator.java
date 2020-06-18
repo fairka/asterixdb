@@ -113,11 +113,10 @@ public class IntervalForwardScanJoinPOperator extends AbstractJoinPOperator {
 
     @Override
     public void computeDeliveredProperties(ILogicalOperator iop, IOptimizationContext context) {
-        ArrayList<OrderColumn> order = getLeftRangeOrderColumn();
-
+        List<OrderColumn> order = intervalPartitions.getLeftStartColumn();
         IPartitioningProperty pp = new OrderedPartitionedProperty(order, null, intervalPartitions.getRangeMap());
         List<ILocalStructuralProperty> propsLocal = new ArrayList<>();
-        propsLocal.add(new LocalOrderProperty(getLeftRangeOrderColumn()));
+        propsLocal.add(new LocalOrderProperty(intervalPartitions.getLeftStartColumn()));
         deliveredProperties = new StructuralPropertiesVector(pp, propsLocal);
     }
 
@@ -129,25 +128,23 @@ public class IntervalForwardScanJoinPOperator extends AbstractJoinPOperator {
 
         IPartitioningProperty ppLeft = null;
         List<ILocalStructuralProperty> ispLeft = new ArrayList<>();
-        ispLeft.add(new LocalOrderProperty(getLeftRangeOrderColumn()));
+        ispLeft.add(new LocalOrderProperty(intervalPartitions.getLeftStartColumn()));
         IPartitioningProperty ppRight = null;
         List<ILocalStructuralProperty> ispRight = new ArrayList<>(1);
-        ispRight.add(new LocalOrderProperty(getRightRangeOrderColumn()));
+        ispRight.add(new LocalOrderProperty(intervalPartitions.getRightStartColumn()));
 
         if (op.getExecutionMode() == AbstractLogicalOperator.ExecutionMode.PARTITIONED) {
             INodeDomain targetNodeDomain = context.getComputationNodeDomain();
 
             RangeMap rangeMapHint = intervalPartitions.getRangeMap();
-            ArrayList<OrderColumn> leftOrderColumn = getLeftRangeOrderColumn();
-            ArrayList<OrderColumn> rightOrderColumn = getRightRangeOrderColumn();
 
             //Assign Property
             switch (intervalPartitions.getLeftPartitioningType()) {
                 case ORDERED_PARTITIONED:
-                    ppLeft = new OrderedPartitionedProperty(leftOrderColumn, targetNodeDomain, rangeMapHint);
+                    ppLeft = new OrderedPartitionedProperty(intervalPartitions.getLeftStartColumn(), targetNodeDomain, rangeMapHint);
                     break;
                 case PARTIAL_BROADCAST_ORDERED_FOLLOWING:
-                    ppLeft = new PartialBroadcastOrderedFollowingProperty(leftOrderColumn, targetNodeDomain,
+                    ppLeft = new PartialBroadcastOrderedFollowingProperty(intervalPartitions.getLeftStartColumn(), targetNodeDomain,
                             rangeMapHint);
                     break;
                 case PARTIAL_BROADCAST_ORDERED_INTERSECT:
@@ -157,10 +154,10 @@ public class IntervalForwardScanJoinPOperator extends AbstractJoinPOperator {
             }
             switch (intervalPartitions.getRightPartitioningType()) {
                 case ORDERED_PARTITIONED:
-                    ppRight = new OrderedPartitionedProperty(rightOrderColumn, targetNodeDomain, rangeMapHint);
+                    ppRight = new OrderedPartitionedProperty(intervalPartitions.getRightStartColumn(), targetNodeDomain, rangeMapHint);
                     break;
                 case PARTIAL_BROADCAST_ORDERED_FOLLOWING:
-                    ppRight = new PartialBroadcastOrderedFollowingProperty(rightOrderColumn, targetNodeDomain,
+                    ppRight = new PartialBroadcastOrderedFollowingProperty(intervalPartitions.getRightStartColumn(), targetNodeDomain,
                             rangeMapHint);
                     break;
                 case PARTIAL_BROADCAST_ORDERED_INTERSECT:
@@ -173,26 +170,6 @@ public class IntervalForwardScanJoinPOperator extends AbstractJoinPOperator {
         pv[1] = new StructuralPropertiesVector(ppRight, ispRight);
         IPartitioningRequirementsCoordinator prc = IPartitioningRequirementsCoordinator.NO_COORDINATION;
         return new PhysicalRequirements(pv, prc);
-    }
-
-    protected ArrayList<OrderColumn> getLeftRangeOrderColumn() {
-        ArrayList<OrderColumn> order = new ArrayList<>();
-        int count = 0;
-        for (LogicalVariable v : keysLeftBranch) {
-            order.add(new OrderColumn(v, intervalPartitions.getLeftIntervalColumn().get(count).getOrder()));
-            count++;
-        }
-        return order;
-    }
-
-    protected ArrayList<OrderColumn> getRightRangeOrderColumn() {
-        ArrayList<OrderColumn> orderRight = new ArrayList<>();
-        int count = 0;
-        for (LogicalVariable v : keysRightBranch) {
-            orderRight.add(new OrderColumn(v, intervalPartitions.getRightIntervalColumn().get(count).getOrder()));
-            count++;
-        }
-        return orderRight;
     }
 
     @Override

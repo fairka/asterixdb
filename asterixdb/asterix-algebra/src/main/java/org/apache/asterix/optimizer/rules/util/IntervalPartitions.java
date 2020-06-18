@@ -23,6 +23,7 @@ import java.util.List;
 
 import org.apache.hyracks.algebricks.core.algebra.properties.IPartitioningProperty.PartitioningType;
 import org.apache.hyracks.algebricks.core.algebra.properties.IntervalColumn;
+import org.apache.hyracks.algebricks.core.algebra.properties.OrderColumn;
 import org.apache.hyracks.dataflow.common.data.partition.range.RangeMap;
 
 public class IntervalPartitions {
@@ -47,6 +48,14 @@ public class IntervalPartitions {
         return rangeMap;
     }
 
+    public PartitioningType getLeftPartitioningType() {
+        return leftPartitioningType;
+    }
+
+    public PartitioningType getRightPartitioningType() {
+        return rightPartitioningType;
+    }
+
     public List<IntervalColumn> getLeftIntervalColumn() {
         return leftIntervalColumn;
     }
@@ -55,11 +64,13 @@ public class IntervalPartitions {
         return rightIntervalColumn;
     }
 
-    public PartitioningType getLeftPartitioningType() {
-        return leftPartitioningType;
+    public List<OrderColumn> getLeftStartColumn() {
+        List<OrderColumn> leftColumn = new List<>();
+        leftIntervalColumn.get(0).getStartColumn()
+        return leftColumn;
     }
 
-    public PartitioningType getRightPartitioningType() {
-        return rightPartitioningType;
+    public List<OrderColumn> getRightStartColumn() {
+
     }
 }
