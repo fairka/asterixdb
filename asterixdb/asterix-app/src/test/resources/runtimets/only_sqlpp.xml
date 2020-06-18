@@ -21,72 +21,67 @@
   <test-group name="failed">
     <test-case FilePath="temporal/interval_joins">
       <compilation-unit name="interval_after">
-        <output-dir compare="Text">range_hint</output-dir>
-      </compilation-unit>
-    </test-case>
-    <test-case FilePath="temporal/interval_joins">
-      <compilation-unit name="interval_after">
-        <output-dir compare="Text">range_hint</output-dir>
+        <output-dir compare="Text">interval_after</output-dir>
       </compilation-unit>
     </test-case>
     <test-case FilePath="temporal/interval_joins">
       <compilation-unit name="interval_before">
-        <output-dir compare="Text">range_hint</output-dir>
+        <output-dir compare="Text">interval_before</output-dir>
       </compilation-unit>
     </test-case>
     <test-case FilePath="temporal/interval_joins">
       <compilation-unit name="interval_covered_by">
-        <output-dir compare="Text">range_hint</output-dir>
+        <output-dir compare="Text">interval_covered_by</output-dir>
       </compilation-unit>
     </test-case>
     <test-case FilePath="temporal/interval_joins">
       <compilation-unit name="interval_covers">
-        <output-dir compare="Text">range_hint</output-dir>
+        <output-dir compare="Text">interval_covers</output-dir>
       </compilation-unit>
     </test-case>
     <test-case FilePath="temporal/interval_joins">
       <compilation-unit name="interval_ended_by">
-        <output-dir compare="Text">range_hint</output-dir>
+        <output-dir compare="Text">interval_ended_by</output-dir>
       </compilation-unit>
     </test-case>
     <test-case FilePath="temporal/interval_joins">
       <compilation-unit name="interval_ends">
-        <output-dir compare="Text">range_hint</output-dir>
+        <output-dir compare="Text">interval_ends</output-dir>
       </compilation-unit>
     </test-case>
     <test-case FilePath="temporal/interval_joins">
       <compilation-unit name="interval_meets">
-        <output-dir compare="Text">range_hint</output-dir>
+        <output-dir compare="Text">interval_meets</output-dir>
       </compilation-unit>
     </test-case>
     <test-case FilePath="temporal/interval_joins">
       <compilation-unit name="interval_met_by">
-        <output-dir compare="Text">range_hint</output-dir>
+        <output-dir compare="Text">interval_met_by</output-dir>
       </compilation-unit>
     </test-case>
     <test-case FilePath="temporal/interval_joins">
       <compilation-unit name="interval_overlapped_by">
-        <output-dir compare="Text">range_hint</output-dir>
+        <output-dir compare="Text">interval_overlapped_by</output-dir>
       </compilation-unit>
     </test-case>
     <test-case FilePath="temporal/interval_joins">
       <compilation-unit name="interval_overlapping">
-        <output-dir compare="Text">range_hint</output-dir>
+        <output-dir compare="Text">interval_overlapping</output-dir>
       </compilation-unit>
     </test-case>
     <test-case FilePath="temporal/interval_joins">
       <compilation-unit name="interval_overlaps">
-        <output-dir compare="Text">range_hint</output-dir>
+        <output-dir compare="Text">interval_overlaps</output-dir>
       </compilation-unit>
     </test-case>
     <test-case FilePath="temporal/interval_joins">
       <compilation-unit name="interval_started_by">
-        <output-dir compare="Text">range_hint</output-dir>
+        <output-dir compare="Text">interval_started_by</output-dir>
       </compilation-unit>
     </test-case>
     <test-case FilePath="temporal/interval_joins">
       <compilation-unit name="interval_starts">
-        <output-dir compare="Text">range_hint</output-dir>
+        <output-dir compare="Text">interval_starts</output-dir>
       </compilation-unit>
     </test-case>
   </test-group>
