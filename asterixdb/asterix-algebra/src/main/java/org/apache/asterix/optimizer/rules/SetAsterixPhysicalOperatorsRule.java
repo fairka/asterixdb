@@ -85,6 +85,9 @@ public final class SetAsterixPhysicalOperatorsRule extends SetAlgebricksPhysical
         public IPhysicalOperator visitInnerJoinOperator(InnerJoinOperator op, Boolean topLevelOp)
                 throws AlgebricksException {
             AsterixJoinUtils.setJoinAlgorithmAndExchangeAlgo(op, topLevelOp, context);
+            if (op.getPhysicalOperator() != null) {
+                return op.getPhysicalOperator();
+            }
             return visitAbstractBinaryJoinOperator(op, topLevelOp);
         }
 
@@ -92,6 +95,9 @@ public final class SetAsterixPhysicalOperatorsRule extends SetAlgebricksPhysical
         public IPhysicalOperator visitLeftOuterJoinOperator(LeftOuterJoinOperator op, Boolean topLevelOp)
                 throws AlgebricksException {
             AsterixJoinUtils.setJoinAlgorithmAndExchangeAlgo(op, topLevelOp, context);
+            if (op.getPhysicalOperator() != null) {
+                return op.getPhysicalOperator();
+            }
             return visitAbstractBinaryJoinOperator(op, topLevelOp);
         }
 

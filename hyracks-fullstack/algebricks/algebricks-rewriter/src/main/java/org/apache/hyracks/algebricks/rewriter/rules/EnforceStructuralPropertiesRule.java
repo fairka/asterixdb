@@ -694,17 +694,16 @@ public class EnforceStructuralPropertiesRule implements IAlgebraicRewriteRule {
     private IPhysicalOperator createRangePartitionerConnector(AbstractLogicalOperator parentOp, INodeDomain domain,
             IPartitioningProperty requiredPartitioning, int childIndex, IOptimizationContext ctx)
             throws AlgebricksException {
-        // options for range partitioning: 1. static range map, 2. dynamic range map computed at run time
+        // options for range partitioning: 1. Range Map from Hint computed at run time 2. static range map, 3. dynamic range map computed at run time
         List<OrderColumn> partitioningColumns = ((OrderedPartitionedProperty) requiredPartitioning).getOrderColumns();
         RangeMap rangeMap = ((OrderedPartitionedProperty) requiredPartitioning).getRangeMap();
-        if (parentOp.getAnnotations().containsKey(OperatorAnnotations.USE_STATIC_RANGE)) {
+        if (rangeMap != null) {
+            return new RangePartitionExchangePOperator(partitioningColumns, domain, rangeMap);
+        } else if (parentOp.getAnnotations().containsKey(OperatorAnnotations.USE_STATIC_RANGE)) {
             RangeMap map = (RangeMap) parentOp.getAnnotations().get(OperatorAnnotations.USE_STATIC_RANGE);
             return new RangePartitionExchangePOperator(partitioningColumns, domain, map);
-        } else if (rangeMap != null) {
-            return new RangePartitionExchangePOperator(partitioningColumns, domain, rangeMap);
-        } else {
-            return createDynamicRangePartitionExchangePOperator(parentOp, ctx, domain, partitioningColumns, childIndex);
         }
+        return createDynamicRangePartitionExchangePOperator(parentOp, ctx, domain, partitioningColumns, childIndex);
     }
 
     private IPhysicalOperator createDynamicRangePartitionExchangePOperator(AbstractLogicalOperator parentOp,

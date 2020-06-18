@@ -42,3 +42,21 @@ create type StudentType as open {
 };
 create dataset Students(StudentType)
 primary key name;
+
+use TinyCollege;
+
+load dataset Staff using localfs
+(("path"="asterix_nc1://data/tinycollege/staff.adm"),("format"="adm"));
+
+load dataset Students using localfs
+(("path"="asterix_nc1://data/tinycollege/students.adm"),("format"="adm"));
+
+use TinyCollege;
+
+select element { "staff" : f.name, "student" : d.name }
+from Staff as f, Students as d
+where
+/*+ range [date("2003-06-30"), date("2005-12-31"), date("2008-06-30")] */
+interval_after(f.employment, d.attendance)
+order by f.name, d.name;
+
