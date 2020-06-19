@@ -141,11 +141,12 @@ public class IntervalForwardScanJoinPOperator extends AbstractJoinPOperator {
             //Assign Property
             switch (intervalPartitions.getLeftPartitioningType()) {
                 case ORDERED_PARTITIONED:
-                    ppLeft = new OrderedPartitionedProperty(intervalPartitions.getLeftStartColumn(), targetNodeDomain, rangeMapHint);
+                    ppLeft = new OrderedPartitionedProperty(intervalPartitions.getLeftStartColumn(), targetNodeDomain,
+                            rangeMapHint);
                     break;
                 case PARTIAL_BROADCAST_ORDERED_FOLLOWING:
-                    ppLeft = new PartialBroadcastOrderedFollowingProperty(intervalPartitions.getLeftStartColumn(), targetNodeDomain,
-                            rangeMapHint);
+                    ppLeft = new PartialBroadcastOrderedFollowingProperty(intervalPartitions.getLeftStartColumn(),
+                            targetNodeDomain, rangeMapHint);
                     break;
                 case PARTIAL_BROADCAST_ORDERED_INTERSECT:
                     ppLeft = new PartialBroadcastOrderedIntersectProperty(intervalPartitions.getLeftIntervalColumn(),
@@ -154,11 +155,12 @@ public class IntervalForwardScanJoinPOperator extends AbstractJoinPOperator {
             }
             switch (intervalPartitions.getRightPartitioningType()) {
                 case ORDERED_PARTITIONED:
-                    ppRight = new OrderedPartitionedProperty(intervalPartitions.getRightStartColumn(), targetNodeDomain, rangeMapHint);
+                    ppRight = new OrderedPartitionedProperty(intervalPartitions.getRightStartColumn(), targetNodeDomain,
+                            rangeMapHint);
                     break;
                 case PARTIAL_BROADCAST_ORDERED_FOLLOWING:
-                    ppRight = new PartialBroadcastOrderedFollowingProperty(intervalPartitions.getRightStartColumn(), targetNodeDomain,
-                            rangeMapHint);
+                    ppRight = new PartialBroadcastOrderedFollowingProperty(intervalPartitions.getRightStartColumn(),
+                            targetNodeDomain, rangeMapHint);
                     break;
                 case PARTIAL_BROADCAST_ORDERED_INTERSECT:
                     ppRight = new PartialBroadcastOrderedIntersectProperty(intervalPartitions.getRightIntervalColumn(),

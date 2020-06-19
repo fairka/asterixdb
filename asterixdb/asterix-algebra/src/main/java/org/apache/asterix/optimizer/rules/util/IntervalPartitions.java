@@ -19,8 +19,10 @@
 
 package org.apache.asterix.optimizer.rules.util;
 
+import java.util.Arrays;
 import java.util.List;
 
+import org.apache.hyracks.algebricks.core.algebra.base.LogicalVariable;
 import org.apache.hyracks.algebricks.core.algebra.properties.IPartitioningProperty.PartitioningType;
 import org.apache.hyracks.algebricks.core.algebra.properties.IntervalColumn;
 import org.apache.hyracks.algebricks.core.algebra.properties.OrderColumn;
@@ -65,12 +67,16 @@ public class IntervalPartitions {
     }
 
     public List<OrderColumn> getLeftStartColumn() {
-        List<OrderColumn> leftColumn = new List<>();
-        leftIntervalColumn.get(0).getStartColumn()
-        return leftColumn;
+        LogicalVariable leftStartLogicalVariable = leftIntervalColumn.get(0).getStartColumn();
+        List<OrderColumn> leftOrderColumn =
+                Arrays.asList(new OrderColumn(leftStartLogicalVariable, leftIntervalColumn.get(0).getOrder()));
+        return leftOrderColumn;
     }
 
     public List<OrderColumn> getRightStartColumn() {
-
+        LogicalVariable rightStartLogicalVariable = rightIntervalColumn.get(0).getStartColumn();
+        List<OrderColumn> rightOrderColumn =
+                Arrays.asList(new OrderColumn(rightStartLogicalVariable, rightIntervalColumn.get(0).getOrder()));
+        return rightOrderColumn;
     }
 }
