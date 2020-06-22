@@ -89,25 +89,27 @@ public class IntervalForwardScanJoinOperatorDescriptor extends AbstractOperatorD
             RecordDescriptor[] inRecordDescs = new RecordDescriptor[inputArity];
             inRecordDescs[LEFT_INPUT_INDEX] = recordDescProvider.getInputRecordDescriptor(id, LEFT_INPUT_INDEX);
             inRecordDescs[RIGHT_INPUT_INDEX] = recordDescProvider.getInputRecordDescriptor(id, RIGHT_INPUT_INDEX);
-            return new JoinerOperator(ctx, partition, inputArity, inRecordDescs);
+            return new JoinerOperator(ctx, partition, nPartitions, inputArity, inRecordDescs);
         }
 
         private class JoinerOperator extends AbstractUnaryOutputSourceOperatorNodePushable {
 
             private final IHyracksTaskContext ctx;
             private final int partition;
+            private final int nPartitions;
             private final int inputArity;
             private final RecordDescriptor[] recordDescriptors;
             private ProducerConsumerFrame[] inputStates;
             //private JoinComparator[] tupleComparators;
 
-            public JoinerOperator(IHyracksTaskContext ctx, int partition, int inputArity,
+            public JoinerOperator(IHyracksTaskContext ctx, int partition, int nPartitions, int inputArity,
                     RecordDescriptor[] inRecordDesc) {
                 this.ctx = ctx;
                 this.partition = partition;
                 this.inputArity = inputArity;
                 this.recordDescriptors = inRecordDesc;
                 this.inputStates = new ProducerConsumerFrame[inputArity];
+                this.nPartitions = nPartitions;
             }
 
             @Override
@@ -130,7 +132,7 @@ public class IntervalForwardScanJoinOperatorDescriptor extends AbstractOperatorD
                     writer.open();
                     IStreamJoiner joiner = new IntervalForwardScanJoiner(ctx, inputStates[LEFT_INPUT_INDEX],
                             inputStates[RIGHT_INPUT_INDEX], memoryForJoinInFrames, partition, imjcf, leftKeys,
-                            rightKeys, writer);
+                            rightKeys, writer, nPartitions);
                     joiner.processJoin();
                 } catch (Exception ex) {
                     writer.fail();

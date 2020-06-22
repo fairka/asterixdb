@@ -23,6 +23,8 @@ import java.util.List;
 import java.util.logging.Logger;
 
 import org.apache.asterix.common.annotations.RangeAnnotation;
+import org.apache.asterix.om.types.ATypeTag;
+import org.apache.asterix.om.types.BuiltinType;
 import org.apache.hyracks.algebricks.common.exceptions.AlgebricksException;
 import org.apache.hyracks.algebricks.core.algebra.base.ILogicalExpression;
 import org.apache.hyracks.algebricks.core.algebra.base.IOptimizationContext;
@@ -67,7 +69,13 @@ public class AsterixJoinUtils {
         if (rangeAnnotation == null) {
             return;
         }
+        //Make sure Range Map is right Type
         RangeMap rangeMap = rangeAnnotation.getRangeMap();
+        switch (rangeMap.getTag(0,0)) {
+            case BuiltinType.ADATE:
+
+        }
+
         LOGGER.fine("Interval Join - Forward Scan");
         IntervalPartitions intervalPartitions =
                 IntervalJoinUtils.getIntervalPartitions(op, fi, sideLeft, sideRight, rangeMap, context);

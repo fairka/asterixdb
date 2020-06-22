@@ -131,4 +131,12 @@ public class RangeMap implements Serializable {
     public String toString() {
         return "{SPLIT:" + getSplitCount() + '}';
     }
+
+    public int getMinSlotFromPartition(int partition, int nPartitions) {
+        double rangesPerPart = 1.0;
+        if (getSplitCount() + 1 > nPartitions) {
+            rangesPerPart = ((double) getSplitCount() + 1) / nPartitions;
+        }
+        return (int) Math.ceil(partition * rangesPerPart) - 1;
+    }
 }

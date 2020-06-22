@@ -162,6 +162,7 @@ public class IntervalForwardScanJoiner extends AbstractStreamJoiner {
     private long[] spillWriteCount = { 0, 0 };
 
     private final int partition;
+    private final int nPartitions;
     private final int memorySize;
     private final int processingPartition = -1;
     private final LinkedList<TuplePointer> processingGroup = new LinkedList<>();
@@ -171,14 +172,15 @@ public class IntervalForwardScanJoiner extends AbstractStreamJoiner {
 
     public IntervalForwardScanJoiner(IHyracksTaskContext ctx, IConsumerFrame leftCF, IConsumerFrame rightCF,
             int memorySize, int partition, IIntervalJoinCheckerFactory imjcf, int[] leftKeys, int[] rightKeys,
-            IFrameWriter writer) throws HyracksDataException {
+            IFrameWriter writer, int nPartitions) throws HyracksDataException {
         super(ctx, partition, leftCF, rightCF);
         this.partition = partition;
+        this.nPartitions = nPartitions;
         this.memorySize = memorySize;
         this.writer = writer;
 
-        this.imjc = imjcf.createIntervalMergeJoinChecker(leftKeys, rightKeys, ctx);
-        this.imjcInverse = imjcf.createIntervalInverseMergeJoinChecker(leftKeys, rightKeys, ctx);
+        this.imjc = imjcf.createIntervalMergeJoinChecker(leftKeys, rightKeys, ctx, nPartitions);
+        this.imjcInverse = imjcf.createIntervalInverseMergeJoinChecker(leftKeys, rightKeys, ctx, nPartitions);
 
         this.leftKey = leftKeys[0];
         this.rightKey = rightKeys[0];
@@ -295,7 +297,7 @@ public class IntervalForwardScanJoiner extends AbstractStreamJoiner {
         long ioCost = runFileStream[LEFT_PARTITION].getWriteCount() + runFileStream[LEFT_PARTITION].getReadCount()
                 + runFileStream[RIGHT_PARTITION].getWriteCount() + runFileStream[RIGHT_PARTITION].getReadCount();
         if (LOGGER.isLoggable(Level.WARNING)) {
-            LOGGER.warning(",IntervalForwardSweepJoiner Statistics Log," + partition + ",partition," + memorySize
+            LOGGER.warning("IntervalForwardSweepJoiner Statistics Log," + partition + ",partition," + memorySize
                     + ",memory," + joinResultCount + ",results," + joinComparisonCount + ",CPU," + ioCost + ",IO,"
                     + leftSpillCount + ",left spills," + runFileStream[LEFT_PARTITION].getWriteCount()
                     + ",left frames_written," + runFileStream[LEFT_PARTITION].getReadCount() + ",left frames_read,"
@@ -411,7 +413,7 @@ public class IntervalForwardScanJoiner extends AbstractStreamJoiner {
 
         if (DEBUG) {
             System.err.println("SELECTED tuple: " + searchTp);
-            TuplePrinterUtil.printTuple("selected value: ", memoryAccessor[main], searchTp.getTupleIndex());
+            TuplePrinterUtil.printTuple("     selected value: ", memoryAccessor[main], searchTp.getTupleIndex());
             //        System.err.println("count: " + inputAccessor[main].getTupleCount());
             //        System.err.println("size: " + inputAccessor[main].getTupleLength());
         }
@@ -536,47 +538,6 @@ public class IntervalForwardScanJoiner extends AbstractStreamJoiner {
             inputAccessor[outer].next();
         }
     }
-
-    //    private void processGroupWithMemory(int outer, int inner, TuplePointer searchTp, IFrameWriter writer)
-    //            throws HyracksDataException {
-    //        // Compare with tuple in memory
-    //        for (Iterator<TuplePointer> iterator = activeManager[outer].getIterator(); iterator.hasNext();) {
-    //            TuplePointer matchTp = iterator.next();
-    //            memoryTuple[outer].setTuple(matchTp);
-    //
-    //            // Search group.
-    //            for (Iterator<TuplePointer> groupIterator = processingGroup.iterator(); groupIterator.hasNext();) {
-    //                TuplePointer groupTp = groupIterator.next();
-    //                memoryTuple[inner].setTuple(groupTp);
-    //
-    //                // Add to result if matched.
-    //                //if (imjc.checkToSaveInResult(startGroup, endGroup, startOuter, endOuter, false)) {
-    //                if (memoryTuple[LEFT_PARTITION].compareJoin(memoryTuple[RIGHT_PARTITION])) {
-    //                    addToResult(memoryTuple[LEFT_PARTITION].getAccessor(), memoryTuple[LEFT_PARTITION].getTupleIndex(),
-    //                            memoryTuple[RIGHT_PARTITION].getAccessor(), memoryTuple[RIGHT_PARTITION].getTupleIndex(),
-    //                            false, writer);
-    //                    if (DEBUG) {
-    //                        System.err.println("MATCH (group) in memory match: " + groupTp + " " + matchTp);
-    //                        TuplePrinterUtil.printTuple("    left: ", memoryTuple[LEFT_PARTITION].getAccessor(),
-    //                                memoryTuple[LEFT_PARTITION].getTupleIndex());
-    //                        TuplePrinterUtil.printTuple("    right: ", memoryTuple[RIGHT_PARTITION].getAccessor(),
-    //                                memoryTuple[RIGHT_PARTITION].getTupleIndex());
-    //                    }
-    //                }
-    //                joinComparisonCount++;
-    //            }
-    //
-    //            // Remove if the tuple no long matches.
-    //            memoryTuple[inner].setTuple(searchTp);
-    //            if (memoryTuple[inner].removeFromMemory(memoryTuple[outer])) {
-    //                if (DEBUG) {
-    //                    System.err.println("REMOVE (group) tuple: " + matchTp);
-    //                    TuplePrinterUtil.printTuple("    : ", memoryAccessor[outer], matchTp.getTupleIndex());
-    //                }
-    //                activeManager[outer].remove(iterator, matchTp);
-    //            }
-    //        }
-    //    }
 
     private void processSingleWithMemory(int outer, int inner, TuplePointer searchTp, IFrameWriter writer)
             throws HyracksDataException {
