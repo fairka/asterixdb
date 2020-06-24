@@ -137,6 +137,31 @@ public class RangeMap implements Serializable {
         if (getSplitCount() + 1 > nPartitions) {
             rangesPerPart = ((double) getSplitCount() + 1) / nPartitions;
         }
-        return (int) Math.ceil(partition * rangesPerPart) - 1;
+        if (partition == 0 || rangesPerPart == 0) {
+            return 0;
+        } else {
+            return (int) Math.ceil(partition * rangesPerPart) - 1;
+        }
     }
+
+    public int getMaxStartOffset(int columnIndex) {
+        return getFieldStart(getFieldIndex(columnIndex, getMaxIndex()));
+    }
+
+    private int getMaxIndex() {
+        return endOffsets.length / fields - 1;
+    }
+
+    private int getFieldIndex(int columnIndex, int splitIndex) {
+        return columnIndex + splitIndex * fields;
+    }
+
+    private int getFieldStart(int index) {
+        int start = 0;
+        if (index != 0) {
+            start = endOffsets[index - 1];
+        }
+        return start;
+    }
+
 }

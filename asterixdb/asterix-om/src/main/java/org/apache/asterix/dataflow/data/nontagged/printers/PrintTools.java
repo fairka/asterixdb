@@ -50,6 +50,18 @@ public class PrintTools {
         }
     }
 
+    public static String stringDateString(byte[] b, int s) throws HyracksDataException {
+        long chrononTime = AInt32SerializerDeserializer.getInt(b, s + 1) * CHRONON_OF_DAY;
+        String string;
+        try {
+            string = gCalInstance.getStringExtendStringRepUntilField(chrononTime, 0,
+                    GregorianCalendarSystem.Fields.YEAR, GregorianCalendarSystem.Fields.DAY, false);
+        } catch (IOException e) {
+            throw HyracksDataException.create(e);
+        }
+        return string;
+    }
+
     public static void printDateTimeString(byte[] b, int s, int l, PrintStream ps) throws HyracksDataException {
         long chrononTime = AInt64SerializerDeserializer.getLong(b, s + 1);
 

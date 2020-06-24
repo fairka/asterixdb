@@ -18,11 +18,12 @@
  */
 package org.apache.asterix.runtime.operators.joins;
 
+import org.apache.asterix.dataflow.data.nontagged.serde.ADateSerializerDeserializer;
+import org.apache.asterix.dataflow.data.nontagged.serde.ADateTimeSerializerDeserializer;
+import org.apache.asterix.dataflow.data.nontagged.serde.ATimeSerializerDeserializer;
 import org.apache.asterix.om.types.ATypeTag;
 import org.apache.hyracks.api.context.IHyracksTaskContext;
 import org.apache.hyracks.api.exceptions.HyracksDataException;
-import org.apache.hyracks.data.std.primitive.IntegerPointable;
-import org.apache.hyracks.data.std.primitive.LongPointable;
 import org.apache.hyracks.dataflow.common.data.partition.range.RangeMap;
 
 //import org.apache.hyracks.dataflow.std.misc.RangeForwardOperatorDescriptor.RangeForwardTaskState;
@@ -39,26 +40,25 @@ public class OverlappingIntervalJoinCheckerFactory extends AbstractIntervalJoinC
     public IIntervalJoinChecker createIntervalMergeJoinChecker(int[] keys0, int[] keys1, IHyracksTaskContext ctx,
             int nPartitions) throws HyracksDataException {
         int fieldIndex = 0;
-
-        //        if (ATypeTag.INT64.serialize() != rangeMap.getTag(0, 0)) {
-        //            throw new HyracksDataException("Invalid range map type for interval merge join checker.");
-        //        }
         int partition = ctx.getTaskAttemptId().getTaskId().getPartition();
         int slot = rangeMap.getMinSlotFromPartition(partition, nPartitions);
 
-        long partitionStart = Long.MIN_VALUE;
+        //        long partitionStart = Long.MIN_VALUE;
+        long partitionStart;
         // All lookups are on typed values.
-        //Switch. Don't assume its DATETIME, TIME, or DATE
-        //Get Chronon
-        if (slot <= rangeMap.getSplitCount()) {
-            if (rangeMap.getTag(0, 0) == ATypeTag.DATETIME.serialize()) {
-                partitionStart =
-                        LongPointable.getLong(rangeMap.getByteArray(), rangeMap.getStartOffset(fieldIndex, slot) + 1);
-            } else {
-                partitionStart = IntegerPointable.getInteger(rangeMap.getByteArray(),
-                        rangeMap.getStartOffset(fieldIndex, slot) + 1);
-            }
+        if (rangeMap.getTag(fieldIndex, slot) == ATypeTag.DATETIME.serialize()) {
+            partitionStart = ADateTimeSerializerDeserializer.getChronon(rangeMap.getByteArray(),
+                    rangeMap.getStartOffset(fieldIndex, slot) + 1);
+        } else if (rangeMap.getTag(fieldIndex, slot) == ATypeTag.DATE.serialize()) {
+            partitionStart = ADateSerializerDeserializer.getChronon(rangeMap.getByteArray(),
+                    rangeMap.getStartOffset(fieldIndex, slot) + 1);
+        } else if (rangeMap.getTag(fieldIndex, slot) == ATypeTag.TIME.serialize()) {
+            partitionStart = ATimeSerializerDeserializer.getChronon(rangeMap.getByteArray(),
+                    rangeMap.getMaxStartOffset(fieldIndex) + 1);
+        } else {
+            throw new HyracksDataException("RangeMap type is not supported");
         }
+        //        }
         return new OverlappingIntervalJoinChecker(keys0, keys1, partitionStart);
     }
 

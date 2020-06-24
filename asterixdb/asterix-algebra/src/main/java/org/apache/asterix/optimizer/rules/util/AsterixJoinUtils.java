@@ -23,8 +23,9 @@ import java.util.List;
 import java.util.logging.Logger;
 
 import org.apache.asterix.common.annotations.RangeAnnotation;
+import org.apache.asterix.common.exceptions.CompilationException;
+import org.apache.asterix.common.exceptions.ErrorCode;
 import org.apache.asterix.om.types.ATypeTag;
-import org.apache.asterix.om.types.BuiltinType;
 import org.apache.hyracks.algebricks.common.exceptions.AlgebricksException;
 import org.apache.hyracks.algebricks.core.algebra.base.ILogicalExpression;
 import org.apache.hyracks.algebricks.core.algebra.base.IOptimizationContext;
@@ -54,7 +55,6 @@ public class AsterixJoinUtils {
         if (conditionLE.getExpressionTag() != LogicalExpressionTag.FUNCTION_CALL) {
             return;
         }
-        //Don't used linked list
         List<LogicalVariable> sideLeft = new ArrayList<>(1);
         List<LogicalVariable> sideRight = new ArrayList<>(1);
         List<LogicalVariable> varsLeft = op.getInputs().get(LEFT).getValue().getSchema();
@@ -69,13 +69,14 @@ public class AsterixJoinUtils {
         if (rangeAnnotation == null) {
             return;
         }
-        //Make sure Range Map is right Type
+        //Check RangeMap type
         RangeMap rangeMap = rangeAnnotation.getRangeMap();
-        switch (rangeMap.getTag(0,0)) {
-            case BuiltinType.ADATE:
-
+        if (rangeMap.getTag(0, 0) != ATypeTag.DATETIME.serialize() && rangeMap.getTag(0, 0) != ATypeTag.DATE.serialize()
+                && rangeMap.getTag(0, 0) != ATypeTag.TIME.serialize()) {
+            throw new CompilationException(ErrorCode.COMPILATION_ERROR, op.getSourceLocation(),
+                    "Only DATE, TIME, and DATETIME type rangemaps have been "
+                            + "implemented for this interval operation.");
         }
-
         LOGGER.fine("Interval Join - Forward Scan");
         IntervalPartitions intervalPartitions =
                 IntervalJoinUtils.getIntervalPartitions(op, fi, sideLeft, sideRight, rangeMap, context);

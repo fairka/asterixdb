@@ -283,6 +283,12 @@ public class GregorianCalendarSystem implements ICalendarSystem {
         getExtendStringRepUntilField(chrononTime, timezone, sbder, startField, untilField, withTimezone, 'T');
     }
 
+    //Remove eventually
+    public String getStringExtendStringRepUntilField(long chrononTime, int timezone, Fields startField,
+            Fields untilField, boolean withTimezone) throws IOException {
+        return getStringExtendStringRepUntilField(chrononTime, timezone, startField, untilField, withTimezone, 'T');
+    }
+
     /**
      * Get the extended string representation of the given UTC chronon time under the given time zone. Only fields
      * before
@@ -368,6 +374,83 @@ public class GregorianCalendarSystem implements ICalendarSystem {
                         .append(String.format("%02d", tzMin < 0 ? -tzMin : tzMin));
             }
         }
+    }
+
+    //Remove Eventually
+    public String getStringExtendStringRepUntilField(long chrononTime, int timezone, Fields startField,
+            Fields untilField, boolean withTimezone, char dateTimeSeparator) {
+        String string = "";
+        int year = getYear(chrononTime);
+        int month = getMonthOfYear(chrononTime, year);
+
+        switch (startField) {
+            case YEAR:
+            default:
+                string += year < 0 ? "%05d" : "%04d" + year;
+                if (untilField == Fields.YEAR) {
+                    return string;
+                }
+            case MONTH:
+                if (startField != Fields.MONTH) {
+                    string += '-';
+                }
+                string += String.format("%02d", month);
+                if (untilField == Fields.MONTH) {
+                    return string;
+                }
+            case DAY:
+                if (startField != Fields.DAY) {
+                    string += '-';
+                }
+                string += String.format("%02d", getDayOfMonthYear(chrononTime, year, month));
+                if (untilField == Fields.DAY) {
+                    break;
+                }
+            case HOUR:
+                if (startField != Fields.HOUR) {
+                    string += dateTimeSeparator;
+                }
+                string += String.format("%02d", getHourOfDay(chrononTime));
+                if (untilField == Fields.HOUR) {
+                    break;
+                }
+            case MINUTE:
+                if (startField != Fields.MINUTE) {
+                    string += ':';
+                }
+                string += String.format("%02d", getMinOfHour(chrononTime));
+                if (untilField == Fields.MINUTE) {
+                    break;
+                }
+            case SECOND:
+                if (startField != Fields.SECOND) {
+                    string += ':';
+                }
+                string += String.format("%02d", getSecOfMin(chrononTime));
+                if (untilField == Fields.SECOND) {
+                    break;
+                }
+            case MILLISECOND:
+                if (startField != Fields.MILLISECOND) {
+                    string += '.';
+                }
+                // add millisecond as the precision fields of a second
+                string += String.format("%03d", getMillisOfSec(chrononTime));
+                break;
+        }
+
+        if (withTimezone) {
+            if (timezone == 0) {
+                string += 'Z';
+            } else {
+                int tzMin = (int) ((timezone % CHRONON_OF_HOUR) / CHRONON_OF_MINUTE);
+                int tzHr = (int) (timezone / CHRONON_OF_HOUR);
+                string += tzHr >= 0 ? '-'
+                        : '+' + String.format("%02d", tzHr < 0 ? -tzHr : tzHr) + ':'
+                                + String.format("%02d", tzMin < 0 ? -tzMin : tzMin);
+            }
+        }
+        return string;
     }
 
     /**

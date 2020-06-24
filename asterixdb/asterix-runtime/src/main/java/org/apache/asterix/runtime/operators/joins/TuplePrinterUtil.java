@@ -18,6 +18,7 @@
  */
 package org.apache.asterix.runtime.operators.joins;
 
+import org.apache.asterix.dataflow.data.nontagged.printers.PrintTools;
 import org.apache.asterix.dataflow.data.nontagged.printers.adm.AObjectPrinterFactory;
 import org.apache.hyracks.algebricks.data.IPrinter;
 import org.apache.hyracks.api.comm.IFrameTupleAccessor;
@@ -31,38 +32,37 @@ public class TuplePrinterUtil {
     private TuplePrinterUtil() {
     }
 
-    public static void printTuple(String message, ITupleAccessor accessor) throws HyracksDataException {
+    public static String printTuple(String message, ITupleAccessor accessor) throws HyracksDataException {
         if (accessor.exists()) {
-            printTuple(message, accessor, accessor.getTupleId());
+            return printTuple(message, accessor, accessor.getTupleId());
         } else {
-            System.out.flush();
-            System.err.flush();
-            System.err.print(String.format("%1$-" + 15 + "s", message) + " --");
-            System.err.print("no tuple");
-            System.err.println();
-            System.err.flush();
+            String string = String.format("%1$-" + 15 + "s", message) + " --" + "no tuple";
+            return string;
         }
     }
 
-    public static void printTuple(String message, IFrameTupleAccessor accessor, int tupleId)
+    public static String printTuple(String message, IFrameTupleAccessor accessor, int tupleId)
             throws HyracksDataException {
-        System.out.flush();
-        System.err.flush();
         //print
         String string = String.format("%1$-" + 15 + "s", message) + " -- " + accessor.getTupleLength(tupleId) + " --";
         //String string2 = "";
         int fields = accessor.getFieldCount();
         for (int i = 0; i < fields; ++i) {
             //string2 += " " + i + ": ";
-            System.err.print(" " + i + ": ");
+            string += (" " + i + ": ");
             int fieldStartOffset = accessor.getFieldStartOffset(tupleId, i);
             int fieldSlotsLength = accessor.getFieldSlotsLength();
             int tupleStartOffset = accessor.getTupleStartOffset(tupleId);
+            //            string += "\n" + fieldStartOffset + fieldSlotsLength + tupleStartOffset
+            //                    + accessor.getFieldLength(tupleId, i) + "\n";
+            string += "{ \"date\": \"";
+//            string += PrintTools.stringDateString(accessor.getBuffer().array(),
+//                    fieldStartOffset + fieldSlotsLength + tupleStartOffset);
+            string += "\" }";
             printer.print(accessor.getBuffer().array(), fieldStartOffset + fieldSlotsLength + tupleStartOffset,
                     accessor.getFieldLength(tupleId, i), System.err);
         }
-        System.err.println();
-        System.err.flush();
+        return string;
     }
 
 }
