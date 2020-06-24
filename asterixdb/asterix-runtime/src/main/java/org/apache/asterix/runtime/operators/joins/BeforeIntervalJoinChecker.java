@@ -21,6 +21,7 @@ package org.apache.asterix.runtime.operators.joins;
 import org.apache.asterix.om.pointables.nonvisitor.AIntervalPointable;
 import org.apache.asterix.runtime.evaluators.functions.temporal.IntervalLogicWithLong;
 import org.apache.asterix.runtime.evaluators.functions.temporal.IntervalPartitionLogic;
+import org.apache.hyracks.api.comm.IFrameTupleAccessor;
 import org.apache.hyracks.api.exceptions.HyracksDataException;
 import org.apache.hyracks.dataflow.std.buffermanager.ITupleAccessor;
 
@@ -50,6 +51,16 @@ public class BeforeIntervalJoinChecker extends AbstractIntervalJoinChecker {
     public boolean checkToRemoveInMemory(ITupleAccessor accessorLeft, ITupleAccessor accessorRight)
             throws HyracksDataException {
         return !checkToSaveInMemory(accessorLeft, accessorRight);
+    }
+
+    @Override
+    public boolean checkToRemoveInMemory(IFrameTupleAccessor accessorLeft, int leftTupleIndex,
+            IFrameTupleAccessor accessorRight, int rightTupleIndex) throws HyracksDataException {
+        long start0 = IntervalJoinUtil.getIntervalStart(accessorLeft, leftTupleIndex, idLeft);
+        long end0 = IntervalJoinUtil.getIntervalEnd(accessorLeft, leftTupleIndex, idLeft);
+        long start1 = IntervalJoinUtil.getIntervalStart(accessorRight, rightTupleIndex, idRight);
+        long end1 = IntervalJoinUtil.getIntervalEnd(accessorRight, rightTupleIndex, idRight);
+        return false;
     }
 
     @Override

@@ -42,23 +42,25 @@ public class OverlappingIntervalJoinCheckerFactory extends AbstractIntervalJoinC
         int fieldIndex = 0;
         int partition = ctx.getTaskAttemptId().getTaskId().getPartition();
         int slot = rangeMap.getMinSlotFromPartition(partition, nPartitions);
-
-        //        long partitionStart = Long.MIN_VALUE;
-        long partitionStart;
-        // All lookups are on typed values.
-        if (rangeMap.getTag(fieldIndex, slot) == ATypeTag.DATETIME.serialize()) {
-            partitionStart = ADateTimeSerializerDeserializer.getChronon(rangeMap.getByteArray(),
-                    rangeMap.getStartOffset(fieldIndex, slot) + 1);
-        } else if (rangeMap.getTag(fieldIndex, slot) == ATypeTag.DATE.serialize()) {
-            partitionStart = ADateSerializerDeserializer.getChronon(rangeMap.getByteArray(),
-                    rangeMap.getStartOffset(fieldIndex, slot) + 1);
-        } else if (rangeMap.getTag(fieldIndex, slot) == ATypeTag.TIME.serialize()) {
-            partitionStart = ATimeSerializerDeserializer.getChronon(rangeMap.getByteArray(),
-                    rangeMap.getMaxStartOffset(fieldIndex) + 1);
-        } else {
-            throw new HyracksDataException("RangeMap type is not supported");
+        long partitionStart = Long.MIN_VALUE;
+        if (slot >= 0) {
+            switch (ATypeTag.VALUE_TYPE_MAPPING[rangeMap.getTag(fieldIndex, slot)]) {
+                case DATETIME:
+                    partitionStart = ADateTimeSerializerDeserializer.getChronon(rangeMap.getByteArray(),
+                            rangeMap.getStartOffset(fieldIndex, slot) + 1);
+                    break;
+                case DATE:
+                    partitionStart = ADateSerializerDeserializer.getChronon(rangeMap.getByteArray(),
+                            rangeMap.getStartOffset(fieldIndex, slot) + 1);
+                    break;
+                case TIME:
+                    partitionStart = ATimeSerializerDeserializer.getChronon(rangeMap.getByteArray(),
+                            rangeMap.getStartOffset(fieldIndex, slot) + 1);
+                    break;
+                default:
+                    throw new HyracksDataException("RangeMap type is not supported");
+            }
         }
-        //        }
         return new OverlappingIntervalJoinChecker(keys0, keys1, partitionStart);
     }
 

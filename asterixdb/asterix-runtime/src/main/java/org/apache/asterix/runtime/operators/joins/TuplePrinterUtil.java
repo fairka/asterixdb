@@ -18,7 +18,9 @@
  */
 package org.apache.asterix.runtime.operators.joins;
 
-import org.apache.asterix.dataflow.data.nontagged.printers.PrintTools;
+import java.io.ByteArrayOutputStream;
+import java.io.PrintStream;
+
 import org.apache.asterix.dataflow.data.nontagged.printers.adm.AObjectPrinterFactory;
 import org.apache.hyracks.algebricks.data.IPrinter;
 import org.apache.hyracks.api.comm.IFrameTupleAccessor;
@@ -45,22 +47,36 @@ public class TuplePrinterUtil {
             throws HyracksDataException {
         //print
         String string = String.format("%1$-" + 15 + "s", message) + " -- " + accessor.getTupleLength(tupleId) + " --";
-        //String string2 = "";
         int fields = accessor.getFieldCount();
+        System.err.flush();
+        System.err.println("\n");
         for (int i = 0; i < fields; ++i) {
-            //string2 += " " + i + ": ";
             string += (" " + i + ": ");
             int fieldStartOffset = accessor.getFieldStartOffset(tupleId, i);
             int fieldSlotsLength = accessor.getFieldSlotsLength();
             int tupleStartOffset = accessor.getTupleStartOffset(tupleId);
             //            string += "\n" + fieldStartOffset + fieldSlotsLength + tupleStartOffset
             //                    + accessor.getFieldLength(tupleId, i) + "\n";
-            string += "{ \"date\": \"";
-//            string += PrintTools.stringDateString(accessor.getBuffer().array(),
-//                    fieldStartOffset + fieldSlotsLength + tupleStartOffset);
-            string += "\" }";
+            //            string += PrintTools.writeStringUTF8StringAsJSON(accessor.getBuffer().array(),
+            //                    fieldStartOffset + fieldSlotsLength + tupleStartOffset + 1,
+            //                    accessor.getFieldLength(tupleId, i) - 1);
+            //            string += "{ \"date\": \"";
+            //            string += PrintTools.stringDateString(accessor.getBuffer().array(),
+            //                    fieldStartOffset + fieldSlotsLength + tupleStartOffset);
+            //            string += "\" }";
+            ByteArrayOutputStream os = new ByteArrayOutputStream();
+            PrintStream myStream = new PrintStream(os);
             printer.print(accessor.getBuffer().array(), fieldStartOffset + fieldSlotsLength + tupleStartOffset,
-                    accessor.getFieldLength(tupleId, i), System.err);
+                    accessor.getFieldLength(tupleId, i), myStream);
+            string += os.toString();
+            //            try {
+            //                UTF8StringUtil.printUTF8StringWithQuotes(accessor.getBuffer().array(),
+            //                        fieldStartOffset + fieldSlotsLength + tupleStartOffset, accessor.getFieldLength(tupleId, i),
+            //                        System.err);
+            //            } catch (IOException e) {
+            //                throw new HyracksDataException("Print");
+            //
+            //            }
         }
         return string;
     }

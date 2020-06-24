@@ -400,6 +400,57 @@ public class PrintTools {
         os.write('\"');
     }
 
+    //Remove Eventually
+    public static String writeStringUTF8StringAsJSON(byte[] b, int s, int l) {
+        int utfLength = UTF8StringUtil.getUTFLength(b, s);
+        int position = s + UTF8StringUtil.getNumBytesToStoreLength(utfLength); // skip 2 bytes containing string size
+        int maxPosition = position + utfLength;
+        String string = "'";
+        while (position < maxPosition) {
+            char c = UTF8StringUtil.charAt(b, position);
+            int sz = UTF8StringUtil.charSize(b, position);
+            switch (c) {
+                // escape
+                case '\b':
+                    string += "\\";
+                    string += "b";
+                    position += sz;
+                    break;
+                case '\f':
+                    string += "\\";
+                    string += "f";
+                    position += sz;
+                    break;
+                case '\n':
+                    string += "\\";
+                    string += "n";
+                    position += sz;
+                    break;
+                case '\r':
+                    string += "\\";
+                    string += "r";
+                    position += sz;
+                    break;
+                case '\t':
+                    string += "\\";
+                    string += "t";
+                    position += sz;
+                    break;
+                case '\\':
+                case '"':
+                    string += "\\";
+                    while (sz > 0) {
+                        string += b[position];
+                        ++position;
+                        --sz;
+                    }
+                    break;
+            }
+        }
+        string += "\'";
+        return string;
+    }
+
     private static void writeUEscape(OutputStream os, char c) throws IOException {
         os.write('\\');
         os.write('u');
