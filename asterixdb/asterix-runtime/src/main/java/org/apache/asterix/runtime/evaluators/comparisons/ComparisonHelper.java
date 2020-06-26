@@ -75,14 +75,6 @@ public class ComparisonHelper implements Serializable {
     public int compare(ATypeTag typeTag1, ATypeTag typeTag2, IPointable arg1, IPointable arg2)
             throws HyracksDataException {
         switch (typeTag1) {
-            //            case INT8:
-            //                return compareInt8WithArg(typeTag2, arg1, arg2);
-            //            case INT16:
-            //                return compareInt16WithArg(typeTag2, arg1, arg2);
-            //            case INT32:
-            //                return compareInt32WithArg(typeTag2, arg1, arg2);
-            //            case INT64:
-            //                return compareInt64WithArg(typeTag2, arg1, arg2);
             case FLOAT:
                 return compareFloatWithArg(typeTag2, arg1, arg2);
             case DOUBLE:
@@ -114,20 +106,19 @@ public class ComparisonHelper implements Serializable {
             switch (actualTypeTag) {
                 case YEARMONTHDURATION:
                 case TIME:
+                    //Added
                     //Compare time?
                     //Create Binary Comparator Factories?
                     result = Integer.compare(ATimeSerializerDeserializer.getChronon(leftBytes, leftOffset),
                             ATimeSerializerDeserializer.getChronon(rightBytes, rightOffset));
                     break;
                 case DATE:
-                    //Replace with get Chronon
                     //Create Binary Comparator Factories?
                     result = Integer.compare(ADateSerializerDeserializer.getChronon(leftBytes, leftOffset),
                             ADateSerializerDeserializer.getChronon(rightBytes, rightOffset));
                     break;
                 case DAYTIMEDURATION:
                 case DATETIME:
-                    //Replace with get chronon
                     //Create Binary Comparator Factories?
                     result = Long.compare(ADateTimeSerializerDeserializer.getChronon(leftBytes, leftOffset),
                             ADateTimeSerializerDeserializer.getChronon(rightBytes, rightOffset));
