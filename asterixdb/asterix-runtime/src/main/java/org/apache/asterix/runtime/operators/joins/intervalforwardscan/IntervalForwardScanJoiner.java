@@ -167,7 +167,7 @@ public class IntervalForwardScanJoiner extends AbstractStreamJoiner {
     private final LinkedList<TuplePointer> processingGroup = new LinkedList<>();
     private static final LinkedList<TuplePointer> empty = new LinkedList<>();
 
-    private final boolean DEBUG = true;
+    private final boolean DEBUG = false;
 
     public IntervalForwardScanJoiner(IHyracksTaskContext ctx, IConsumerFrame leftCF, IConsumerFrame rightCF,
             int memorySize, int partition, IIntervalJoinCheckerFactory imjcf, int[] leftKeys, int[] rightKeys,
@@ -405,8 +405,6 @@ public class IntervalForwardScanJoiner extends AbstractStreamJoiner {
         if (DEBUG) {
             String string = TuplePrinterUtil.printTuple("     selected value: ", memoryAccessor[main],
                     searchTp.getTupleIndex());
-            //        System.err.println("count: " + inputAccessor[main].getTupleCount());
-            //        System.err.println("size: " + inputAccessor[main].getTupleLength());
             System.err.println("\nPartitioning: " + partition + ", SELECTED tuple: " + searchTp + "\n" + string);
         }
         //        searchEndTp = buildGroupFor(main, other, searchTp, searchEndTp);
@@ -459,7 +457,14 @@ public class IntervalForwardScanJoiner extends AbstractStreamJoiner {
                     //                    TuplePrinterUtil.printTuple("    inner: ", memoryAccessor[inner], groupTp.getTupleIndex());
                     //                    TuplePrinterUtil.printTuple("    left: ", memoryTuple[LEFT_PARTITION].getAccessor(), memoryTuple[LEFT_PARTITION].getTupleIndex());
                     //                    TuplePrinterUtil.printTuple("    right: ", memoryTuple[RIGHT_PARTITION].getAccessor(), memoryTuple[RIGHT_PARTITION].getTupleIndex());
-
+                    if (DEBUG) {
+                        String string1 = TuplePrinterUtil.printTuple("         left: ", memoryAccessor[LEFT_PARTITION],
+                                memoryTuple[LEFT_PARTITION].getTupleIndex());
+                        String string2 = TuplePrinterUtil.printTuple("         right: ",
+                                memoryAccessor[RIGHT_PARTITION], memoryTuple[RIGHT_PARTITION].getTupleIndex());
+                        System.err.println("\n       Partitioning: " + partition + ", COMPARE Group from stream: "
+                                + groupTp + " " + tp + "\n" + string1 + "\n" + string2);
+                    }
                     // Add to result if matched.
                     if (memoryTuple[LEFT_PARTITION].compareJoin(memoryTuple[RIGHT_PARTITION])) {
                         //                      memoryAccessor[LEFT_PARTITION].reset(groupTp);
@@ -471,7 +476,7 @@ public class IntervalForwardScanJoiner extends AbstractStreamJoiner {
                                     memoryTuple[LEFT_PARTITION].getTupleIndex());
                             String string2 = TuplePrinterUtil.printTuple("    right: ", memoryAccessor[RIGHT_PARTITION],
                                     memoryTuple[RIGHT_PARTITION].getTupleIndex());
-                            System.err.println("\nPartitioning: " + partition + ", MATCH form stream: " + groupTp + " "
+                            System.err.println("\nPartitioning: " + partition + ", MATCH from stream: " + groupTp + " "
                                     + tp + "\n" + string1 + "\n" + string2);
                         }
                     }
@@ -500,6 +505,15 @@ public class IntervalForwardScanJoiner extends AbstractStreamJoiner {
             TuplePointer matchTp = iterator.next();
             memoryTuple[outer].setTuple(matchTp);
 
+            if (DEBUG) {
+                String string1 = TuplePrinterUtil.printTuple("         left: ",
+                        memoryTuple[LEFT_PARTITION].getAccessor(), memoryTuple[LEFT_PARTITION].getTupleIndex());
+                String string2 = TuplePrinterUtil.printTuple("         right: ",
+                        memoryTuple[RIGHT_PARTITION].getAccessor(), memoryTuple[RIGHT_PARTITION].getTupleIndex());
+                System.err.println("\n       Partitioning: " + partition + ", COMPARE in memory: " + searchTp + " "
+                        + matchTp + "\n" + string1 + "\n" + string2);
+            }
+
             if (memoryTuple[inner].removeFromMemory(memoryTuple[outer])) {
                 // Remove if the tuple no long matches.
                 if (DEBUG) {
@@ -507,9 +521,8 @@ public class IntervalForwardScanJoiner extends AbstractStreamJoiner {
                             matchTp.getTupleIndex());
                     System.err.println("\n Partitioning: " + partition + ", REMOVE tuple: " + matchTp + "\n" + string);
                 }
-                //iS this doing what it is supposed to?
                 activeManager[outer].remove(iterator, matchTp);
-            } else if (memoryTuple[inner].checkForEarlyExit(memoryTuple[outer])) {
+            } else if (false) {
                 // No more possible comparisons
                 break;
             } else if (memoryTuple[LEFT_PARTITION].compareJoin(memoryTuple[RIGHT_PARTITION])) {

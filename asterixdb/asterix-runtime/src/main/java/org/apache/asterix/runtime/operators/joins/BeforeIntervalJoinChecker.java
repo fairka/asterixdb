@@ -54,16 +54,6 @@ public class BeforeIntervalJoinChecker extends AbstractIntervalJoinChecker {
     }
 
     @Override
-    public boolean checkToRemoveInMemory(IFrameTupleAccessor accessorLeft, int leftTupleIndex,
-            IFrameTupleAccessor accessorRight, int rightTupleIndex) throws HyracksDataException {
-        long start0 = IntervalJoinUtil.getIntervalStart(accessorLeft, leftTupleIndex, idLeft);
-        long end0 = IntervalJoinUtil.getIntervalEnd(accessorLeft, leftTupleIndex, idLeft);
-        long start1 = IntervalJoinUtil.getIntervalStart(accessorRight, rightTupleIndex, idRight);
-        long end1 = IntervalJoinUtil.getIntervalEnd(accessorRight, rightTupleIndex, idRight);
-        return false;
-    }
-
-    @Override
     public boolean compareInterval(AIntervalPointable ipLeft, AIntervalPointable ipRight) throws HyracksDataException {
         return il.before(ipLeft, ipRight);
     }
@@ -76,6 +66,12 @@ public class BeforeIntervalJoinChecker extends AbstractIntervalJoinChecker {
     @Override
     public boolean compareInterval(long start0, long end0, long start1, long end1) {
         return IntervalLogicWithLong.before(start0, end0, start1, end1);
+    }
+
+    @Override
+    public boolean checkForEarlyExit(IFrameTupleAccessor accessorLeft, int leftTupleIndex,
+            IFrameTupleAccessor accessorRight, int rightTupleIndex) throws HyracksDataException {
+        return false;
     }
 
 }

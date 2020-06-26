@@ -35,48 +35,31 @@ public class TuplePrinterUtil {
     }
 
     public static String printTuple(String message, ITupleAccessor accessor) throws HyracksDataException {
+        String string;
         if (accessor.exists()) {
-            return printTuple(message, accessor, accessor.getTupleId());
+            string = printTuple(message, accessor, accessor.getTupleId());
         } else {
-            String string = String.format("%1$-" + 15 + "s", message) + " --" + "no tuple";
-            return string;
+            string = String.format("%1$-" + 15 + "s", message) + " --";
+            string += "no tuple";
         }
+        return string;
     }
 
     public static String printTuple(String message, IFrameTupleAccessor accessor, int tupleId)
             throws HyracksDataException {
-        //print
         String string = String.format("%1$-" + 15 + "s", message) + " -- " + accessor.getTupleLength(tupleId) + " --";
         int fields = accessor.getFieldCount();
-        System.err.flush();
-        System.err.println("\n");
+        ByteArrayOutputStream os = new ByteArrayOutputStream();
+        PrintStream myStream = new PrintStream(os);
         for (int i = 0; i < fields; ++i) {
-            string += (" " + i + ": ");
+            string += " " + i + ": ";
             int fieldStartOffset = accessor.getFieldStartOffset(tupleId, i);
             int fieldSlotsLength = accessor.getFieldSlotsLength();
             int tupleStartOffset = accessor.getTupleStartOffset(tupleId);
-            //            string += "\n" + fieldStartOffset + fieldSlotsLength + tupleStartOffset
-            //                    + accessor.getFieldLength(tupleId, i) + "\n";
-            //            string += PrintTools.writeStringUTF8StringAsJSON(accessor.getBuffer().array(),
-            //                    fieldStartOffset + fieldSlotsLength + tupleStartOffset + 1,
-            //                    accessor.getFieldLength(tupleId, i) - 1);
-            //            string += "{ \"date\": \"";
-            //            string += PrintTools.stringDateString(accessor.getBuffer().array(),
-            //                    fieldStartOffset + fieldSlotsLength + tupleStartOffset);
-            //            string += "\" }";
-            ByteArrayOutputStream os = new ByteArrayOutputStream();
-            PrintStream myStream = new PrintStream(os);
             printer.print(accessor.getBuffer().array(), fieldStartOffset + fieldSlotsLength + tupleStartOffset,
                     accessor.getFieldLength(tupleId, i), myStream);
             string += os.toString();
-            //            try {
-            //                UTF8StringUtil.printUTF8StringWithQuotes(accessor.getBuffer().array(),
-            //                        fieldStartOffset + fieldSlotsLength + tupleStartOffset, accessor.getFieldLength(tupleId, i),
-            //                        System.err);
-            //            } catch (IOException e) {
-            //                throw new HyracksDataException("Print");
-            //
-            //            }
+            myStream.flush();
         }
         return string;
     }

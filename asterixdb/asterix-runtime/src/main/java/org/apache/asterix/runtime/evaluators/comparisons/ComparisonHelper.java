@@ -29,12 +29,14 @@ import org.apache.asterix.dataflow.data.nontagged.comparators.APointPartialBinar
 import org.apache.asterix.dataflow.data.nontagged.comparators.APolygonPartialBinaryComparatorFactory;
 import org.apache.asterix.dataflow.data.nontagged.comparators.ARectanglePartialBinaryComparatorFactory;
 import org.apache.asterix.dataflow.data.nontagged.comparators.AUUIDPartialBinaryComparatorFactory;
+import org.apache.asterix.dataflow.data.nontagged.serde.ADateSerializerDeserializer;
+import org.apache.asterix.dataflow.data.nontagged.serde.ADateTimeSerializerDeserializer;
 import org.apache.asterix.dataflow.data.nontagged.serde.ADoubleSerializerDeserializer;
 import org.apache.asterix.dataflow.data.nontagged.serde.AFloatSerializerDeserializer;
 import org.apache.asterix.dataflow.data.nontagged.serde.AInt16SerializerDeserializer;
-import org.apache.asterix.dataflow.data.nontagged.serde.AInt32SerializerDeserializer;
 import org.apache.asterix.dataflow.data.nontagged.serde.AInt64SerializerDeserializer;
 import org.apache.asterix.dataflow.data.nontagged.serde.AInt8SerializerDeserializer;
+import org.apache.asterix.dataflow.data.nontagged.serde.ATimeSerializerDeserializer;
 // import org.apache.asterix.formats.nontagged.AqlBinaryComparatorFactoryProvider;
 import org.apache.asterix.om.types.ATypeTag;
 import org.apache.hyracks.api.dataflow.value.IBinaryComparator;
@@ -112,14 +114,23 @@ public class ComparisonHelper implements Serializable {
             switch (actualTypeTag) {
                 case YEARMONTHDURATION:
                 case TIME:
+                    //Compare time?
+                    //Create Binary Comparator Factories?
+                    result = Integer.compare(ATimeSerializerDeserializer.getChronon(leftBytes, leftOffset),
+                            ATimeSerializerDeserializer.getChronon(rightBytes, rightOffset));
+                    break;
                 case DATE:
-                    result = Integer.compare(AInt32SerializerDeserializer.getInt(leftBytes, leftOffset),
-                            AInt32SerializerDeserializer.getInt(rightBytes, rightOffset));
+                    //Replace with get Chronon
+                    //Create Binary Comparator Factories?
+                    result = Integer.compare(ADateSerializerDeserializer.getChronon(leftBytes, leftOffset),
+                            ADateSerializerDeserializer.getChronon(rightBytes, rightOffset));
                     break;
                 case DAYTIMEDURATION:
                 case DATETIME:
-                    result = Long.compare(AInt64SerializerDeserializer.getLong(leftBytes, leftOffset),
-                            AInt64SerializerDeserializer.getLong(rightBytes, rightOffset));
+                    //Replace with get chronon
+                    //Create Binary Comparator Factories?
+                    result = Long.compare(ADateTimeSerializerDeserializer.getChronon(leftBytes, leftOffset),
+                            ADateTimeSerializerDeserializer.getChronon(rightBytes, rightOffset));
                     break;
                 case CIRCLE:
                     result = circleBinaryComp.compare(leftBytes, leftOffset, leftLen, rightBytes, rightOffset,
