@@ -2876,11 +2876,11 @@
     <test-case FilePath="aggregate-subclause">
       <compilation-unit name="agg_filter_02_neg">
         <output-dir compare="Text">agg_filter_01</output-dir>
-        <expected-error>ASX1120: Illegal use of aggregate FILTER clause</expected-error>
-        <expected-error>ASX1120: Illegal use of aggregate FILTER clause</expected-error>
+        <expected-error>ASX1121: Illegal use of aggregate FILTER clause</expected-error>
+        <expected-error>ASX1121: Illegal use of aggregate FILTER clause</expected-error>
         <expected-error>ASX1073: Cannot resolve alias reference for undefined identifier r</expected-error>
-        <expected-error>ASX1120: Illegal use of aggregate FILTER clause</expected-error>
-        <expected-error>ASX1120: Illegal use of aggregate FILTER clause</expected-error>
+        <expected-error>ASX1121: Illegal use of aggregate FILTER clause</expected-error>
+        <expected-error>ASX1121: Illegal use of aggregate FILTER clause</expected-error>
       </compilation-unit>
     </test-case>
   </test-group>
@@ -3988,6 +3988,7 @@
         <output-dir compare="Text">create-dataset-inline-type-2</output-dir>
         <expected-error>ASX1082: Cannot find datatype with name test.$d$t$i$Cust1</expected-error>
         <expected-error>ASX1082: Cannot find datatype with name test.$d$t$i$Cust2</expected-error>
+        <expected-error>ASX1082: Cannot find datatype with name my_unknown_type</expected-error>
       </compilation-unit>
     </test-case>
     <test-case FilePath="ddl">
@@ -5628,14 +5629,14 @@
     <test-case FilePath="group-by">
       <compilation-unit name="grouping-sets-3-negative">
         <output-dir compare="Text">grouping-sets-2</output-dir>
-        <expected-error>ASX1119: Unexpected alias: v21</expected-error>
-        <expected-error>ASX1119: Unexpected alias: v22</expected-error>
-        <expected-error>ASX1119: Unexpected alias: v23</expected-error>
+        <expected-error>ASX1120: Unexpected alias: v21</expected-error>
+        <expected-error>ASX1120: Unexpected alias: v22</expected-error>
+        <expected-error>ASX1120: Unexpected alias: v23</expected-error>
         <expected-error>ASX1087: Invalid number of arguments for function grouping</expected-error>
-        <expected-error>ASX1118: Invalid argument to grouping() function</expected-error>
-        <expected-error>ASX1118: Invalid argument to grouping() function</expected-error>
-        <expected-error>ASX1118: Invalid argument to grouping() function</expected-error>
-        <expected-error>ASX1117: Too many grouping sets in group by clause: 512. Maximum allowed: 128.</expected-error>
+        <expected-error>ASX1119: Invalid argument to grouping() function</expected-error>
+        <expected-error>ASX1119: Invalid argument to grouping() function</expected-error>
+        <expected-error>ASX1119: Invalid argument to grouping() function</expected-error>
+        <expected-error>ASX1118: Too many grouping sets in group by clause: 512. Maximum allowed: 128.</expected-error>
       </compilation-unit>
     </test-case>
     <test-case FilePath="group-by">
@@ -6492,6 +6493,11 @@
       </compilation-unit>
     </test-case>
     <test-case FilePath="misc">
+      <compilation-unit name="case_09">
+        <output-dir compare="Text">case_09</output-dir>
+      </compilation-unit>
+    </test-case>
+    <test-case FilePath="misc">
       <compilation-unit name="dataset_nodegroup">
         <output-dir compare="Text">dataset_nodegroup</output-dir>
       </compilation-unit>
@@ -7033,6 +7039,11 @@
       <test-case FilePath="open-index-non-enforced/index-selection">
         <compilation-unit name="btree-index-composite-key-03">
           <output-dir compare="Text">btree-index-composite-key-03</output-dir>
+        </compilation-unit>
+      </test-case>
+      <test-case FilePath="open-index-non-enforced/index-selection">
+        <compilation-unit name="btree-index-composite-key-04">
+          <output-dir compare="Text">btree-index-composite-key-04</output-dir>
         </compilation-unit>
       </test-case>
       <test-case FilePath="open-index-non-enforced/correlated-index-selection">
@@ -13297,6 +13308,11 @@
     </test-case>
   </test-group>
   <test-group name="unnest">
+    <test-case FilePath="unnest">
+      <compilation-unit name="ASTERIXDB-2750_unnest_join">
+        <output-dir compare="Text">ASTERIXDB-2750_unnest_join</output-dir>
+      </compilation-unit>
+    </test-case>
     <test-case FilePath="unnest">
       <compilation-unit name="left-outer-unnest">
         <output-dir compare="Text">left-outer-unnest</output-dir>
