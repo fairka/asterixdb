@@ -19,8 +19,6 @@
 package org.apache.asterix.runtime.operators.joins;
 
 import org.apache.asterix.om.pointables.nonvisitor.AIntervalPointable;
-import org.apache.asterix.runtime.evaluators.functions.temporal.IntervalLogicWithLong;
-import org.apache.asterix.runtime.evaluators.functions.temporal.IntervalPartitionLogic;
 import org.apache.hyracks.api.exceptions.HyracksDataException;
 import org.apache.hyracks.dataflow.std.buffermanager.ITupleAccessor;
 
@@ -38,7 +36,8 @@ public class EndsIntervalJoinChecker extends AbstractIntervalJoinChecker {
         IntervalJoinUtil.getIntervalPointable(accessorRight, idRight, tvp, ipRight);
         ipLeft.getEnd(endLeft);
         ipRight.getEnd(endRight);
-        return ch.compare(ipLeft.getTypeTag(), ipRight.getTypeTag(), endLeft, endRight) <= 0;
+        return ch.compare(ipLeft.getByteArray(), ipLeft.getStartOffset(), ipLeft.getLength(), ipRight.getByteArray(),
+                ipRight.getStartOffset(), ipRight.getLength()) <= 0;
     }
 
     @Override
@@ -50,16 +49,6 @@ public class EndsIntervalJoinChecker extends AbstractIntervalJoinChecker {
     @Override
     public boolean compareInterval(AIntervalPointable ipLeft, AIntervalPointable ipRight) throws HyracksDataException {
         return il.ends(ipLeft, ipRight);
-    }
-
-    @Override
-    public boolean compareIntervalPartition(int s1, int e1, int s2, int e2) {
-        return IntervalPartitionLogic.ends(s1, e1, s2, e2);
-    }
-
-    @Override
-    public boolean compareInterval(long start0, long end0, long start1, long end1) {
-        return IntervalLogicWithLong.ends(start0, end0, start1, end1);
     }
 
 }

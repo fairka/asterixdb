@@ -19,8 +19,6 @@
 package org.apache.asterix.runtime.operators.joins;
 
 import org.apache.asterix.om.pointables.nonvisitor.AIntervalPointable;
-import org.apache.asterix.runtime.evaluators.functions.temporal.IntervalLogicWithLong;
-import org.apache.asterix.runtime.evaluators.functions.temporal.IntervalPartitionLogic;
 import org.apache.hyracks.api.comm.IFrameTupleAccessor;
 import org.apache.hyracks.api.exceptions.HyracksDataException;
 
@@ -34,17 +32,6 @@ public class CoveredByIntervalJoinChecker extends AbstractIntervalInverseJoinChe
     @Override
     public boolean compareInterval(AIntervalPointable ipLeft, AIntervalPointable ipRight) throws HyracksDataException {
         return il.coveredBy(ipLeft, ipRight);
-    }
-
-    @Override
-    public boolean compareIntervalPartition(int s1, int e1, int s2, int e2) {
-        return IntervalPartitionLogic.coveredBy(s1, e1, s2, e2);
-    }
-
-    @Override
-    public boolean compareInterval(long start0, long end0, long start1, long end1) {
-        return IntervalLogicWithLong.coveredBy(start0, end0, start1, end1);
-
     }
 
     /**

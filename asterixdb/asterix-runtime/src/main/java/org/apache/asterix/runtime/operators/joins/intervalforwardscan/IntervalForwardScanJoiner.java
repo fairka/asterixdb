@@ -106,10 +106,6 @@ class IntervalSideTuple {
         return imjc.checkToSaveInResult(accessor, tupleIndex, ist.accessor, ist.tupleIndex, false);
     }
 
-    public boolean addToMemory(IntervalSideTuple ist) throws HyracksDataException {
-        return imjc.checkToSaveInMemory(accessor, tupleIndex, ist.accessor, ist.tupleIndex);
-    }
-
     public boolean removeFromMemory(IntervalSideTuple ist) throws HyracksDataException {
         return imjc.checkToRemoveInMemory(accessor, tupleIndex, ist.accessor, ist.tupleIndex);
     }

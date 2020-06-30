@@ -18,10 +18,7 @@
  */
 package org.apache.asterix.runtime.operators.joins;
 
-import org.apache.asterix.dataflow.data.nontagged.serde.AIntervalSerializerDeserializer;
 import org.apache.asterix.om.pointables.nonvisitor.AIntervalPointable;
-import org.apache.asterix.runtime.evaluators.functions.temporal.IntervalLogicWithLong;
-import org.apache.asterix.runtime.evaluators.functions.temporal.IntervalPartitionLogic;
 import org.apache.hyracks.api.comm.IFrameTupleAccessor;
 import org.apache.hyracks.api.exceptions.HyracksDataException;
 
@@ -82,41 +79,22 @@ public class OverlappingIntervalJoinChecker extends AbstractIntervalJoinChecker 
     @Override
     public boolean checkToSaveInResult(IFrameTupleAccessor accessorLeft, int leftTupleIndex,
             IFrameTupleAccessor accessorRight, int rightTupleIndex, boolean reversed) throws HyracksDataException {
-        int offset0 = IntervalJoinUtil.getIntervalOffset(accessorLeft, leftTupleIndex, (reversed ? idRight : idLeft));
-        int offset1 = IntervalJoinUtil.getIntervalOffset(accessorRight, rightTupleIndex, (reversed ? idLeft : idRight));
-
-        long start0 = AIntervalSerializerDeserializer.getIntervalStart(accessorLeft.getBuffer().array(), offset0);
-        long start1 = AIntervalSerializerDeserializer.getIntervalStart(accessorRight.getBuffer().array(), offset1);
-        if (start0 < partitionStart && start1 < partitionStart) {
+        if (reversed) {
+            IntervalJoinUtil.getIntervalPointable(accessorLeft, leftTupleIndex, idLeft, tvp, ipRight);
+            IntervalJoinUtil.getIntervalPointable(accessorRight, rightTupleIndex, idRight, tvp, ipLeft);
+        } else {
+            IntervalJoinUtil.getIntervalPointable(accessorLeft, leftTupleIndex, idLeft, tvp, ipLeft);
+            IntervalJoinUtil.getIntervalPointable(accessorRight, rightTupleIndex, idRight, tvp, ipRight);
+        }
+        if (ipLeft.getStartValue() < partitionStart && ipRight.getStartValue() < partitionStart) {
             // Both tuples will match in a different partition.
             return false;
         }
-        long end0 = AIntervalSerializerDeserializer.getIntervalEnd(accessorLeft.getBuffer().array(), offset0);
-        long end1 = AIntervalSerializerDeserializer.getIntervalEnd(accessorRight.getBuffer().array(), offset1);
-        return IntervalLogicWithLong.overlapping(start0, end0, start1, end1);
-    }
-
-    public boolean checkToSaveInResult(long start0, long end0, long start1, long end1, boolean reversed) {
-        if (start0 < partitionStart && start1 < partitionStart) {
-            // Both tuples will match in a different partition.
-            return false;
-        }
-        return super.checkToSaveInResult(start0, end0, start1, end1, reversed);
+        return il.overlapping(ipLeft, ipRight);
     }
 
     @Override
     public boolean compareInterval(AIntervalPointable ipLeft, AIntervalPointable ipRight) throws HyracksDataException {
         return il.overlapping(ipLeft, ipRight);
     }
-
-    @Override
-    public boolean compareIntervalPartition(int s1, int e1, int s2, int e2) {
-        return IntervalPartitionLogic.overlapping(s1, e1, s2, e2);
-    }
-
-    @Override
-    public boolean compareInterval(long start0, long end0, long start1, long end1) {
-        return IntervalLogicWithLong.overlapping(start0, end0, start1, end1);
-    }
-
 }

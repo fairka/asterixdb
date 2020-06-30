@@ -19,7 +19,6 @@
 package org.apache.asterix.runtime.operators.joins;
 
 import org.apache.asterix.om.pointables.nonvisitor.AIntervalPointable;
-import org.apache.asterix.runtime.evaluators.functions.temporal.IntervalPartitionLogic;
 import org.apache.hyracks.api.exceptions.HyracksDataException;
 
 public class EndedByIntervalJoinChecker extends EndsIntervalJoinChecker {
@@ -32,11 +31,6 @@ public class EndedByIntervalJoinChecker extends EndsIntervalJoinChecker {
     @Override
     public boolean compareInterval(AIntervalPointable ipLeft, AIntervalPointable ipRight) throws HyracksDataException {
         return il.endedBy(ipLeft, ipRight);
-    }
-
-    @Override
-    public boolean compareIntervalPartition(int s1, int e1, int s2, int e2) {
-        return IntervalPartitionLogic.endedBy(s1, e1, s2, e2);
     }
 
 }

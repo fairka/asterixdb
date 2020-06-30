@@ -18,10 +18,12 @@
  */
 package org.apache.asterix.runtime.operators.joins;
 
+import org.apache.asterix.formats.nontagged.BinaryComparatorFactoryProvider;
 import org.apache.asterix.om.pointables.nonvisitor.AIntervalPointable;
-import org.apache.asterix.runtime.evaluators.comparisons.ComparisonHelper;
-import org.apache.asterix.runtime.evaluators.functions.temporal.IntervalLogicWithPointables;
+import org.apache.asterix.om.types.BuiltinType;
+import org.apache.asterix.runtime.evaluators.functions.temporal.IntervalLogic;
 import org.apache.hyracks.api.comm.IFrameTupleAccessor;
+import org.apache.hyracks.api.dataflow.value.IBinaryComparator;
 import org.apache.hyracks.api.exceptions.HyracksDataException;
 import org.apache.hyracks.data.std.api.IPointable;
 import org.apache.hyracks.data.std.primitive.TaggedValuePointable;
@@ -35,13 +37,14 @@ public abstract class AbstractIntervalJoinChecker implements IIntervalJoinChecke
     protected final int idLeft;
     protected final int idRight;
 
-    protected final IntervalLogicWithPointables il = new IntervalLogicWithPointables();
+    protected final IntervalLogic il = new IntervalLogic();
 
     protected final TaggedValuePointable tvp = (TaggedValuePointable) TaggedValuePointable.FACTORY.createPointable();
     protected final AIntervalPointable ipLeft = (AIntervalPointable) AIntervalPointable.FACTORY.createPointable();
     protected final AIntervalPointable ipRight = (AIntervalPointable) AIntervalPointable.FACTORY.createPointable();
 
-    protected final ComparisonHelper ch = new ComparisonHelper();
+    protected final IBinaryComparator ch = BinaryComparatorFactoryProvider.INSTANCE
+            .getBinaryComparatorFactory(BuiltinType.ANY, BuiltinType.ANY, true).createBinaryComparator();;
     protected final IPointable startLeft = VoidPointable.FACTORY.createPointable();
     protected final IPointable endLeft = VoidPointable.FACTORY.createPointable();
     protected final IPointable startRight = VoidPointable.FACTORY.createPointable();
@@ -126,7 +129,8 @@ public abstract class AbstractIntervalJoinChecker implements IIntervalJoinChecke
         IntervalJoinUtil.getIntervalPointable(accessorRight, idRight, tvp, ipRight);
         ipLeft.getEnd(endLeft);
         ipRight.getEnd(endRight);
-        return ch.compare(ipLeft.getTypeTag(), ipRight.getTypeTag(), endLeft, endRight) < 0;
+        return ch.compare(ipLeft.getByteArray(), ipLeft.getStartOffset(), ipLeft.getLength(), ipRight.getByteArray(),
+                ipRight.getStartOffset(), ipRight.getLength()) < 0;
     }
 
     /**
@@ -174,15 +178,6 @@ public abstract class AbstractIntervalJoinChecker implements IIntervalJoinChecke
         return compareInterval(ipLeft, ipRight);
     }
 
-    @Override
-    public boolean checkToSaveInResult(long start0, long end0, long start1, long end1, boolean reversed) {
-        if (reversed) {
-            return compareInterval(start1, end1, start0, end0);
-        } else {
-            return compareInterval(start0, end0, start1, end1);
-        }
-    }
-
     /**
      * Right (second argument) interval starts before left (first argument) interval ends.
      */
@@ -199,11 +194,5 @@ public abstract class AbstractIntervalJoinChecker implements IIntervalJoinChecke
     @Override
     public abstract boolean compareInterval(AIntervalPointable ipLeft, AIntervalPointable ipRight)
             throws HyracksDataException;
-
-    @Override
-    public abstract boolean compareInterval(long start0, long end0, long start1, long end1);
-
-    @Override
-    public abstract boolean compareIntervalPartition(int s1, int e1, int s2, int e2);
 
 }
