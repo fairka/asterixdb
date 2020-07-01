@@ -163,7 +163,7 @@ public class IntervalForwardScanJoiner extends AbstractStreamJoiner {
     private final LinkedList<TuplePointer> processingGroup = new LinkedList<>();
     private static final LinkedList<TuplePointer> empty = new LinkedList<>();
 
-    private final boolean DEBUG = false;
+    private final boolean DEBUG = true;
 
     public IntervalForwardScanJoiner(IHyracksTaskContext ctx, IConsumerFrame leftCF, IConsumerFrame rightCF,
             int memorySize, int partition, IIntervalJoinCheckerFactory imjcf, int[] leftKeys, int[] rightKeys,

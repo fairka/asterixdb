@@ -23,10 +23,10 @@
  */
 
 use TinyCollege;
-
+/*+ range [time("19:23:50.930+07:00"), time("13:40:34.930+07:00"), time("17:23:50.930+07:00")] */
 select element { "staff" : f.name, "student" : d.name }
 from Students as d, Staff as f
 where
-
+/*+ range [time("03:30:00.0+00:00"), time("05:59:00.0+00:00"), time("08:30:00.0+00:00")] */
 interval_ends(f.office_hours, d.work_hours)
 order by f.name, d.name;

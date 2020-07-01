@@ -63,4 +63,10 @@ public class AfterIntervalJoinChecker extends AbstractIntervalJoinChecker {
         return false;
     }
 
+    @Override
+    public boolean checkIfMoreMatches(IFrameTupleAccessor accessorLeft, int leftTupleIndex,
+            IFrameTupleAccessor accessorRight, int rightTupleIndex) {
+        return true;
+    }
+
 }

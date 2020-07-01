@@ -27,6 +27,6 @@ use TinyCollege;
 select element { "staff" : f.name, "student" : d.name }
 from Staff as f, Students as d
 where
-
+/*+ range [time("03:30:00.0+00:00"), time("05:59:00.0+00:00"), time("08:30:00.0+00:00")] */
 interval_before(f.office_hours, d.work_hours)
 order by f.name, d.name;

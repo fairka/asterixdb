@@ -126,12 +126,24 @@ public class IntervalForwardScanJoinPOperator extends AbstractJoinPOperator {
         StructuralPropertiesVector[] pv = new StructuralPropertiesVector[2];
         AbstractLogicalOperator op = (AbstractLogicalOperator) iop;
 
+        //Create Left Local Order Column
         IPartitioningProperty ppLeft = null;
         List<ILocalStructuralProperty> ispLeft = new ArrayList<>();
-        ispLeft.add(new LocalOrderProperty(intervalPartitions.getLeftStartColumn()));
+        ArrayList<OrderColumn> leftLocalOrderColumn = new ArrayList<>();
+        for (LogicalVariable v : keysLeftBranch) {
+            leftLocalOrderColumn.add(new OrderColumn(v, intervalPartitions.getLeftIntervalColumn().get(0).getOrder()));
+        }
+        ispLeft.add(new LocalOrderProperty(leftLocalOrderColumn));
+
+        //Create Right Local Order Column
         IPartitioningProperty ppRight = null;
-        List<ILocalStructuralProperty> ispRight = new ArrayList<>(1);
-        ispRight.add(new LocalOrderProperty(intervalPartitions.getRightStartColumn()));
+        List<ILocalStructuralProperty> ispRight = new ArrayList<>();
+        ArrayList<OrderColumn> rightLocalOrderColumn = new ArrayList<>();
+        for (LogicalVariable v : keysRightBranch) {
+            rightLocalOrderColumn
+                    .add(new OrderColumn(v, intervalPartitions.getRightIntervalColumn().get(0).getOrder()));
+        }
+        ispRight.add(new LocalOrderProperty(rightLocalOrderColumn));
 
         if (op.getExecutionMode() == AbstractLogicalOperator.ExecutionMode.PARTITIONED) {
             INodeDomain targetNodeDomain = context.getComputationNodeDomain();

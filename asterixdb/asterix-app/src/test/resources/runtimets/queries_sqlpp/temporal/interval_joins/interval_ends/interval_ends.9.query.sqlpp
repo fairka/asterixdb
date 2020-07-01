@@ -27,6 +27,6 @@ use TinyCollege;
 select element { "staff" : f.name, "student" : d.name }
 from Students as d, Staff as f
 where
-/*+ range [datetime("2003-06-30T23:49:23.938"), datetime("2005-12-31T23:49:23.938"), datetime("2008-06-30T23:49:23.938")] */
+/*+ range [datetime("2003-06-30T00:00:00.0"), datetime("2005-12-31T00:00:00.0"), datetime("2008-06-30T00:00:00.0")] */
 interval_ends(f.vacation, d.break)
 order by f.name, d.name;
