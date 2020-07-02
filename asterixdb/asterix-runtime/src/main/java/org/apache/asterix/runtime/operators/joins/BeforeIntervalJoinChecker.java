@@ -68,4 +68,5 @@ public class BeforeIntervalJoinChecker extends AbstractIntervalJoinChecker {
             IFrameTupleAccessor accessorRight, int rightTupleIndex) {
         return true;
     }
+
 }

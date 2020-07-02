@@ -22,10 +22,13 @@ import org.apache.hyracks.api.comm.IFrame;
 import org.apache.hyracks.api.dataflow.value.RecordDescriptor;
 import org.apache.hyracks.api.exceptions.HyracksDataException;
 
+//TODO: Rename Interface: IJoinData
 public interface IConsumerFrame {
 
     public RecordDescriptor getRecordDescriptor();
 
     public boolean getFrame(IFrame returnFrame) throws HyracksDataException;
+
+    //TODO: Return RunFileStream
 
 }

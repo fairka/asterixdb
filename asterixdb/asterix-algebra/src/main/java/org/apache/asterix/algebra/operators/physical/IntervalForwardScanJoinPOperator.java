@@ -92,10 +92,6 @@ public class IntervalForwardScanJoinPOperator extends AbstractJoinPOperator {
         return mjcf;
     }
 
-    public RangeMap getRangeMapHint() {
-        return intervalPartitions.getRangeMap();
-    }
-
     @Override
     public PhysicalOperatorTag getOperatorTag() {
         return PhysicalOperatorTag.DELEGATE_OPERATOR;

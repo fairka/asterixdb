@@ -124,11 +124,6 @@ public class IntervalForwardScanJoinOperatorDescriptor extends AbstractOperatorD
                 sleepUntilStateIsReady(RIGHT_INPUT_INDEX);
 
                 try {
-
-                    //                    byte point = imjcf.isOrderAsc() ? EndPointIndexItem.START_POINT : EndPointIndexItem.END_POINT;
-                    //                    Comparator<EndPointIndexItem> endPointComparator = imjcf.isOrderAsc()
-                    //                            ? EndPointIndexItem.EndPointAscComparator
-                    //                            : EndPointIndexItem.EndPointDescComparator;
                     writer.open();
                     IStreamJoiner joiner = new IntervalForwardScanJoiner(ctx, inputStates[LEFT_INPUT_INDEX],
                             inputStates[RIGHT_INPUT_INDEX], memoryForJoinInFrames, partition, imjcf, leftKeys,
