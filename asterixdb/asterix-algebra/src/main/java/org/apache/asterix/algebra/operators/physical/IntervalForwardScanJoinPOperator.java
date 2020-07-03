@@ -122,24 +122,15 @@ public class IntervalForwardScanJoinPOperator extends AbstractJoinPOperator {
         StructuralPropertiesVector[] pv = new StructuralPropertiesVector[2];
         AbstractLogicalOperator op = (AbstractLogicalOperator) iop;
 
-        //Create Left Local Order Column
-        IPartitioningProperty ppLeft = null;
+        //Create Left and Local Order Column
         List<ILocalStructuralProperty> ispLeft = new ArrayList<>();
-        ArrayList<OrderColumn> leftLocalOrderColumn = new ArrayList<>();
-        for (LogicalVariable v : keysLeftBranch) {
-            leftLocalOrderColumn.add(new OrderColumn(v, intervalPartitions.getLeftIntervalColumn().get(0).getOrder()));
-        }
-        ispLeft.add(new LocalOrderProperty(leftLocalOrderColumn));
-
-        //Create Right Local Order Column
-        IPartitioningProperty ppRight = null;
+        ispLeft.add(new LocalOrderProperty(getLeftLocalOrderColumn()));
         List<ILocalStructuralProperty> ispRight = new ArrayList<>();
-        ArrayList<OrderColumn> rightLocalOrderColumn = new ArrayList<>();
-        for (LogicalVariable v : keysRightBranch) {
-            rightLocalOrderColumn
-                    .add(new OrderColumn(v, intervalPartitions.getRightIntervalColumn().get(0).getOrder()));
-        }
-        ispRight.add(new LocalOrderProperty(rightLocalOrderColumn));
+        ispRight.add(new LocalOrderProperty(getRightLocalOrderColumn()));
+
+        //Assign Partitioning Property
+        IPartitioningProperty ppLeft = null;
+        IPartitioningProperty ppRight = null;
 
         if (op.getExecutionMode() == AbstractLogicalOperator.ExecutionMode.PARTITIONED) {
             INodeDomain targetNodeDomain = context.getComputationNodeDomain();
@@ -211,4 +202,22 @@ public class IntervalForwardScanJoinPOperator extends AbstractJoinPOperator {
         return new IntervalForwardScanJoinOperatorDescriptor(spec, memSizeInFrames, keysLeft, keysRight,
                 recordDescriptor, mjcf);
     }
+
+    private ArrayList<OrderColumn> getRightLocalOrderColumn() {
+        ArrayList<OrderColumn> rightLocalOrderColumn = new ArrayList<>();
+        for (LogicalVariable v : keysRightBranch) {
+            rightLocalOrderColumn
+                    .add(new OrderColumn(v, intervalPartitions.getRightIntervalColumn().get(0).getOrder()));
+        }
+        return rightLocalOrderColumn;
+    }
+
+    private ArrayList<OrderColumn> getLeftLocalOrderColumn() {
+        ArrayList<OrderColumn> leftLocalOrderColumn = new ArrayList<>();
+        for (LogicalVariable v : keysLeftBranch) {
+            leftLocalOrderColumn.add(new OrderColumn(v, intervalPartitions.getLeftIntervalColumn().get(0).getOrder()));
+        }
+        return leftLocalOrderColumn;
+    }
+
 }

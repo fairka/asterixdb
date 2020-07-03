@@ -18,7 +18,7 @@
  */
 package org.apache.asterix.runtime.operators.joins;
 
-import org.apache.asterix.runtime.operators.joins.intervalmergejoin.IntervalMergeBranchStatus;
+import org.apache.asterix.runtime.operators.joins.intervalforwardscan.IntervalForwardScanBranchStatus;
 import org.apache.hyracks.api.comm.IFrame;
 import org.apache.hyracks.api.comm.VSizeFrame;
 import org.apache.hyracks.api.context.IHyracksTaskContext;
@@ -26,7 +26,6 @@ import org.apache.hyracks.api.exceptions.HyracksDataException;
 import org.apache.hyracks.dataflow.common.comm.io.FrameTupleAppender;
 import org.apache.hyracks.dataflow.std.buffermanager.ITupleAccessor;
 import org.apache.hyracks.dataflow.std.buffermanager.TupleAccessor;
-import org.apache.hyracks.dataflow.std.join.IConsumerFrame;
 import org.apache.hyracks.dataflow.std.join.IStreamJoiner;
 
 public abstract class AbstractStreamJoiner implements IStreamJoiner {
@@ -49,7 +48,7 @@ public abstract class AbstractStreamJoiner implements IStreamJoiner {
         }
     }
 
-    protected final IntervalMergeBranchStatus[] branchStatus;
+    protected final IntervalForwardScanBranchStatus[] branchStatus;
 
     protected static final int JOIN_PARTITIONS = 2;
     protected static final int LEFT_PARTITION = 0;
@@ -58,13 +57,13 @@ public abstract class AbstractStreamJoiner implements IStreamJoiner {
     protected final IFrame[] inputBuffer;
     protected final FrameTupleAppender resultAppender;
     protected final ITupleAccessor[] inputAccessor;
-    protected final IConsumerFrame[] consumerFrames;
+    protected final IJoinData[] consumerFrames;
 
     private final int partition;
     protected long[] frameCounts = { 0, 0 };
     protected long[] tupleCounts = { 0, 0 };
 
-    public AbstractStreamJoiner(IHyracksTaskContext ctx, int partition, IConsumerFrame leftCF, IConsumerFrame rightCF)
+    public AbstractStreamJoiner(IHyracksTaskContext ctx, int partition, IJoinData leftCF, IJoinData rightCF)
             throws HyracksDataException {
         this.partition = partition;
 
@@ -76,11 +75,11 @@ public abstract class AbstractStreamJoiner implements IStreamJoiner {
         inputBuffer[LEFT_PARTITION] = new VSizeFrame(ctx);
         inputBuffer[RIGHT_PARTITION] = new VSizeFrame(ctx);
 
-        branchStatus = new IntervalMergeBranchStatus[JOIN_PARTITIONS];
-        branchStatus[LEFT_PARTITION] = new IntervalMergeBranchStatus();
-        branchStatus[RIGHT_PARTITION] = new IntervalMergeBranchStatus();
+        branchStatus = new IntervalForwardScanBranchStatus[JOIN_PARTITIONS];
+        branchStatus[LEFT_PARTITION] = new IntervalForwardScanBranchStatus();
+        branchStatus[RIGHT_PARTITION] = new IntervalForwardScanBranchStatus();
 
-        consumerFrames = new IConsumerFrame[JOIN_PARTITIONS];
+        consumerFrames = new IJoinData[JOIN_PARTITIONS];
         consumerFrames[LEFT_PARTITION] = leftCF;
         consumerFrames[RIGHT_PARTITION] = rightCF;
 

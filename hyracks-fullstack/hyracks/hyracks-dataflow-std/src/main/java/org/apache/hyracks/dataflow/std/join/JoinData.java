@@ -18,17 +18,31 @@
  */
 package org.apache.hyracks.dataflow.std.join;
 
+import java.nio.ByteBuffer;
+import java.util.concurrent.locks.Condition;
+import java.util.concurrent.locks.Lock;
+import java.util.concurrent.locks.ReentrantLock;
+
 import org.apache.hyracks.api.comm.IFrame;
 import org.apache.hyracks.api.dataflow.value.RecordDescriptor;
 import org.apache.hyracks.api.exceptions.HyracksDataException;
 
-//TODO: Rename Interface: IJoinData
-public interface IConsumerFrame {
+public class JoinData {
 
-    public RecordDescriptor getRecordDescriptor();
+    private RunFileStream stream;
+    private final RecordDescriptor recordDescriptor;
 
-    public boolean getFrame(IFrame returnFrame) throws HyracksDataException;
+    public JoinData(RecordDescriptor recordDescriptor, RunFileStream runFileStream) {
+        this.recordDescriptor = recordDescriptor;
+        this.stream = runFileStream;
+    }
 
-    //TODO: Return RunFileStream
+    public RunFileStream getRunFileStream() {
+        return stream;
+    }
+
+    public RecordDescriptor getRecordDescriptor() {
+        return recordDescriptor;
+    }
 
 }

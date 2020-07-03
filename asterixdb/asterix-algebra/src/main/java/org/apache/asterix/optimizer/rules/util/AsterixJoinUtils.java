@@ -55,11 +55,12 @@ public class AsterixJoinUtils {
         if (conditionLE.getExpressionTag() != LogicalExpressionTag.FUNCTION_CALL) {
             return;
         }
-        List<LogicalVariable> sideLeft = new ArrayList<>(1);
-        List<LogicalVariable> sideRight = new ArrayList<>(1);
+        AbstractFunctionCallExpression fexp = (AbstractFunctionCallExpression) conditionLE;
         List<LogicalVariable> varsLeft = op.getInputs().get(LEFT).getValue().getSchema();
         List<LogicalVariable> varsRight = op.getInputs().get(RIGHT).getValue().getSchema();
-        AbstractFunctionCallExpression fexp = (AbstractFunctionCallExpression) conditionLE;
+        List<LogicalVariable> sideLeft = new ArrayList<>(1);
+        List<LogicalVariable> sideRight = new ArrayList<>(1);
+
         FunctionIdentifier fi =
                 IntervalJoinUtils.isIntervalJoinCondition(fexp, varsLeft, varsRight, sideLeft, sideRight);
         if (fi == null) {
@@ -71,11 +72,12 @@ public class AsterixJoinUtils {
         }
         //Check RangeMap type
         RangeMap rangeMap = rangeAnnotation.getRangeMap();
-        if (rangeMap.getTag(0, 0) != ATypeTag.DATETIME.serialize() && rangeMap.getTag(0, 0) != ATypeTag.DATE.serialize()
+        if (rangeMap.getTag(0, 0) != ATypeTag.DATETIME.serialize()
+                && rangeMap.getTag(0, 0) != ATypeTag.DATE.serialize()
                 && rangeMap.getTag(0, 0) != ATypeTag.TIME.serialize()) {
             throw new CompilationException(ErrorCode.COMPILATION_ERROR, op.getSourceLocation(),
-                    "Only DATE, TIME, and DATETIME type rangemaps have been "
-                            + "implemented for this interval operation.");
+                    "Only RangeMaps of type DATE, TIME, and DATETIME have been "
+                            + "implemented for interval-joins.");
         }
         LOGGER.fine("Interval Join - Forward Scan");
         IntervalPartitions intervalPartitions =

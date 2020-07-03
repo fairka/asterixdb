@@ -39,7 +39,7 @@ import org.apache.hyracks.dataflow.std.buffermanager.IPartitionedDeletableTupleB
 import org.apache.hyracks.dataflow.std.buffermanager.ITupleAccessor;
 import org.apache.hyracks.dataflow.std.buffermanager.TupleAccessor;
 import org.apache.hyracks.dataflow.std.buffermanager.VPartitionDeletableTupleBufferManager;
-import org.apache.hyracks.dataflow.std.join.IConsumerFrame;
+import org.apache.hyracks.dataflow.std.join.JoinData;
 import org.apache.hyracks.dataflow.std.join.RunFileStream;
 import org.apache.hyracks.dataflow.std.structures.RunFilePointer;
 import org.apache.hyracks.dataflow.std.structures.TuplePointer;
@@ -165,9 +165,9 @@ public class IntervalForwardScanJoiner extends AbstractStreamJoiner {
 
     private final boolean DEBUG = false;
 
-    public IntervalForwardScanJoiner(IHyracksTaskContext ctx, IConsumerFrame leftCF, IConsumerFrame rightCF,
-            int memorySize, int partition, IIntervalJoinCheckerFactory imjcf, int[] leftKeys, int[] rightKeys,
-            IFrameWriter writer, int nPartitions) throws HyracksDataException {
+    public IntervalForwardScanJoiner(IHyracksTaskContext ctx, JoinData leftCF, JoinData rightCF, int memorySize,
+            int partition, IIntervalJoinCheckerFactory imjcf, int[] leftKeys, int[] rightKeys, IFrameWriter writer,
+            int nPartitions) throws HyracksDataException {
         super(ctx, partition, leftCF, rightCF);
         this.partition = partition;
         this.memorySize = memorySize;
@@ -201,7 +201,7 @@ public class IntervalForwardScanJoiner extends AbstractStreamJoiner {
         // Run files for both branches
         runFileStream = new RunFileStream[JOIN_PARTITIONS];
         runFileStream[LEFT_PARTITION] = new RunFileStream(ctx, "ifsj-left", branchStatus[LEFT_PARTITION]);
-        //RunFileStream(IHyracksTaskContext ctx, String key, IRunFileStreamStatus status)
+
         runFileStream[RIGHT_PARTITION] = new RunFileStream(ctx, "ifsj-right", branchStatus[RIGHT_PARTITION]);
         runFilePointer = new RunFilePointer[JOIN_PARTITIONS];
         runFilePointer[LEFT_PARTITION] = new RunFilePointer();
@@ -215,11 +215,8 @@ public class IntervalForwardScanJoiner extends AbstractStreamJoiner {
         inputTuple[LEFT_PARTITION] = new IntervalSideTuple(imjc, inputAccessor[LEFT_PARTITION], leftKey);
         inputTuple[RIGHT_PARTITION] = new IntervalSideTuple(imjcInverse, inputAccessor[RIGHT_PARTITION], rightKey);
 
-        //        LOGGER.setLevel(Level.FINE);
-        //        if (LOGGER.isLoggable(Level.FINE)) {
         System.out.println("IntervalForwardSweepJoiner has started partition " + partition + " with " + memorySize
                 + " frames of memory.");
-        //        }
     }
 
     private void addToResult(IFrameTupleAccessor accessor1, int index1, IFrameTupleAccessor accessor2, int index2,

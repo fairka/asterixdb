@@ -16,13 +16,13 @@
  * specific language governing permissions and limitations
  * under the License.
  */
-package org.apache.asterix.runtime.operators.joins.intervalmergejoin;
+package org.apache.asterix.runtime.operators.joins.intervalforwardscan;
 
 import java.io.Serializable;
 
 import org.apache.hyracks.dataflow.std.join.IRunFileStreamStatus;
 
-public class IntervalMergeBranchStatus implements IRunFileStreamStatus, Serializable {
+public class IntervalForwardScanBranchStatus implements IRunFileStreamStatus, Serializable {
     private static final long serialVersionUID = 1L;
 
     public enum Stage {
