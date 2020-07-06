@@ -180,6 +180,7 @@ public abstract class AbstractSorterOperatorDescriptor extends AbstractOperatorD
                     AbstractExternalSortRunMerger merger =
                             getSortRunMerger(ctx, recordDescProvider, runs, comparators, nmkComputer, framesLimit);
                     IFrameWriter wrappingWriter = null;
+                    Throwable th = null;
                     try {
                         if (runs.isEmpty()) {
                             wrappingWriter = merger.prepareSkipMergingFinalResultWriter(writer);
@@ -199,13 +200,21 @@ public abstract class AbstractSorterOperatorDescriptor extends AbstractOperatorD
                         if (wrappingWriter != null) {
                             wrappingWriter.fail();
                         }
+                        th = e;
                         throw HyracksDataException.create(e);
                     } finally {
-                        if (sorter != null) {
-                            sorter.close();
-                        }
-                        if (wrappingWriter != null) {
-                            wrappingWriter.close();
+                        try {
+                            if (sorter != null) {
+                                sorter.close();
+                            }
+                            if (wrappingWriter != null) {
+                                wrappingWriter.close();
+                            }
+                        } catch (Exception e) {
+                            if (th != null) {
+                                e.addSuppressed(th);
+                                throw HyracksDataException.create(e);
+                            }
                         }
                     }
                 }

@@ -72,12 +72,10 @@ public class AsterixJoinUtils {
         }
         //Check RangeMap type
         RangeMap rangeMap = rangeAnnotation.getRangeMap();
-        if (rangeMap.getTag(0, 0) != ATypeTag.DATETIME.serialize()
-                && rangeMap.getTag(0, 0) != ATypeTag.DATE.serialize()
+        if (rangeMap.getTag(0, 0) != ATypeTag.DATETIME.serialize() && rangeMap.getTag(0, 0) != ATypeTag.DATE.serialize()
                 && rangeMap.getTag(0, 0) != ATypeTag.TIME.serialize()) {
             throw new CompilationException(ErrorCode.COMPILATION_ERROR, op.getSourceLocation(),
-                    "Only RangeMaps of type DATE, TIME, and DATETIME have been "
-                            + "implemented for interval-joins.");
+                    "Only RangeMaps of type DATE, TIME, and DATETIME have been " + "implemented for interval-joins.");
         }
         LOGGER.fine("Interval Join - Forward Scan");
         IntervalPartitions intervalPartitions =

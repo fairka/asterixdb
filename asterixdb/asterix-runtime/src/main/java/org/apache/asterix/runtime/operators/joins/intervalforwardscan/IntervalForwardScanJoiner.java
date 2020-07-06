@@ -165,10 +165,10 @@ public class IntervalForwardScanJoiner extends AbstractStreamJoiner {
 
     private final boolean DEBUG = false;
 
-    public IntervalForwardScanJoiner(IHyracksTaskContext ctx, JoinData leftCF, JoinData rightCF, int memorySize,
-            int partition, IIntervalJoinCheckerFactory imjcf, int[] leftKeys, int[] rightKeys, IFrameWriter writer,
-            int nPartitions) throws HyracksDataException {
-        super(ctx, partition, leftCF, rightCF);
+    public IntervalForwardScanJoiner(IHyracksTaskContext ctx, JoinData leftJoinData, JoinData rightJoinData,
+            int memorySize, int partition, IIntervalJoinCheckerFactory imjcf, int[] leftKeys, int[] rightKeys,
+            IFrameWriter writer, int nPartitions) throws HyracksDataException {
+        super(ctx, partition, leftJoinData, rightJoinData);
         this.partition = partition;
         this.memorySize = memorySize;
         this.writer = writer;
@@ -180,8 +180,8 @@ public class IntervalForwardScanJoiner extends AbstractStreamJoiner {
         this.rightKey = rightKeys[0];
 
         RecordDescriptor[] recordDescriptors = new RecordDescriptor[JOIN_PARTITIONS];
-        recordDescriptors[LEFT_PARTITION] = leftCF.getRecordDescriptor();
-        recordDescriptors[RIGHT_PARTITION] = rightCF.getRecordDescriptor();
+        recordDescriptors[LEFT_PARTITION] = leftJoinData.getRecordDescriptor();
+        recordDescriptors[RIGHT_PARTITION] = rightJoinData.getRecordDescriptor();
 
         streamIndex = new int[JOIN_PARTITIONS];
         streamIndex[LEFT_PARTITION] = TupleAccessor.UNSET;
@@ -191,8 +191,8 @@ public class IntervalForwardScanJoiner extends AbstractStreamJoiner {
                 new VPartitionDeletableTupleBufferManager(ctx, VPartitionDeletableTupleBufferManager.NO_CONSTRAIN,
                         JOIN_PARTITIONS, memorySize * ctx.getInitialFrameSize(), recordDescriptors);
         memoryAccessor = new ITupleAccessor[JOIN_PARTITIONS];
-        memoryAccessor[LEFT_PARTITION] = bufferManager.getTupleAccessor(leftCF.getRecordDescriptor());
-        memoryAccessor[RIGHT_PARTITION] = bufferManager.getTupleAccessor(rightCF.getRecordDescriptor());
+        memoryAccessor[LEFT_PARTITION] = bufferManager.getTupleAccessor(leftJoinData.getRecordDescriptor());
+        memoryAccessor[RIGHT_PARTITION] = bufferManager.getTupleAccessor(rightJoinData.getRecordDescriptor());
 
         activeManager = new ForwardScanActiveManager[JOIN_PARTITIONS];
         activeManager[LEFT_PARTITION] = new ForwardScanActiveManager(bufferManager, LEFT_PARTITION);
@@ -200,9 +200,9 @@ public class IntervalForwardScanJoiner extends AbstractStreamJoiner {
 
         // Run files for both branches
         runFileStream = new RunFileStream[JOIN_PARTITIONS];
-        runFileStream[LEFT_PARTITION] = new RunFileStream(ctx, "ifsj-left", branchStatus[LEFT_PARTITION]);
+        runFileStream[LEFT_PARTITION] = leftJoinData.getRunFileStream();
 
-        runFileStream[RIGHT_PARTITION] = new RunFileStream(ctx, "ifsj-right", branchStatus[RIGHT_PARTITION]);
+        runFileStream[RIGHT_PARTITION] = rightJoinData.getRunFileStream();
         runFilePointer = new RunFilePointer[JOIN_PARTITIONS];
         runFilePointer[LEFT_PARTITION] = new RunFilePointer();
         runFilePointer[RIGHT_PARTITION] = new RunFilePointer();

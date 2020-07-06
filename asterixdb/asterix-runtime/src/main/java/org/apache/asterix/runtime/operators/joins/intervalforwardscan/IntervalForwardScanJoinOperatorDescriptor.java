@@ -23,7 +23,6 @@ import java.nio.ByteBuffer;
 import java.util.logging.Logger;
 
 import org.apache.asterix.runtime.operators.joins.IIntervalJoinCheckerFactory;
-import org.apache.hyracks.api.comm.IFrameWriter;
 import org.apache.hyracks.api.context.IHyracksJobletContext;
 import org.apache.hyracks.api.context.IHyracksTaskContext;
 import org.apache.hyracks.api.dataflow.ActivityId;
@@ -69,22 +68,28 @@ public class IntervalForwardScanJoinOperatorDescriptor extends AbstractOperatorD
         this.imjcf = imjcf;
     }
 
-    @Override public void contributeActivities(IActivityGraphBuilder builder) {
+    @Override
+    public void contributeActivities(IActivityGraphBuilder builder) {
 
         ActivityId joinCacheLeftID = new ActivityId(getOperatorId(), LEFT_INPUT_INDEX);
         ActivityId joinCacheRightID = new ActivityId(getOperatorId(), RIGHT_INPUT_INDEX);
         ActivityId joinCacheID = new ActivityId(getOperatorId(), JOIN_INPUT_INDEX);
+
         IActivity joinCacheLeft = new JoinCacheActivityNode(joinCacheLeftID, joinCacheID);
         IActivity joinCacheRight = new JoinCacheActivityNode(joinCacheRightID, joinCacheID);
-        IActivity joinerNode = new JoinerActivityNode(joinCacheID);
+        IActivity joinerNode = new JoinerActivityNode(joinCacheID, joinCacheLeftID, joinCacheRightID);
+
+        builder.addActivity(this, joinCacheLeft);
+        builder.addSourceEdge(LEFT_INPUT_INDEX, joinCacheLeft, 0);
+
+        builder.addActivity(this, joinCacheRight);
+        builder.addSourceEdge(RIGHT_INPUT_INDEX, joinCacheRight, 0);
 
         builder.addActivity(this, joinerNode);
-        builder.addActivity(this, joinCacheLeft);
-        builder.addActivity(this, joinCacheRight);
-
-        builder.addSourceEdge(LEFT_INPUT_INDEX, joinCacheLeft, LEFT_INPUT_INDEX);
-        builder.addSourceEdge(RIGHT_INPUT_INDEX, joinCacheRight, RIGHT_INPUT_INDEX);
         builder.addTargetEdge(0, joinerNode, 0);
+
+        builder.addBlockingEdge(joinCacheLeft, joinerNode);
+        builder.addBlockingEdge(joinCacheRight, joinerNode);
 
     }
 
@@ -99,31 +104,28 @@ public class IntervalForwardScanJoinOperatorDescriptor extends AbstractOperatorD
     private class JoinCacheActivityNode extends AbstractActivityNode {
         private static final long serialVersionUID = 1L;
 
-        private final ActivityId nljAid;
-
         public JoinCacheActivityNode(ActivityId id, ActivityId nljAid) {
             super(id);
-            this.nljAid = nljAid;
         }
 
-        @Override public IOperatorNodePushable createPushRuntime(final IHyracksTaskContext ctx,
+        @Override
+        public IOperatorNodePushable createPushRuntime(final IHyracksTaskContext ctx,
                 IRecordDescriptorProvider recordDescProvider, final int partition, int nPartitions)
                 throws HyracksDataException {
             final IHyracksJobletContext jobletCtx = ctx.getJobletContext();
-            final RecordDescriptor rd0 = recordDescProvider.getInputRecordDescriptor(nljAid, 0);
-            final RecordDescriptor rd1 = recordDescProvider.getInputRecordDescriptor(getActivityId(), 0);
+            final RecordDescriptor rd0 = recordDescProvider.getInputRecordDescriptor(getActivityId(), 0);
 
             return new AbstractUnaryInputSinkOperatorNodePushable() {
 
                 private RunFileStream runFileStream;
-                IHyracksTaskContext ctx;
                 String key = "job" + getActivityId();
-                private IntervalForwardScanBranchStatus status;
+                private IntervalForwardScanBranchStatus status = new IntervalForwardScanBranchStatus();
                 FrameTupleAccessor accessor = new FrameTupleAccessor(rd0);
 
                 JoinCacheTaskState state;
 
-                @Override public void open() throws HyracksDataException {
+                @Override
+                public void open() throws HyracksDataException {
                     state = new JoinCacheTaskState(jobletCtx.getJobId(), new TaskId(getActivityId(), partition));
                     runFileStream = new RunFileStream(ctx, key, status);
                     runFileStream.createRunFileWriting();
@@ -132,19 +134,22 @@ public class IntervalForwardScanJoinOperatorDescriptor extends AbstractOperatorD
                     //state.joinData = new ProducerConsumerFrame(rd0);
                 }
 
-                @Override public void nextFrame(ByteBuffer buffer) throws HyracksDataException {
+                @Override
+                public void nextFrame(ByteBuffer buffer) throws HyracksDataException {
                     accessor.reset(buffer);
                     for (int x = 0; x < accessor.getTupleCount(); x++) {
                         runFileStream.addToRunFile(accessor, x);
                     }
                 }
 
-                @Override public void close() throws HyracksDataException {
+                @Override
+                public void close() throws HyracksDataException {
                     state.joinData = new JoinData(rd0, runFileStream);
                     ctx.setStateObject(state);
                 }
 
-                @Override public void fail() throws HyracksDataException {
+                @Override
+                public void fail() throws HyracksDataException {
                     runFileStream.removeRunFile();
                     runFileStream.close();
                 }
@@ -154,19 +159,21 @@ public class IntervalForwardScanJoinOperatorDescriptor extends AbstractOperatorD
 
     private class JoinerActivityNode extends AbstractActivityNode {
         private static final long serialVersionUID = 1L;
+        private final ActivityId leftActivityID;
+        private final ActivityId rightActivityID;
 
-        public JoinerActivityNode(ActivityId id) {
+        public JoinerActivityNode(ActivityId id, ActivityId leftID, ActivityId rightID) {
             super(id);
+            leftActivityID = leftID;
+            rightActivityID = rightID;
         }
 
-        @Override public IOperatorNodePushable createPushRuntime(IHyracksTaskContext ctx,
+        @Override
+        public IOperatorNodePushable createPushRuntime(IHyracksTaskContext ctx,
                 IRecordDescriptorProvider recordDescProvider, int partition, int nPartitions)
                 throws HyracksDataException {
 
-            RecordDescriptor[] inRecordDescs = new RecordDescriptor[inputArity];
-            inRecordDescs[LEFT_INPUT_INDEX] = recordDescProvider.getInputRecordDescriptor(id, LEFT_INPUT_INDEX);
-            inRecordDescs[RIGHT_INPUT_INDEX] = recordDescProvider.getInputRecordDescriptor(id, RIGHT_INPUT_INDEX);
-            return new JoinerOperator(ctx, partition, nPartitions, inputArity, inRecordDescs);
+            return new JoinerOperator(ctx, partition, nPartitions, inputArity);
         }
 
         private class JoinerOperator extends AbstractUnaryOutputSourceOperatorNodePushable {
@@ -175,35 +182,38 @@ public class IntervalForwardScanJoinOperatorDescriptor extends AbstractOperatorD
             private final int partition;
             private final int nPartitions;
             private final int inputArity;
-            private final RecordDescriptor[] recordDescriptors;
-            private JoinData[] inputStates;
-            //private JoinComparator[] tupleComparators;
+            private JoinCacheTaskState[] inputStates;
 
-            public JoinerOperator(IHyracksTaskContext ctx, int partition, int nPartitions, int inputArity,
-                    RecordDescriptor[] inRecordDesc) {
+            public JoinerOperator(IHyracksTaskContext ctx, int partition, int nPartitions, int inputArity)
+                    throws HyracksDataException {
+
                 this.ctx = ctx;
                 this.partition = partition;
                 this.inputArity = inputArity;
-                this.recordDescriptors = inRecordDesc;
-                this.inputStates = new JoinData[inputArity];
+                this.inputStates = new JoinCacheTaskState[JOIN_INPUT_INDEX];
+                this.inputStates[LEFT_INPUT_INDEX] =
+                        (JoinCacheTaskState) ctx.getStateObject(new TaskId(leftActivityID, partition));
+                this.inputStates[RIGHT_INPUT_INDEX] =
+                        (JoinCacheTaskState) ctx.getStateObject(new TaskId(rightActivityID, partition));
                 this.nPartitions = nPartitions;
             }
 
-            @Override public int getInputArity() {
+            @Override
+            public int getInputArity() {
                 return inputArity;
             }
 
-            @Override public void initialize() throws HyracksDataException {
+            @Override
+            public void initialize() throws HyracksDataException {
 
                 sleepUntilStateIsReady(LEFT_INPUT_INDEX);
                 sleepUntilStateIsReady(RIGHT_INPUT_INDEX);
 
                 try {
                     writer.open();
-
                     //Pass in Data
-                    IStreamJoiner joiner = new IntervalForwardScanJoiner(ctx, inputStates[LEFT_INPUT_INDEX],
-                            inputStates[RIGHT_INPUT_INDEX], memoryForJoinInFrames, partition, imjcf, leftKeys,
+                    IStreamJoiner joiner = new IntervalForwardScanJoiner(ctx, inputStates[LEFT_INPUT_INDEX].joinData,
+                            inputStates[RIGHT_INPUT_INDEX].joinData, memoryForJoinInFrames, partition, imjcf, leftKeys,
                             rightKeys, writer, nPartitions);
                     joiner.processJoin();
                 } catch (Exception ex) {

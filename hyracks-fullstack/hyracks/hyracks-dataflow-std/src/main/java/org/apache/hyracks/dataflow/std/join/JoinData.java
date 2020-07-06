@@ -18,14 +18,7 @@
  */
 package org.apache.hyracks.dataflow.std.join;
 
-import java.nio.ByteBuffer;
-import java.util.concurrent.locks.Condition;
-import java.util.concurrent.locks.Lock;
-import java.util.concurrent.locks.ReentrantLock;
-
-import org.apache.hyracks.api.comm.IFrame;
 import org.apache.hyracks.api.dataflow.value.RecordDescriptor;
-import org.apache.hyracks.api.exceptions.HyracksDataException;
 
 public class JoinData {
 

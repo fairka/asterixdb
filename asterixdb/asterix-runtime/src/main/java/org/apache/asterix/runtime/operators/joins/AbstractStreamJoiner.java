@@ -27,6 +27,7 @@ import org.apache.hyracks.dataflow.common.comm.io.FrameTupleAppender;
 import org.apache.hyracks.dataflow.std.buffermanager.ITupleAccessor;
 import org.apache.hyracks.dataflow.std.buffermanager.TupleAccessor;
 import org.apache.hyracks.dataflow.std.join.IStreamJoiner;
+import org.apache.hyracks.dataflow.std.join.JoinData;
 
 public abstract class AbstractStreamJoiner implements IStreamJoiner {
 
@@ -57,19 +58,19 @@ public abstract class AbstractStreamJoiner implements IStreamJoiner {
     protected final IFrame[] inputBuffer;
     protected final FrameTupleAppender resultAppender;
     protected final ITupleAccessor[] inputAccessor;
-    protected final IJoinData[] consumerFrames;
+    protected final JoinData[] joinData;
 
     private final int partition;
     protected long[] frameCounts = { 0, 0 };
     protected long[] tupleCounts = { 0, 0 };
 
-    public AbstractStreamJoiner(IHyracksTaskContext ctx, int partition, IJoinData leftCF, IJoinData rightCF)
+    public AbstractStreamJoiner(IHyracksTaskContext ctx, int partition, JoinData leftJoinData, JoinData rightJoinData)
             throws HyracksDataException {
         this.partition = partition;
 
         inputAccessor = new TupleAccessor[JOIN_PARTITIONS];
-        inputAccessor[LEFT_PARTITION] = new TupleAccessor(leftCF.getRecordDescriptor());
-        inputAccessor[RIGHT_PARTITION] = new TupleAccessor(rightCF.getRecordDescriptor());
+        inputAccessor[LEFT_PARTITION] = new TupleAccessor(leftJoinData.getRecordDescriptor());
+        inputAccessor[RIGHT_PARTITION] = new TupleAccessor(rightJoinData.getRecordDescriptor());
 
         inputBuffer = new IFrame[JOIN_PARTITIONS];
         inputBuffer[LEFT_PARTITION] = new VSizeFrame(ctx);
@@ -78,10 +79,14 @@ public abstract class AbstractStreamJoiner implements IStreamJoiner {
         branchStatus = new IntervalForwardScanBranchStatus[JOIN_PARTITIONS];
         branchStatus[LEFT_PARTITION] = new IntervalForwardScanBranchStatus();
         branchStatus[RIGHT_PARTITION] = new IntervalForwardScanBranchStatus();
+        branchStatus[LEFT_PARTITION].noMore();
+        branchStatus[RIGHT_PARTITION].noMore();
+        branchStatus[LEFT_PARTITION].setRunFileReading(true);
+        branchStatus[RIGHT_PARTITION].setRunFileReading(true);
 
-        consumerFrames = new IJoinData[JOIN_PARTITIONS];
-        consumerFrames[LEFT_PARTITION] = leftCF;
-        consumerFrames[RIGHT_PARTITION] = rightCF;
+        joinData = new JoinData[JOIN_PARTITIONS];
+        joinData[LEFT_PARTITION] = leftJoinData;
+        joinData[RIGHT_PARTITION] = rightJoinData;
 
         // Result
         resultAppender = new FrameTupleAppender(new VSizeFrame(ctx));
@@ -93,7 +98,7 @@ public abstract class AbstractStreamJoiner implements IStreamJoiner {
             // Still processing frame.
             loaded = TupleStatus.LOADED;
         } else {
-            if (branchStatus[branch].hasMore() && getNextFrame(branch)) {
+            if (branchStatus[branch].hasMore()) {
                 loaded = TupleStatus.LOADED;
             } else {
                 // No more frames or tuples to process.
@@ -104,21 +109,21 @@ public abstract class AbstractStreamJoiner implements IStreamJoiner {
         return loaded;
     }
 
-    protected boolean getNextFrame(int branch) throws HyracksDataException {
-        if (consumerFrames[branch].getFrame(inputBuffer[branch])) {
-            inputAccessor[branch].reset(inputBuffer[branch].getBuffer());
-            inputAccessor[branch].next();
-            if (!inputAccessor[branch].exists()) {
-                return false;
-            }
-            frameCounts[branch]++;
-            tupleCounts[branch] += inputAccessor[branch].getTupleCount();
-            return true;
-        } else {
-            inputAccessor[branch] = null;
-            return false;
-        }
-
-    }
+    //    protected boolean getNextFrame(int branch) throws HyracksDataException {
+    //        if (consumerFrames[branch].getFrame(inputBuffer[branch])) {
+    //            inputAccessor[branch].reset(inputBuffer[branch].getBuffer());
+    //            inputAccessor[branch].next();
+    //            if (!inputAccessor[branch].exists()) {
+    //                return false;
+    //            }
+    //            frameCounts[branch]++;
+    //            tupleCounts[branch] += inputAccessor[branch].getTupleCount();
+    //            return true;
+    //        } else {
+    //            inputAccessor[branch] = null;
+    //            return false;
+    //        }
+    //
+    //    }
 
 }
