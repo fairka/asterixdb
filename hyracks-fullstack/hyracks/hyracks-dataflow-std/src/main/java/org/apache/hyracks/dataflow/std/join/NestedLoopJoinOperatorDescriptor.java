@@ -75,8 +75,7 @@ public class NestedLoopJoinOperatorDescriptor extends AbstractOperatorDescriptor
         this.nullWriterFactories1 = nullWriterFactories1;
     }
 
-    @Override
-    public void contributeActivities(IActivityGraphBuilder builder) {
+    @Override public void contributeActivities(IActivityGraphBuilder builder) {
         ActivityId jcaId = new ActivityId(getOperatorId(), JOIN_CACHE_ACTIVITY_ID);
         ActivityId nljAid = new ActivityId(getOperatorId(), NL_JOIN_ACTIVITY_ID);
         JoinCacheActivityNode jc = new JoinCacheActivityNode(jcaId, nljAid);
@@ -110,8 +109,7 @@ public class NestedLoopJoinOperatorDescriptor extends AbstractOperatorDescriptor
             this.nljAid = nljAid;
         }
 
-        @Override
-        public IOperatorNodePushable createPushRuntime(final IHyracksTaskContext ctx,
+        @Override public IOperatorNodePushable createPushRuntime(final IHyracksTaskContext ctx,
                 IRecordDescriptorProvider recordDescProvider, final int partition, int nPartitions)
                 throws HyracksDataException {
             final IHyracksJobletContext jobletCtx = ctx.getJobletContext();
@@ -130,29 +128,26 @@ public class NestedLoopJoinOperatorDescriptor extends AbstractOperatorDescriptor
             return new AbstractUnaryInputSinkOperatorNodePushable() {
                 private JoinCacheTaskState state;
 
-                @Override
-                public void open() throws HyracksDataException {
+                @Override public void open() throws HyracksDataException {
                     state = new JoinCacheTaskState(jobletCtx.getJobId(), new TaskId(getActivityId(), partition));
-                    state.joiner = new NestedLoopJoin(jobletCtx, new FrameTupleAccessor(rd0),
-                            new FrameTupleAccessor(rd1), memSize, predEvaluator, isLeftOuter, nullWriters1);
+                    state.joiner =
+                            new NestedLoopJoin(jobletCtx, new FrameTupleAccessor(rd0), new FrameTupleAccessor(rd1),
+                                    memSize, predEvaluator, isLeftOuter, nullWriters1);
 
                 }
 
-                @Override
-                public void nextFrame(ByteBuffer buffer) throws HyracksDataException {
+                @Override public void nextFrame(ByteBuffer buffer) throws HyracksDataException {
                     ByteBuffer copyBuffer = jobletCtx.allocateFrame(buffer.capacity());
                     FrameUtils.copyAndFlip(buffer, copyBuffer);
                     state.joiner.cache(copyBuffer);
                 }
 
-                @Override
-                public void close() throws HyracksDataException {
+                @Override public void close() throws HyracksDataException {
                     state.joiner.closeCache();
                     ctx.setStateObject(state);
                 }
 
-                @Override
-                public void fail() throws HyracksDataException {
+                @Override public void fail() throws HyracksDataException {
                     // No variables to update.
                 }
             };
@@ -166,28 +161,24 @@ public class NestedLoopJoinOperatorDescriptor extends AbstractOperatorDescriptor
             super(id);
         }
 
-        @Override
-        public IOperatorNodePushable createPushRuntime(final IHyracksTaskContext ctx,
+        @Override public IOperatorNodePushable createPushRuntime(final IHyracksTaskContext ctx,
                 IRecordDescriptorProvider recordDescProvider, final int partition, int nPartitions) {
             return new AbstractUnaryInputUnaryOutputOperatorNodePushable() {
                 private JoinCacheTaskState state;
                 boolean failed = false;
 
-                @Override
-                public void open() throws HyracksDataException {
+                @Override public void open() throws HyracksDataException {
                     writer.open();
                     state = (JoinCacheTaskState) ctx.getStateObject(
                             new TaskId(new ActivityId(getOperatorId(), JOIN_CACHE_ACTIVITY_ID), partition));
                     state.joiner.setComparator(comparatorFactory.createTuplePairComparator(ctx));
                 }
 
-                @Override
-                public void nextFrame(ByteBuffer buffer) throws HyracksDataException {
+                @Override public void nextFrame(ByteBuffer buffer) throws HyracksDataException {
                     state.joiner.join(buffer, writer);
                 }
 
-                @Override
-                public void close() throws HyracksDataException {
+                @Override public void close() throws HyracksDataException {
                     if (failed) {
                         try {
                             state.joiner.closeCache();
@@ -211,8 +202,7 @@ public class NestedLoopJoinOperatorDescriptor extends AbstractOperatorDescriptor
                     }
                 }
 
-                @Override
-                public void fail() throws HyracksDataException {
+                @Override public void fail() throws HyracksDataException {
                     failed = true;
                     writer.fail();
                 }

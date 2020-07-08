@@ -116,12 +116,10 @@ public class IntervalForwardScanJoinOperatorDescriptor extends AbstractOperatorD
             final RecordDescriptor rd0 = recordDescProvider.getInputRecordDescriptor(getActivityId(), 0);
 
             return new AbstractUnaryInputSinkOperatorNodePushable() {
-
-                private RunFileStream runFileStream;
-                String key = "job" + getActivityId();
                 private IntervalForwardScanBranchStatus status = new IntervalForwardScanBranchStatus();
+                private RunFileStream runFileStream;
                 FrameTupleAccessor accessor = new FrameTupleAccessor(rd0);
-
+                String key = "join: " + getActivityId();
                 JoinCacheTaskState state;
 
                 @Override
@@ -130,8 +128,6 @@ public class IntervalForwardScanJoinOperatorDescriptor extends AbstractOperatorD
                     runFileStream = new RunFileStream(ctx, key, status);
                     runFileStream.createRunFileWriting();
                     runFileStream.startRunFileWriting();
-
-                    //state.joinData = new ProducerConsumerFrame(rd0);
                 }
 
                 @Override
@@ -144,6 +140,7 @@ public class IntervalForwardScanJoinOperatorDescriptor extends AbstractOperatorD
 
                 @Override
                 public void close() throws HyracksDataException {
+                    runFileStream.flushRunFile();
                     state.joinData = new JoinData(rd0, runFileStream);
                     ctx.setStateObject(state);
                 }
@@ -184,9 +181,7 @@ public class IntervalForwardScanJoinOperatorDescriptor extends AbstractOperatorD
             private final int inputArity;
             private JoinCacheTaskState[] inputStates;
 
-            public JoinerOperator(IHyracksTaskContext ctx, int partition, int nPartitions, int inputArity)
-                    throws HyracksDataException {
-
+            public JoinerOperator(IHyracksTaskContext ctx, int partition, int nPartitions, int inputArity) {
                 this.ctx = ctx;
                 this.partition = partition;
                 this.inputArity = inputArity;

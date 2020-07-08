@@ -18,7 +18,6 @@
  */
 package org.apache.asterix.runtime.operators.joins;
 
-import org.apache.asterix.runtime.operators.joins.intervalforwardscan.IntervalForwardScanBranchStatus;
 import org.apache.hyracks.api.comm.IFrame;
 import org.apache.hyracks.api.comm.VSizeFrame;
 import org.apache.hyracks.api.context.IHyracksTaskContext;
@@ -49,8 +48,6 @@ public abstract class AbstractStreamJoiner implements IStreamJoiner {
         }
     }
 
-    protected final IntervalForwardScanBranchStatus[] branchStatus;
-
     protected static final int JOIN_PARTITIONS = 2;
     protected static final int LEFT_PARTITION = 0;
     protected static final int RIGHT_PARTITION = 1;
@@ -60,13 +57,8 @@ public abstract class AbstractStreamJoiner implements IStreamJoiner {
     protected final ITupleAccessor[] inputAccessor;
     protected final JoinData[] joinData;
 
-    private final int partition;
-    protected long[] frameCounts = { 0, 0 };
-    protected long[] tupleCounts = { 0, 0 };
-
-    public AbstractStreamJoiner(IHyracksTaskContext ctx, int partition, JoinData leftJoinData, JoinData rightJoinData)
+    public AbstractStreamJoiner(IHyracksTaskContext ctx, JoinData leftJoinData, JoinData rightJoinData)
             throws HyracksDataException {
-        this.partition = partition;
 
         inputAccessor = new TupleAccessor[JOIN_PARTITIONS];
         inputAccessor[LEFT_PARTITION] = new TupleAccessor(leftJoinData.getRecordDescriptor());
@@ -76,14 +68,6 @@ public abstract class AbstractStreamJoiner implements IStreamJoiner {
         inputBuffer[LEFT_PARTITION] = new VSizeFrame(ctx);
         inputBuffer[RIGHT_PARTITION] = new VSizeFrame(ctx);
 
-        branchStatus = new IntervalForwardScanBranchStatus[JOIN_PARTITIONS];
-        branchStatus[LEFT_PARTITION] = new IntervalForwardScanBranchStatus();
-        branchStatus[RIGHT_PARTITION] = new IntervalForwardScanBranchStatus();
-        branchStatus[LEFT_PARTITION].noMore();
-        branchStatus[RIGHT_PARTITION].noMore();
-        branchStatus[LEFT_PARTITION].setRunFileReading(true);
-        branchStatus[RIGHT_PARTITION].setRunFileReading(true);
-
         joinData = new JoinData[JOIN_PARTITIONS];
         joinData[LEFT_PARTITION] = leftJoinData;
         joinData[RIGHT_PARTITION] = rightJoinData;
@@ -91,39 +75,5 @@ public abstract class AbstractStreamJoiner implements IStreamJoiner {
         // Result
         resultAppender = new FrameTupleAppender(new VSizeFrame(ctx));
     }
-
-    protected TupleStatus loadMemoryTuple(int branch) throws HyracksDataException {
-        TupleStatus loaded;
-        if (inputAccessor[branch] != null && inputAccessor[branch].exists()) {
-            // Still processing frame.
-            loaded = TupleStatus.LOADED;
-        } else {
-            if (branchStatus[branch].hasMore()) {
-                loaded = TupleStatus.LOADED;
-            } else {
-                // No more frames or tuples to process.
-                branchStatus[branch].noMore();
-                loaded = TupleStatus.EMPTY;
-            }
-        }
-        return loaded;
-    }
-
-    //    protected boolean getNextFrame(int branch) throws HyracksDataException {
-    //        if (consumerFrames[branch].getFrame(inputBuffer[branch])) {
-    //            inputAccessor[branch].reset(inputBuffer[branch].getBuffer());
-    //            inputAccessor[branch].next();
-    //            if (!inputAccessor[branch].exists()) {
-    //                return false;
-    //            }
-    //            frameCounts[branch]++;
-    //            tupleCounts[branch] += inputAccessor[branch].getTupleCount();
-    //            return true;
-    //        } else {
-    //            inputAccessor[branch] = null;
-    //            return false;
-    //        }
-    //
-    //    }
 
 }
