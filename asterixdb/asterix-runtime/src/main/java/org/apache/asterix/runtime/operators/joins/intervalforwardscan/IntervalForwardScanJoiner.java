@@ -560,5 +560,5 @@ public class IntervalForwardScanJoiner extends AbstractStreamJoiner {
             LOGGER.fine("Unfreezing (" + frozenPartition + ").");
         }
     }
-    
+
 }
