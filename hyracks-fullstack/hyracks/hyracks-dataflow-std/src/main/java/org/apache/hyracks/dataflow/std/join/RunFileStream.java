@@ -37,6 +37,13 @@ import org.apache.hyracks.dataflow.std.buffermanager.ITupleAccessor;
 
 public class RunFileStream {
 
+    //When using Run File Stream you need to:
+    //Create the run file writer
+    //Write information
+    //flushRunFile() to close
+    //Go to the next frame
+    //Repeat
+
     private static final Logger LOGGER = Logger.getLogger(RunFileStream.class.getName());
 
     private final String key;
