@@ -16,7 +16,7 @@
  * specific language governing permissions and limitations
  * under the License.
  */
-package org.apache.hyracks.dataflow.std.sort.util;
+package org.apache.hyracks.dataflow.std.util;
 
 import java.io.Serializable;
 import java.util.Comparator;
