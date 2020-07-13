@@ -20,24 +20,12 @@ package org.apache.asterix.runtime.operators.joins;
 
 import org.apache.asterix.om.pointables.nonvisitor.AIntervalPointable;
 import org.apache.hyracks.api.exceptions.HyracksDataException;
-import org.apache.hyracks.dataflow.std.buffermanager.ITupleAccessor;
 
-public class MetByIntervalJoinChecker extends AbstractIntervalInverseJoinChecker {
+public class MetByIntervalJoinChecker extends AbstractIntervalJoinChecker {
     private static final long serialVersionUID = 1L;
 
     public MetByIntervalJoinChecker(int[] keysLeft, int[] keysRight) {
         super(keysLeft[0], keysRight[0]);
-    }
-
-    @Override
-    public boolean checkToSaveInMemory(ITupleAccessor accessorLeft, ITupleAccessor accessorRight)
-            throws HyracksDataException {
-        IntervalJoinUtil.getIntervalPointable(accessorLeft, idLeft, tvp, ipLeft);
-        IntervalJoinUtil.getIntervalPointable(accessorRight, idRight, tvp, ipRight);
-        ipLeft.getEnd(endLeft);
-        ipRight.getStart(startRight);
-        return ch.compare(ipLeft.getByteArray(), ipLeft.getStartOffset(), ipLeft.getLength(), ipRight.getByteArray(),
-                ipRight.getStartOffset(), ipRight.getLength()) >= 0;
     }
 
     @Override

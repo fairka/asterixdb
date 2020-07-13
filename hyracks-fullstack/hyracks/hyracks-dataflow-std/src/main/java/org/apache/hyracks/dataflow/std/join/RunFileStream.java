@@ -51,7 +51,6 @@ public class RunFileStream {
     private final IFrameTupleAppender runFileAppender;
     private RunFileWriter runFileWriter;
     private RunFileReader runFileReader;
-    private final IRunFileStreamStatus status;
     private FileReference runfile;
 
     private final IHyracksTaskContext ctx;
@@ -61,19 +60,19 @@ public class RunFileStream {
     private long writeCount = 0;
     private long totalTupleCount = 0;
     private long previousReadPointer;
+    private boolean runFileWriting = false;
+    private boolean runFileReading = false;
 
     /**
      * The RunFileSream uses two frames to buffer read and write operations.
      *
      * @param ctx
      * @param key
-     * @param status
      * @throws HyracksDataException
      */
-    public RunFileStream(IHyracksTaskContext ctx, String key, IRunFileStreamStatus status) throws HyracksDataException {
+    public RunFileStream(IHyracksTaskContext ctx, String key) throws HyracksDataException {
         this.ctx = ctx;
         this.key = key;
-        this.status = status;
 
         // TODO make the stream only use one buffer.
         runFileBuffer = new VSizeFrame(ctx);
@@ -116,7 +115,7 @@ public class RunFileStream {
     }
 
     public void startRunFileWriting() throws HyracksDataException {
-        status.setRunFileWriting(true);
+        runFileWriting = true;
         runFileBuffer.reset();
     }
 
@@ -142,7 +141,7 @@ public class RunFileStream {
         if (runFileReader != null) {
             runFileReader.close();
         }
-        status.setRunFileReading(true);
+        runFileReading = true;
 
         // Create reader
         runFileReader = runFileWriter.createReader();
@@ -167,7 +166,7 @@ public class RunFileStream {
     }
 
     public void flushRunFile() throws HyracksDataException {
-        status.setRunFileWriting(false);
+        runFileWriting = false;
 
         // Flush buffer.
         if (runFileAppender.getTupleCount() > 0) {
@@ -178,7 +177,7 @@ public class RunFileStream {
     }
 
     public void closeRunFileReading() throws HyracksDataException {
-        status.setRunFileReading(false);
+        runFileReading = false;
         runFileReader.close();
         previousReadPointer = -1;
     }
@@ -199,11 +198,11 @@ public class RunFileStream {
     }
 
     public boolean isReading() {
-        return status.isRunFileReading();
+        return runFileReading;
     }
 
     public boolean isWriting() {
-        return status.isRunFileWriting();
+        return runFileWriting;
     }
 
     public long getReadPointer() {

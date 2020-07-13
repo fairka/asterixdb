@@ -20,15 +20,12 @@ package org.apache.asterix.runtime.operators.joins.intervalforwardscan;
 
 import java.util.Iterator;
 import java.util.LinkedList;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 
 import org.apache.asterix.dataflow.data.nontagged.serde.AIntervalSerializerDeserializer;
 import org.apache.asterix.runtime.operators.joins.AbstractStreamJoiner;
 import org.apache.asterix.runtime.operators.joins.IIntervalJoinChecker;
 import org.apache.asterix.runtime.operators.joins.IIntervalJoinCheckerFactory;
 import org.apache.asterix.runtime.operators.joins.IntervalJoinUtil;
-import org.apache.asterix.runtime.operators.joins.TuplePrinterUtil;
 import org.apache.hyracks.api.comm.IFrameTupleAccessor;
 import org.apache.hyracks.api.comm.IFrameWriter;
 import org.apache.hyracks.api.context.IHyracksTaskContext;
@@ -124,8 +121,6 @@ class IntervalSideTuple {
  * The both right and left use memory to maintain active intervals for the join.
  */
 public class IntervalForwardScanJoiner extends AbstractStreamJoiner {
-
-    private static final Logger LOGGER = Logger.getLogger(IntervalForwardScanJoiner.class.getName());
 
     private final IPartitionedDeletableTupleBufferManager bufferManager;
     private final IFrameWriter writer;
@@ -257,11 +252,6 @@ public class IntervalForwardScanJoiner extends AbstractStreamJoiner {
                 // Should never happen if memory budget is correct.
                 throw new HyracksDataException("Left partition does not have access to a single page of memory.");
             }
-            if (DEBUG) {
-                String string = TuplePrinterUtil.printTuple("     left: ", inputAccessor[LEFT_PARTITION]);
-                System.err.println(
-                        "\nPartitioning: " + partition + ", ADD to empty array, load left: " + tp + "\n" + string);
-            }
             inputAccessor[LEFT_PARTITION].next();
         }
         TupleStatus rightTs = loadTuple(RIGHT_PARTITION);
@@ -270,11 +260,6 @@ public class IntervalForwardScanJoiner extends AbstractStreamJoiner {
             if (tp == null) {
                 // Should never happen if memory budget is correct.
                 throw new HyracksDataException("Right partition does not have access to a single page of memory.");
-            }
-            if (DEBUG) {
-                String string = TuplePrinterUtil.printTuple("     right: ", inputAccessor[RIGHT_PARTITION]);
-                System.err.println(
-                        "\nPartitioning: " + partition + ", ADD to empty array, load right: " + tp + "\n" + string);
             }
             inputAccessor[RIGHT_PARTITION].next();
         }
@@ -308,10 +293,6 @@ public class IntervalForwardScanJoiner extends AbstractStreamJoiner {
         // Process left tuples one by one, check them with active memory from the right branch.
         TupleStatus ts = loadTuple(main);
         while (ts.isLoaded() && activeManager[other].hasRecords()) {
-            if (DEBUG) {
-                String string = TuplePrinterUtil.printTuple(" -- spilling: ", inputAccessor[main]);
-                System.err.println("\nSPILLING selected from stream: " + "\n" + string);
-            }
             inputTuple[main].loadTuple();
             processTupleJoin(inputTuple[main], other, reversed, writer, empty);
             inputAccessor[main].next();
@@ -329,12 +310,6 @@ public class IntervalForwardScanJoiner extends AbstractStreamJoiner {
         TuplePointer searchTp = activeManager[main].getFirst();
         TuplePointer searchEndTp = searchTp;
 
-        if (DEBUG) {
-            String string = TuplePrinterUtil.printTuple("     selected value: ", memoryAccessor[main],
-                    searchTp.getTupleIndex());
-            System.err.println("\nPartitioning: " + partition + ", SELECTED tuple: " + searchTp + "\n" + string);
-        }
-
         processingGroup.clear();
         processingGroup.add(searchTp);
 
@@ -344,11 +319,6 @@ public class IntervalForwardScanJoiner extends AbstractStreamJoiner {
         processGroupWithStream(other, main, searchEndTp, writer);
 
         // Remove search tuple
-        if (DEBUG) {
-            String string =
-                    TuplePrinterUtil.printTuple("    selected value: ", memoryAccessor[main], searchTp.getTupleIndex());
-            System.err.println("\nPartitioning: " + partition + ", REMOVE selected: " + searchTp + "\n" + string);
-        }
         for (Iterator<TuplePointer> groupIterator = processingGroup.iterator(); groupIterator.hasNext();) {
             TuplePointer groupTp = groupIterator.next();
             activeManager[main].remove(groupTp);
@@ -369,11 +339,6 @@ public class IntervalForwardScanJoiner extends AbstractStreamJoiner {
             if (tp != null) {
                 memoryTuple[outer].setTuple(tp);
 
-                if (DEBUG) {
-                    String string =
-                            TuplePrinterUtil.printTuple("     stream: ", memoryAccessor[outer], tp.getTupleIndex());
-                    System.err.println("\nPartitioning: " + partition + ", ADDED from stream: " + tp + " \n" + string);
-                }
                 // Search group.
                 for (Iterator<TuplePointer> groupIterator = processingGroup.iterator(); groupIterator.hasNext();) {
                     TuplePointer groupTp = groupIterator.next();
@@ -385,14 +350,6 @@ public class IntervalForwardScanJoiner extends AbstractStreamJoiner {
                         addToResult(memoryTuple[LEFT_PARTITION].getAccessor(),
                                 memoryTuple[LEFT_PARTITION].getTupleIndex(), memoryTuple[RIGHT_PARTITION].getAccessor(),
                                 memoryTuple[RIGHT_PARTITION].getTupleIndex(), false, writer);
-                        if (DEBUG) {
-                            String string1 = TuplePrinterUtil.printTuple("    left: ", memoryAccessor[LEFT_PARTITION],
-                                    memoryTuple[LEFT_PARTITION].getTupleIndex());
-                            String string2 = TuplePrinterUtil.printTuple("    right: ", memoryAccessor[RIGHT_PARTITION],
-                                    memoryTuple[RIGHT_PARTITION].getTupleIndex());
-                            System.err.println("\nPartitioning: " + partition + ", MATCH from stream: " + groupTp + " "
-                                    + tp + "\n" + string1 + "\n" + string2);
-                        }
                     }
                 }
             } else {
@@ -415,28 +372,15 @@ public class IntervalForwardScanJoiner extends AbstractStreamJoiner {
             memoryTuple[outer].setTuple(matchTp);
             if (memoryTuple[inner].removeFromMemory(memoryTuple[outer])) {
                 // Remove if the tuple no long matches.
-                if (DEBUG) {
-                    String string = TuplePrinterUtil.printTuple("    right: ", memoryAccessor[RIGHT_PARTITION],
-                            matchTp.getTupleIndex());
-                    System.err.println("\n Partitioning: " + partition + ", REMOVE tuple: " + matchTp + "\n" + string);
-                }
                 activeManager[outer].remove(iterator, matchTp);
             } else if (memoryTuple[inner].checkForEarlyExit(memoryTuple[outer])) {
                 // No more possible comparisons
                 break;
             } else if (memoryTuple[LEFT_PARTITION].compareJoin(memoryTuple[RIGHT_PARTITION])) {
+                // Add to result if matched.
                 addToResult(memoryTuple[LEFT_PARTITION].getAccessor(), memoryTuple[LEFT_PARTITION].getTupleIndex(),
                         memoryTuple[RIGHT_PARTITION].getAccessor(), memoryTuple[RIGHT_PARTITION].getTupleIndex(), false,
                         writer);
-                // Add to result if matched.
-                if (DEBUG) {
-                    String string1 = TuplePrinterUtil.printTuple("    left: ",
-                            memoryTuple[LEFT_PARTITION].getAccessor(), memoryTuple[LEFT_PARTITION].getTupleIndex());
-                    String string2 = TuplePrinterUtil.printTuple("    right: ",
-                            memoryTuple[RIGHT_PARTITION].getAccessor(), memoryTuple[RIGHT_PARTITION].getTupleIndex());
-                    System.err.println("\nPartitioning: " + partition + ", MATCH in memory: " + searchTp + " " + matchTp
-                            + "\n" + string1 + "\n" + string2);
-                }
             }
         }
     }
@@ -450,11 +394,6 @@ public class IntervalForwardScanJoiner extends AbstractStreamJoiner {
                 continue;
             }
             memoryTuple[outer].setTuple(outerTp);
-            if (DEBUG) {
-                String string = TuplePrinterUtil.printTuple("     -- Outer", memoryTuple[outer].getAccessor(),
-                        memoryTuple[outer].getTupleIndex());
-                System.err.println("\n" + string);
-            }
             processTupleJoin(memoryTuple[outer], inner, reversed, writer, searchGroup);
         }
     }
@@ -469,21 +408,8 @@ public class IntervalForwardScanJoiner extends AbstractStreamJoiner {
             }
             memoryTuple[inner].setTuple(innerTp);
 
-            if (DEBUG) {
-                String string1 = TuplePrinterUtil.printTuple(" -- spilling: ", testTuple.getAccessor(),
-                        testTuple.getTupleIndex());
-                String string2 = TuplePrinterUtil.printTuple(" -- Inner", memoryTuple[inner].getAccessor(),
-                        memoryTuple[inner].getTupleIndex());
-                System.err.println("\n" + string1 + "\n" + string2);
-            }
-
             if (testTuple.removeFromMemory(memoryTuple[inner])) {
                 // Remove if the tuple no long matches.
-                if (DEBUG) {
-                    String string = TuplePrinterUtil.printTuple("    ...: ", memoryTuple[inner].getAccessor(),
-                            memoryTuple[inner].getTupleIndex());
-                    System.err.println("\nPartitioning: " + partition + ", REMOVE tuple: " + innerTp + "\n" + string);
-                }
                 activeManager[inner].remove(innerIterator, innerTp);
             } else if (!testTuple.hasMoreMatches(memoryTuple[inner])) {
                 // Exit if no more possible matches
@@ -492,14 +418,6 @@ public class IntervalForwardScanJoiner extends AbstractStreamJoiner {
                 // Add to result if matched.
                 addToResult(testTuple.getAccessor(), testTuple.getTupleIndex(), memoryTuple[inner].getAccessor(),
                         memoryTuple[inner].getTupleIndex(), reversed, writer);
-                if (DEBUG) {
-                    String string1 = TuplePrinterUtil.printTuple("    ...: ", testTuple.getAccessor(),
-                            testTuple.getTupleIndex());
-                    String string2 = TuplePrinterUtil.printTuple("    ...: ", memoryTuple[inner].getAccessor(),
-                            memoryTuple[inner].getTupleIndex());
-                    System.err.println("\nPartitioning: " + partition + ", MATCH in processTupleJoin: " + "\n" + string1
-                            + "\n" + string2);
-                }
             }
         }
     }
@@ -527,12 +445,6 @@ public class IntervalForwardScanJoiner extends AbstractStreamJoiner {
                 inputAccessor[freezePartition].getTupleId());
         // Start writing
         runFileStream[freezePartition].startRunFileWriting();
-        if (LOGGER.isLoggable(Level.FINEST)) {
-            LOGGER.finest("Memory is full. Freezing the " + freezePartition + " branch. (Left memory tuples: "
-                    + bufferManager.getNumTuples(LEFT_PARTITION) + ", Right memory tuples: "
-                    + bufferManager.getNumTuples(RIGHT_PARTITION) + ")");
-            bufferManager.printStats("memory details");
-        }
         freezeAndClearMemory(writer, searchGroup);
         // Frozen.
         if (runFileStream[LEFT_PARTITION].isWriting()) {
@@ -556,9 +468,6 @@ public class IntervalForwardScanJoiner extends AbstractStreamJoiner {
         accessor.setTupleId(runFilePointer[frozenPartition].getTupleIndex());
         runFilePointer[frozenPartition].reset(-1, -1);
 
-        if (LOGGER.isLoggable(Level.FINE)) {
-            LOGGER.fine("Unfreezing (" + frozenPartition + ").");
-        }
     }
 
 }

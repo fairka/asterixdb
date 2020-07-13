@@ -116,7 +116,6 @@ public class IntervalForwardScanJoinOperatorDescriptor extends AbstractOperatorD
             final RecordDescriptor rd0 = recordDescProvider.getInputRecordDescriptor(getActivityId(), 0);
 
             return new AbstractUnaryInputSinkOperatorNodePushable() {
-                private IntervalForwardScanBranchStatus status = new IntervalForwardScanBranchStatus();
                 private RunFileStream runFileStream;
                 FrameTupleAccessor accessor = new FrameTupleAccessor(rd0);
                 String key = "join: " + getActivityId();
@@ -125,7 +124,7 @@ public class IntervalForwardScanJoinOperatorDescriptor extends AbstractOperatorD
                 @Override
                 public void open() throws HyracksDataException {
                     state = new JoinCacheTaskState(jobletCtx.getJobId(), new TaskId(getActivityId(), partition));
-                    runFileStream = new RunFileStream(ctx, key, status);
+                    runFileStream = new RunFileStream(ctx, key);
                     runFileStream.createRunFileWriting();
                     runFileStream.startRunFileWriting();
                 }
@@ -170,7 +169,7 @@ public class IntervalForwardScanJoinOperatorDescriptor extends AbstractOperatorD
                 IRecordDescriptorProvider recordDescProvider, int partition, int nPartitions)
                 throws HyracksDataException {
 
-            return new JoinerOperator(ctx, partition, nPartitions, inputArity);
+            return new JoinerOperator(ctx, partition, nPartitions);
         }
 
         private class JoinerOperator extends AbstractUnaryOutputSourceOperatorNodePushable {
@@ -178,24 +177,17 @@ public class IntervalForwardScanJoinOperatorDescriptor extends AbstractOperatorD
             private final IHyracksTaskContext ctx;
             private final int partition;
             private final int nPartitions;
-            private final int inputArity;
             private JoinCacheTaskState[] inputStates;
 
-            public JoinerOperator(IHyracksTaskContext ctx, int partition, int nPartitions, int inputArity) {
+            public JoinerOperator(IHyracksTaskContext ctx, int partition, int nPartitions) {
                 this.ctx = ctx;
                 this.partition = partition;
-                this.inputArity = inputArity;
                 this.inputStates = new JoinCacheTaskState[JOIN_INPUT_INDEX];
                 this.inputStates[LEFT_INPUT_INDEX] =
                         (JoinCacheTaskState) ctx.getStateObject(new TaskId(leftActivityID, partition));
                 this.inputStates[RIGHT_INPUT_INDEX] =
                         (JoinCacheTaskState) ctx.getStateObject(new TaskId(rightActivityID, partition));
                 this.nPartitions = nPartitions;
-            }
-
-            @Override
-            public int getInputArity() {
-                return inputArity;
             }
 
             @Override

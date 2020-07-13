@@ -25,11 +25,10 @@ import org.apache.hyracks.api.exceptions.HyracksDataException;
 
 public interface IIntervalJoinCheckerFactory extends Serializable {
 
-    public IIntervalJoinChecker createIntervalMergeJoinChecker(int[] keys0, int[] keys1, IHyracksTaskContext ctx,
+    IIntervalJoinChecker createIntervalMergeJoinChecker(int[] keys0, int[] keys1, IHyracksTaskContext ctx,
             int nPartitions) throws HyracksDataException;
 
-    public IIntervalJoinChecker createIntervalInverseMergeJoinChecker(int[] keys0, int[] keys1, IHyracksTaskContext ctx,
+    IIntervalJoinChecker createIntervalInverseMergeJoinChecker(int[] keys0, int[] keys1, IHyracksTaskContext ctx,
             int nPartitions) throws HyracksDataException;
 
-    boolean isOrderAsc();
 }

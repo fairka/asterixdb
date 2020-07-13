@@ -20,7 +20,7 @@ package org.apache.asterix.runtime.operators.joins;
 
 import org.apache.hyracks.api.context.IHyracksTaskContext;
 
-public class MetByIntervalJoinCheckerFactory extends AbstractIntervalJoinCheckerFactory {
+public class MetByIntervalJoinCheckerFactory implements IIntervalJoinCheckerFactory {
     private static final long serialVersionUID = 1L;
 
     @Override

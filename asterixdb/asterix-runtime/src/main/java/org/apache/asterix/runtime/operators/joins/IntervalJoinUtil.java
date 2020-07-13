@@ -29,15 +29,6 @@ public class IntervalJoinUtil {
     private IntervalJoinUtil() {
     }
 
-    public static void getIntervalPointable(ITupleAccessor accessor, int fieldId, TaggedValuePointable tvp,
-            AIntervalPointable ip) {
-        int start =
-                accessor.getTupleStartOffset() + accessor.getFieldSlotsLength() + accessor.getFieldStartOffset(fieldId);
-        int length = accessor.getFieldLength(fieldId);
-        tvp.set(accessor.getBuffer().array(), start, length);
-        tvp.getValue(ip);
-    }
-
     public static void getIntervalPointable(IFrameTupleAccessor accessor, int tupleId, int fieldId,
             TaggedValuePointable tvp, AIntervalPointable ip) {
         int start = getIntervalOffset(accessor, tupleId, fieldId);

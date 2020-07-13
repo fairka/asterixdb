@@ -21,7 +21,7 @@ package org.apache.asterix.runtime.operators.joins;
 import org.apache.asterix.om.pointables.nonvisitor.AIntervalPointable;
 import org.apache.hyracks.api.exceptions.HyracksDataException;
 
-public class OverlappedByIntervalJoinChecker extends AbstractIntervalInverseJoinChecker {
+public class OverlappedByIntervalJoinChecker extends AbstractIntervalJoinChecker {
     private static final long serialVersionUID = 1L;
 
     public OverlappedByIntervalJoinChecker(int[] keysLeft, int[] keysRight) {

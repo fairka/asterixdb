@@ -45,5 +45,4 @@ public interface ITupleBufferManager {
 
     ITuplePointerAccessor createTuplePointerAccessor();
 
-    ITupleAccessor createTupleAccessor();
 }

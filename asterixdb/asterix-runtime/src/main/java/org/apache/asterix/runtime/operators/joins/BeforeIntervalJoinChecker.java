@@ -21,35 +21,12 @@ package org.apache.asterix.runtime.operators.joins;
 import org.apache.asterix.om.pointables.nonvisitor.AIntervalPointable;
 import org.apache.hyracks.api.comm.IFrameTupleAccessor;
 import org.apache.hyracks.api.exceptions.HyracksDataException;
-import org.apache.hyracks.dataflow.std.buffermanager.ITupleAccessor;
 
 public class BeforeIntervalJoinChecker extends AbstractIntervalJoinChecker {
     private static final long serialVersionUID = 1L;
 
     public BeforeIntervalJoinChecker(int[] keysLeft, int[] keysRight) {
         super(keysLeft[0], keysRight[0]);
-    }
-
-    @Override
-    public boolean checkToRemoveLeftActive() {
-        return false;
-    }
-
-    @Override
-    public boolean checkToSaveInMemory(ITupleAccessor accessorLeft, ITupleAccessor accessorRight)
-            throws HyracksDataException {
-        IntervalJoinUtil.getIntervalPointable(accessorLeft, idLeft, tvp, ipLeft);
-        IntervalJoinUtil.getIntervalPointable(accessorRight, idRight, tvp, ipRight);
-        ipLeft.getStart(startLeft);
-        ipRight.getStart(startRight);
-        return ch.compare(ipLeft.getByteArray(), ipLeft.getStartOffset(), ipRight.getLength(), ipRight.getByteArray(),
-                ipRight.getStartOffset(), ipRight.getLength()) < 0;
-    }
-
-    @Override
-    public boolean checkToRemoveInMemory(ITupleAccessor accessorLeft, ITupleAccessor accessorRight)
-            throws HyracksDataException {
-        return !checkToSaveInMemory(accessorLeft, accessorRight);
     }
 
     @Override

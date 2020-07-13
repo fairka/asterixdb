@@ -20,7 +20,7 @@ package org.apache.asterix.runtime.operators.joins;
 
 import org.apache.hyracks.api.context.IHyracksTaskContext;
 
-public class EndsIntervalJoinCheckerFactory extends AbstractIntervalJoinCheckerFactory {
+public class EndsIntervalJoinCheckerFactory implements IIntervalJoinCheckerFactory {
     private static final long serialVersionUID = 1L;
 
     @Override
@@ -33,11 +33,6 @@ public class EndsIntervalJoinCheckerFactory extends AbstractIntervalJoinCheckerF
     public IIntervalJoinChecker createIntervalInverseMergeJoinChecker(int[] keys0, int[] keys1, IHyracksTaskContext ctx,
             int nPartitions) {
         return new EndedByIntervalJoinChecker(keys0, keys1);
-    }
-
-    @Override
-    public boolean isOrderAsc() {
-        return false;
     }
 
 }
