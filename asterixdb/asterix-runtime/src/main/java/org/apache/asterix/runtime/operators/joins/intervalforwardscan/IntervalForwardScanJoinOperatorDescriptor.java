@@ -175,13 +175,11 @@ public class IntervalForwardScanJoinOperatorDescriptor extends AbstractOperatorD
         private class JoinerOperator extends AbstractUnaryOutputSourceOperatorNodePushable {
             //Get from State and pass it in here
             private final IHyracksTaskContext ctx;
-            private final int partition;
             private final int nPartitions;
             private JoinCacheTaskState[] inputStates;
 
             public JoinerOperator(IHyracksTaskContext ctx, int partition, int nPartitions) {
                 this.ctx = ctx;
-                this.partition = partition;
                 this.inputStates = new JoinCacheTaskState[JOIN_INPUT_INDEX];
                 this.inputStates[LEFT_INPUT_INDEX] =
                         (JoinCacheTaskState) ctx.getStateObject(new TaskId(leftActivityID, partition));
@@ -200,8 +198,8 @@ public class IntervalForwardScanJoinOperatorDescriptor extends AbstractOperatorD
                     writer.open();
                     //Pass in Data
                     IStreamJoiner joiner = new IntervalForwardScanJoiner(ctx, inputStates[LEFT_INPUT_INDEX].joinData,
-                            inputStates[RIGHT_INPUT_INDEX].joinData, memoryForJoinInFrames, partition, imjcf, leftKeys,
-                            rightKeys, writer, nPartitions);
+                            inputStates[RIGHT_INPUT_INDEX].joinData, memoryForJoinInFrames, imjcf, leftKeys, rightKeys,
+                            writer, nPartitions);
                     joiner.processJoin();
                 } catch (Exception ex) {
                     writer.fail();

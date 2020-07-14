@@ -28,25 +28,22 @@ import java.util.Map;
 
 import org.apache.asterix.algebra.operators.physical.IntervalForwardScanJoinPOperator;
 import org.apache.asterix.common.annotations.RangeAnnotation;
+import org.apache.asterix.common.exceptions.CompilationException;
+import org.apache.asterix.common.exceptions.ErrorCode;
 import org.apache.asterix.lang.common.util.FunctionUtil;
 import org.apache.asterix.om.functions.BuiltinFunctions;
 import org.apache.asterix.runtime.operators.joins.AfterIntervalJoinCheckerFactory;
 import org.apache.asterix.runtime.operators.joins.BeforeIntervalJoinCheckerFactory;
 import org.apache.asterix.runtime.operators.joins.CoveredByIntervalJoinCheckerFactory;
 import org.apache.asterix.runtime.operators.joins.CoversIntervalJoinCheckerFactory;
-import org.apache.asterix.runtime.operators.joins.EndedByIntervalJoinCheckerFactory;
-import org.apache.asterix.runtime.operators.joins.EndsIntervalJoinCheckerFactory;
 import org.apache.asterix.runtime.operators.joins.IIntervalJoinCheckerFactory;
-import org.apache.asterix.runtime.operators.joins.MeetsIntervalJoinCheckerFactory;
-import org.apache.asterix.runtime.operators.joins.MetByIntervalJoinCheckerFactory;
 import org.apache.asterix.runtime.operators.joins.OverlappedByIntervalJoinCheckerFactory;
 import org.apache.asterix.runtime.operators.joins.OverlappingIntervalJoinCheckerFactory;
 import org.apache.asterix.runtime.operators.joins.OverlapsIntervalJoinCheckerFactory;
-import org.apache.asterix.runtime.operators.joins.StartedByIntervalJoinCheckerFactory;
-import org.apache.asterix.runtime.operators.joins.StartsIntervalJoinCheckerFactory;
 import org.apache.commons.lang3.mutable.Mutable;
 import org.apache.commons.lang3.mutable.MutableObject;
 import org.apache.hyracks.algebricks.common.exceptions.AlgebricksException;
+import org.apache.hyracks.algebricks.common.utils.Triple;
 import org.apache.hyracks.algebricks.core.algebra.base.ILogicalExpression;
 import org.apache.hyracks.algebricks.core.algebra.base.ILogicalOperator;
 import org.apache.hyracks.algebricks.core.algebra.base.IOptimizationContext;
@@ -93,7 +90,7 @@ public class IntervalJoinUtils {
         INTERVAL_JOIN_CONDITIONS.put(BuiltinFunctions.INTERVAL_STARTS, BuiltinFunctions.INTERVAL_STARTED_BY);
     }
 
-    protected static RangeAnnotation IntervalJoinRangeMapAnnotation(AbstractFunctionCallExpression fexp) {
+    static RangeAnnotation intervalJoinRangeMapAnnotation(AbstractFunctionCallExpression fexp) {
         Iterator<IExpressionAnnotation> annotationIter = fexp.getAnnotations().values().iterator();
         while (annotationIter.hasNext()) {
             IExpressionAnnotation annotation = annotationIter.next();
@@ -104,13 +101,14 @@ public class IntervalJoinUtils {
         return null;
     }
 
-    protected static void setIntervalForwardScanJoinOp(AbstractBinaryJoinOperator op, FunctionIdentifier fi,
-            List<LogicalVariable> sideLeft, List<LogicalVariable> sideRight, IOptimizationContext context,
-            IntervalPartitions intervalPartitions) {
+    protected static void setIntervalForwardScanJoinOp(AbstractBinaryJoinOperator op,
+            Triple<FunctionIdentifier, LogicalVariable, LogicalVariable> outFields, IOptimizationContext context,
+            IntervalPartitions intervalPartitions) throws CompilationException {
 
-        IIntervalJoinCheckerFactory mjcf = getIntervalMergeJoinCheckerFactory(fi, intervalPartitions.getRangeMap());
+        IIntervalJoinCheckerFactory mjcf =
+                getIntervalMergeJoinCheckerFactory(outFields.first, intervalPartitions.getRangeMap());
         op.setPhysicalOperator(new IntervalForwardScanJoinPOperator(op.getJoinKind(),
-                AbstractJoinPOperator.JoinPartitioningType.BROADCAST, sideLeft, sideRight,
+                AbstractJoinPOperator.JoinPartitioningType.BROADCAST, outFields.second, outFields.third,
                 context.getPhysicalOptimizationConfig().getMaxFramesForJoin(), mjcf, intervalPartitions));
     }
 
@@ -119,8 +117,8 @@ public class IntervalJoinUtils {
      *
      * @see org.apache.asterix.optimizer.rules.temporal.TranslateIntervalExpressionRule
      */
-    protected static IntervalPartitions getIntervalPartitions(AbstractBinaryJoinOperator op, FunctionIdentifier fi,
-            List<LogicalVariable> sideLeft, List<LogicalVariable> sideRight, RangeMap rangeMap,
+    protected static IntervalPartitions getIntervalPartitions(AbstractBinaryJoinOperator op,
+            Triple<FunctionIdentifier, LogicalVariable, LogicalVariable> outFields, RangeMap rangeMap,
             IOptimizationContext context) throws AlgebricksException {
 
         List<LogicalVariable> leftPartitionVar = new ArrayList<>(2);
@@ -130,8 +128,8 @@ public class IntervalJoinUtils {
         rightPartitionVar.add(context.newVar());
         rightPartitionVar.add(context.newVar());
 
-        insertPartitionSortKey(op, LEFT, leftPartitionVar, sideLeft.get(0), context);
-        insertPartitionSortKey(op, RIGHT, rightPartitionVar, sideRight.get(0), context);
+        insertPartitionSortKey(op, LEFT, leftPartitionVar, outFields.second, context);
+        insertPartitionSortKey(op, RIGHT, rightPartitionVar, outFields.third, context);
 
         List<IntervalColumn> leftIC = new ArrayList<>(1);
         leftIC.add(new IntervalColumn(leftPartitionVar.get(0), leftPartitionVar.get(1),
@@ -143,81 +141,84 @@ public class IntervalJoinUtils {
         //Set Partitioning Types
         PartitioningType leftPartitioningType = PartitioningType.ORDERED_PARTITIONED;
         PartitioningType rightPartitioningType = PartitioningType.ORDERED_PARTITIONED;
-        if (fi.equals(BuiltinFunctions.INTERVAL_OVERLAPPED_BY)) {
+        if (outFields.first.equals(BuiltinFunctions.INTERVAL_OVERLAPPED_BY)) {
             rightPartitioningType = PartitioningType.PARTIAL_BROADCAST_ORDERED_INTERSECT;
-        } else if (fi.equals(BuiltinFunctions.INTERVAL_OVERLAPS)) {
+        } else if (outFields.first.equals(BuiltinFunctions.INTERVAL_OVERLAPS)) {
             leftPartitioningType = PartitioningType.PARTIAL_BROADCAST_ORDERED_INTERSECT;
-        } else if (fi.equals(BuiltinFunctions.INTERVAL_OVERLAPPING)) {
+        } else if (outFields.first.equals(BuiltinFunctions.INTERVAL_OVERLAPPING)) {
             leftPartitioningType = PartitioningType.PARTIAL_BROADCAST_ORDERED_INTERSECT;
             rightPartitioningType = PartitioningType.PARTIAL_BROADCAST_ORDERED_INTERSECT;
-        } else if (fi.equals(BuiltinFunctions.INTERVAL_COVERS)) {
+        } else if (outFields.first.equals(BuiltinFunctions.INTERVAL_COVERS)) {
             leftPartitioningType = PartitioningType.PARTIAL_BROADCAST_ORDERED_INTERSECT;
-        } else if (fi.equals(BuiltinFunctions.INTERVAL_COVERED_BY)) {
+        } else if (outFields.first.equals(BuiltinFunctions.INTERVAL_COVERED_BY)) {
             rightPartitioningType = PartitioningType.PARTIAL_BROADCAST_ORDERED_INTERSECT;
-        } else if (fi.equals(BuiltinFunctions.INTERVAL_STARTS)) {
-            //Not implemented
-        } else if (fi.equals(BuiltinFunctions.INTERVAL_STARTED_BY)) {
-            //Not implemented
-            leftPartitioningType = PartitioningType.PARTIAL_BROADCAST_ORDERED_INTERSECT;
-        } else if (fi.equals(BuiltinFunctions.INTERVAL_ENDS)) {
-            //Not implemented
-        } else if (fi.equals(BuiltinFunctions.INTERVAL_ENDED_BY)) {
-            //Not implemented
-            leftPartitioningType = PartitioningType.PARTIAL_BROADCAST_ORDERED_INTERSECT;
-        } else if (fi.equals(BuiltinFunctions.INTERVAL_MEETS)) {
-            //Is not implemented
-        } else if (fi.equals(BuiltinFunctions.INTERVAL_MET_BY)) {
-            //Is not implemented
-            leftPartitioningType = PartitioningType.PARTIAL_BROADCAST_ORDERED_INTERSECT;
-            rightPartitioningType = PartitioningType.ORDERED_PARTITIONED;
-        } else if (fi.equals(BuiltinFunctions.INTERVAL_BEFORE)) {
+        } else if (outFields.first.equals(BuiltinFunctions.INTERVAL_STARTS)) {
+            throw new CompilationException(ErrorCode.OPERATION_NOT_SUPPORTED);
+        } else if (outFields.first.equals(BuiltinFunctions.INTERVAL_STARTED_BY)) {
+            throw new CompilationException(ErrorCode.OPERATION_NOT_SUPPORTED);
+        } else if (outFields.first.equals(BuiltinFunctions.INTERVAL_ENDS)) {
+            throw new CompilationException(ErrorCode.OPERATION_NOT_SUPPORTED);
+        } else if (outFields.first.equals(BuiltinFunctions.INTERVAL_ENDED_BY)) {
+            throw new CompilationException(ErrorCode.OPERATION_NOT_SUPPORTED);
+        } else if (outFields.first.equals(BuiltinFunctions.INTERVAL_MEETS)) {
+            throw new CompilationException(ErrorCode.OPERATION_NOT_SUPPORTED);
+        } else if (outFields.first.equals(BuiltinFunctions.INTERVAL_MET_BY)) {
+            throw new CompilationException(ErrorCode.OPERATION_NOT_SUPPORTED);
+        } else if (outFields.first.equals(BuiltinFunctions.INTERVAL_BEFORE)) {
             leftPartitioningType = PartitioningType.PARTIAL_BROADCAST_ORDERED_FOLLOWING;
-        } else if (fi.equals(BuiltinFunctions.INTERVAL_AFTER)) {
+        } else if (outFields.first.equals(BuiltinFunctions.INTERVAL_AFTER)) {
             rightPartitioningType = PartitioningType.PARTIAL_BROADCAST_ORDERED_FOLLOWING;
         }
         return new IntervalPartitions(rangeMap, leftIC, rightIC, leftPartitioningType, rightPartitioningType);
     }
 
-    protected static FunctionIdentifier isIntervalJoinCondition(ILogicalExpression e,
+    protected static void getIntervalJoinCondition(AbstractFunctionCallExpression e,
             Collection<LogicalVariable> inLeftAll, Collection<LogicalVariable> inRightAll,
-            Collection<LogicalVariable> outLeftFields, Collection<LogicalVariable> outRightFields) {
-        FunctionIdentifier fiReturn;
+            Triple<FunctionIdentifier, LogicalVariable, LogicalVariable> outFields) {
         boolean switchArguments = false;
         if (e.getExpressionTag() == LogicalExpressionTag.FUNCTION_CALL) {
-            AbstractFunctionCallExpression fexp = (AbstractFunctionCallExpression) e;
+            AbstractFunctionCallExpression fexp = e;
             FunctionIdentifier fi = fexp.getFunctionIdentifier();
-            if (isIntervalFunction(fi)) {
-                fiReturn = fi;
+            if (reverseIntervalFunction(fi)) {
+                outFields.first = fi;
             } else {
-                return null;
+                outFields.second = null;
+                outFields.third = null;
+                outFields.first = null;
+                return;
             }
             ILogicalExpression opLeft = fexp.getArguments().get(LEFT).getValue();
             ILogicalExpression opRight = fexp.getArguments().get(RIGHT).getValue();
             if (opLeft.getExpressionTag() != LogicalExpressionTag.VARIABLE
                     || opRight.getExpressionTag() != LogicalExpressionTag.VARIABLE) {
-                return null;
+                outFields.second = null;
+                outFields.third = null;
+                outFields.first = null;
+                return;
             }
             LogicalVariable var1 = ((VariableReferenceExpression) opLeft).getVariableReference();
-            if (inLeftAll.contains(var1) && !outLeftFields.contains(var1)) {
-                outLeftFields.add(var1);
-            } else if (inRightAll.contains(var1) && !outRightFields.contains(var1)) {
-                outRightFields.add(var1);
-                fiReturn = reverseIntervalExpression(fi);
+            if (inLeftAll.contains(var1)) {
+                outFields.second = var1;
+            } else if (inRightAll.contains(var1)) {
+                outFields.third = var1;
+                outFields.first = reverseIntervalExpression(fi);
                 switchArguments = true;
             } else {
-                return null;
+                outFields.first = null;
+                outFields.second = null;
+                outFields.third = null;
+                return;
             }
             LogicalVariable var2 = ((VariableReferenceExpression) opRight).getVariableReference();
-            if (inLeftAll.contains(var2) && !outLeftFields.contains(var2) && switchArguments) {
-                outLeftFields.add(var2);
-            } else if (inRightAll.contains(var2) && !outRightFields.contains(var2) && !switchArguments) {
-                outRightFields.add(var2);
+            if (inLeftAll.contains(var2) && !outFields.second.equals(var2) && switchArguments) {
+                outFields.second.equals(var2);
+            } else if (inRightAll.contains(var2) && !outFields.second.equals(var2) && !switchArguments) {
+                outFields.third = var2;
             } else {
-                return null;
+                outFields.second = null;
+                outFields.third = null;
+                outFields.first = null;
             }
-            return fiReturn;
-        } else {
-            return null;
         }
     }
 
@@ -227,8 +228,8 @@ public class IntervalJoinUtils {
      * @see org.apache.asterix.optimizer.rules.temporal.TranslateIntervalExpressionRule
      */
     private static IIntervalJoinCheckerFactory getIntervalMergeJoinCheckerFactory(FunctionIdentifier fi,
-            RangeMap rangeMap) {
-        IIntervalJoinCheckerFactory mjcf = new OverlappingIntervalJoinCheckerFactory(rangeMap);
+            RangeMap rangeMap) throws CompilationException {
+        IIntervalJoinCheckerFactory mjcf;
         if (fi.equals(BuiltinFunctions.INTERVAL_OVERLAPPED_BY)) {
             mjcf = new OverlappedByIntervalJoinCheckerFactory();
         } else if (fi.equals(BuiltinFunctions.INTERVAL_OVERLAPS)) {
@@ -238,32 +239,28 @@ public class IntervalJoinUtils {
         } else if (fi.equals(BuiltinFunctions.INTERVAL_COVERED_BY)) {
             mjcf = new CoveredByIntervalJoinCheckerFactory();
         } else if (fi.equals(BuiltinFunctions.INTERVAL_STARTS)) {
-            //Not Implemented
-            mjcf = new StartsIntervalJoinCheckerFactory();
+            throw new CompilationException(ErrorCode.OPERATION_NOT_SUPPORTED);
         } else if (fi.equals(BuiltinFunctions.INTERVAL_STARTED_BY)) {
-            //Not Implemented
-            mjcf = new StartedByIntervalJoinCheckerFactory();
+            throw new CompilationException(ErrorCode.OPERATION_NOT_SUPPORTED);
         } else if (fi.equals(BuiltinFunctions.INTERVAL_ENDS)) {
-            //Not Implemented
-            mjcf = new EndsIntervalJoinCheckerFactory();
+            throw new CompilationException(ErrorCode.OPERATION_NOT_SUPPORTED);
         } else if (fi.equals(BuiltinFunctions.INTERVAL_ENDED_BY)) {
-            //Not Implemented
-            mjcf = new EndedByIntervalJoinCheckerFactory();
+            throw new CompilationException(ErrorCode.OPERATION_NOT_SUPPORTED);
         } else if (fi.equals(BuiltinFunctions.INTERVAL_MEETS)) {
-            //Not Implemented
-            mjcf = new MeetsIntervalJoinCheckerFactory();
+            throw new CompilationException(ErrorCode.OPERATION_NOT_SUPPORTED);
         } else if (fi.equals(BuiltinFunctions.INTERVAL_MET_BY)) {
-            //Not Implemented
-            mjcf = new MetByIntervalJoinCheckerFactory();
+            throw new CompilationException(ErrorCode.OPERATION_NOT_SUPPORTED);
         } else if (fi.equals(BuiltinFunctions.INTERVAL_BEFORE)) {
             mjcf = new BeforeIntervalJoinCheckerFactory();
         } else if (fi.equals(BuiltinFunctions.INTERVAL_AFTER)) {
             mjcf = new AfterIntervalJoinCheckerFactory();
+        } else {
+            mjcf = new OverlappingIntervalJoinCheckerFactory(rangeMap);
         }
         return mjcf;
     }
 
-    private static boolean isIntervalFunction(FunctionIdentifier fi) {
+    private static boolean reverseIntervalFunction(FunctionIdentifier fi) {
         return INTERVAL_JOIN_CONDITIONS.containsKey(fi);
     }
 
@@ -285,12 +282,12 @@ public class IntervalJoinUtils {
         IFunctionInfo startFi = FunctionUtil.getFunctionInfo(BuiltinFunctions.ACCESSOR_TEMPORAL_INTERVAL_START);
         @SuppressWarnings("unchecked")
         ScalarFunctionCallExpression startPartitionExp = new ScalarFunctionCallExpression(startFi, intervalExp);
-        assignExps.add(new MutableObject<ILogicalExpression>(startPartitionExp));
+        assignExps.add(new MutableObject<>(startPartitionExp));
         // End partition
         IFunctionInfo endFi = FunctionUtil.getFunctionInfo(BuiltinFunctions.ACCESSOR_TEMPORAL_INTERVAL_END);
         @SuppressWarnings("unchecked")
         ScalarFunctionCallExpression endPartitionExp = new ScalarFunctionCallExpression(endFi, intervalExp);
-        assignExps.add(new MutableObject<ILogicalExpression>(endPartitionExp));
+        assignExps.add(new MutableObject<>(endPartitionExp));
 
         AssignOperator ao = new AssignOperator(partitionVars, assignExps);
         ao.setExecutionMode(op.getExecutionMode());

@@ -97,7 +97,6 @@ public class VPartitionDeletableTupleBufferManager extends VPartitionTupleBuffer
     }
 
     private void reOrganizeFrames(int partition) {
-        //        System.err.printf("reOrganizeFrames -- %d:[", partition);
         policy[partition].reset();
         partitionArray[partition].resetIterator();
         int f = partitionArray[partition].next();
@@ -110,11 +109,9 @@ public class VPartitionDeletableTupleBufferManager extends VPartitionTupleBuffer
                 framePool.deAllocateBuffer(tempInfo.getBuffer());
             } else {
                 policy[partition].pushNewFrame(f, accessor[partition].getContiguousFreeSpace());
-                //                accessor[partition].printStats(System.err);
             }
             f = partitionArray[partition].next();
         }
-        //        System.err.println("] ");
     }
 
     private boolean canBeInsertedAfterCleanUpFragmentation(int partition, int requiredFreeSpace) {
@@ -152,29 +149,8 @@ public class VPartitionDeletableTupleBufferManager extends VPartitionTupleBuffer
         return recordDescriptor.getFieldCount() * 4 + 4;
     }
 
-    public void printStats(String message) {
-        System.err.print(String.format("%1$-" + 15 + "s", message) + " --");
-
-        for (int p = 0; p < partitionArray.length; ++p) {
-            System.err.printf("%d:[", p);
-            IFrameBufferManager partition = partitionArray[p];
-            if (partition != null) {
-                partitionArray[p].resetIterator();
-                int f = partitionArray[p].next();
-                while (partitionArray[p].exists()) {
-                    partitionArray[p].getFrame(f, tempInfo);
-                    accessor[p].reset(tempInfo.getBuffer());
-                    accessor[p].printStats(System.err);
-                    f = partitionArray[p].next();
-                }
-            }
-            System.err.printf("] ");
-        }
-        System.err.println();
-    }
-
     @Override
-    public void deleteTuple(int partition, TuplePointer tuplePointer) throws HyracksDataException {
+    public void deleteTuple(int partition, TuplePointer tuplePointer) {
         partitionArray[parsePartitionId(tuplePointer.getFrameIndex())]
                 .getFrame(parseFrameIdInPartition(tuplePointer.getFrameIndex()), tempInfo);
         accessor[partition].reset(tempInfo.getBuffer());
@@ -216,9 +192,6 @@ public class VPartitionDeletableTupleBufferManager extends VPartitionTupleBuffer
             @Override
             void resetInnerAccessor(TuplePointer tuplePointer) {
                 resetInnerAccessor(tuplePointer.getFrameIndex());
-                //                partitionArray[parsePartitionId(tuplePointer.getFrameIndex())]
-                //                        .getFrame(parseFrameIdInPartition(tuplePointer.getFrameIndex()), tempInfo);
-                //                innerAccessor.reset(tempInfo.getBuffer());
             }
 
             @Override
@@ -230,11 +203,6 @@ public class VPartitionDeletableTupleBufferManager extends VPartitionTupleBuffer
             @Override
             int getFrameCount() {
                 return partitionArray.length;
-            }
-
-            @Override
-            public boolean hasNext() {
-                return hasNext(frameId, tupleId);
             }
 
             @Override
@@ -250,17 +218,6 @@ public class VPartitionDeletableTupleBufferManager extends VPartitionTupleBuffer
                     tupleId = INITIALIZED;
                     next();
                 }
-            }
-
-            public boolean hasNext(int fId, int tId) {
-                int id = nextTuple(fId, tId);
-                if (id > INITIALIZED) {
-                    return true;
-                }
-                if (fId + 1 < getFrameCount()) {
-                    return hasNext(fId + 1, INITIALIZED);
-                }
-                return false;
             }
 
             public int nextTuple(int fId, int tId) {

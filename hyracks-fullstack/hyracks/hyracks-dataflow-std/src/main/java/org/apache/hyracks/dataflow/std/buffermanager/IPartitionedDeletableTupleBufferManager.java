@@ -26,6 +26,4 @@ public interface IPartitionedDeletableTupleBufferManager extends IPartitionedTup
 
     void deleteTuple(int partition, TuplePointer tuplePointer) throws HyracksDataException;
 
-    void printStats(String string);
-
 }

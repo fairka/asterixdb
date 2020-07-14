@@ -59,11 +59,6 @@ public class TupleAccessor extends FrameTupleAccessor implements ITupleAccessor 
     }
 
     @Override
-    public int getAbsFieldStartOffset(int fieldId) {
-        return getAbsoluteFieldStartOffset(tupleId, fieldId);
-    }
-
-    @Override
     public int getFieldLength(int fieldId) {
         return getFieldLength(tupleId, fieldId);
     }
@@ -84,26 +79,8 @@ public class TupleAccessor extends FrameTupleAccessor implements ITupleAccessor 
     }
 
     @Override
-    public void getTuplePointer(TuplePointer tp) {
-        tp.reset(INITIALIZED, tupleId);
-    }
-
-    @Override
     public void setTupleId(int tupleId) {
         this.tupleId = tupleId;
-    }
-
-    @Override
-    public void reset() {
-        tupleId = INITIALIZED;
-    }
-
-    @Override
-    public boolean hasNext() {
-        if (tupleId == UNSET) {
-            return false;
-        }
-        return tupleId + 1 < getTupleCount();
     }
 
     @Override

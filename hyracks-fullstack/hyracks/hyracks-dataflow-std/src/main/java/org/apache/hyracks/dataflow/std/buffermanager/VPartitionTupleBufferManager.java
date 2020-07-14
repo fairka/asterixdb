@@ -246,7 +246,7 @@ public class VPartitionTupleBufferManager implements IPartitionedTupleBufferMana
         return getLastBuffer(partition);
     }
 
-    private int getLastBuffer(int partition) throws HyracksDataException {
+    private int getLastBuffer(int partition) {
         return partitionArray[partition].getNumFrames() - 1;
     }
 
@@ -386,87 +386,6 @@ public class VPartitionTupleBufferManager implements IPartitionedTupleBufferMana
                 innerAccessor.reset(tempInfo.getBuffer(), tempInfo.getStartOffset(), tempInfo.getLength());
             }
         };
-    }
-
-    public ITupleAccessor createPartitionTupleAccessor(final RecordDescriptor recordDescriptor, int accessorPartition) {
-        return new AbstractTupleAccessor() {
-            private FrameTupleAccessor innerAccessor = new FrameTupleAccessor(recordDescriptor);
-            private int partition = accessorPartition;
-
-            @Override
-            IFrameTupleAccessor getInnerAccessor() {
-                return innerAccessor;
-            }
-
-            void resetInnerAccessor(TuplePointer tuplePointer) {
-                resetInnerAccessor(tuplePointer.getFrameIndex());
-            }
-
-            @Override
-            void resetInnerAccessor(int frameIndex) {
-                partitionArray[parsePartitionId(frameIndex)].getFrame(parseFrameIdInPartition(frameIndex), tempInfo);
-                innerAccessor.reset(tempInfo.getBuffer(), tempInfo.getStartOffset(), tempInfo.getLength());
-            }
-
-            @Override
-            int getFrameCount() {
-                return partitionArray[partition].getNumFrames();
-            }
-
-            @Override
-            public boolean hasNext() {
-                return hasNext(frameId, tupleId);
-            }
-
-            @Override
-            public void next() {
-                tupleId = nextTuple(frameId, tupleId);
-                if (tupleId > INITIALIZED) {
-                    return;
-                }
-
-                if (frameId + 1 < getFrameCount()) {
-                    ++frameId;
-                    resetInnerAccessor(frameId);
-                    tupleId = INITIALIZED;
-                    next();
-                }
-            }
-
-            public boolean hasNext(int fId, int tId) {
-                int id = nextTuple(fId, tId);
-                if (id > INITIALIZED) {
-                    return true;
-                }
-                if (fId + 1 < getFrameCount()) {
-                    return hasNext(fId + 1, INITIALIZED);
-                }
-                return false;
-            }
-
-            public int nextTuple(int fId, int tId) {
-                if (fId != frameId) {
-                    resetInnerAccessor(fId);
-                }
-                int id = nextTupleInFrame(tId);
-                if (fId != frameId) {
-                    resetInnerAccessor(frameId);
-                }
-                return id;
-            }
-
-            public int nextTupleInFrame(int tId) {
-                int id = tId;
-                while (id + 1 < getTupleCount()) {
-                    ++id;
-                    if (getTupleEndOffset(id) > 0) {
-                        return id;
-                    }
-                }
-                return UNSET;
-            }
-        };
-
     }
 
     @Override

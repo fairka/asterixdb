@@ -18,7 +18,6 @@
  */
 package org.apache.asterix.optimizer.rules.util;
 
-import java.util.ArrayList;
 import java.util.List;
 import java.util.logging.Logger;
 
@@ -27,6 +26,7 @@ import org.apache.asterix.common.exceptions.CompilationException;
 import org.apache.asterix.common.exceptions.ErrorCode;
 import org.apache.asterix.om.types.ATypeTag;
 import org.apache.hyracks.algebricks.common.exceptions.AlgebricksException;
+import org.apache.hyracks.algebricks.common.utils.Triple;
 import org.apache.hyracks.algebricks.core.algebra.base.ILogicalExpression;
 import org.apache.hyracks.algebricks.core.algebra.base.IOptimizationContext;
 import org.apache.hyracks.algebricks.core.algebra.base.LogicalExpressionTag;
@@ -58,28 +58,27 @@ public class AsterixJoinUtils {
         AbstractFunctionCallExpression fexp = (AbstractFunctionCallExpression) conditionLE;
         List<LogicalVariable> varsLeft = op.getInputs().get(LEFT).getValue().getSchema();
         List<LogicalVariable> varsRight = op.getInputs().get(RIGHT).getValue().getSchema();
-        List<LogicalVariable> sideLeft = new ArrayList<>(1);
-        List<LogicalVariable> sideRight = new ArrayList<>(1);
+        Triple<FunctionIdentifier, LogicalVariable, LogicalVariable> outFields = new Triple<>(null, null, null);
 
-        FunctionIdentifier fi =
-                IntervalJoinUtils.isIntervalJoinCondition(fexp, varsLeft, varsRight, sideLeft, sideRight);
-        if (fi == null) {
+        IntervalJoinUtils.getIntervalJoinCondition(fexp, varsLeft, varsRight, outFields);
+        if (outFields.first == null) {
             return;
         }
-        RangeAnnotation rangeAnnotation = IntervalJoinUtils.IntervalJoinRangeMapAnnotation(fexp);
+        RangeAnnotation rangeAnnotation = IntervalJoinUtils.intervalJoinRangeMapAnnotation(fexp);
         if (rangeAnnotation == null) {
             return;
         }
         //Check RangeMap type
         RangeMap rangeMap = rangeAnnotation.getRangeMap();
-        if (rangeMap.getTag(0, 0) != ATypeTag.DATETIME.serialize() && rangeMap.getTag(0, 0) != ATypeTag.DATE.serialize()
-                && rangeMap.getTag(0, 0) != ATypeTag.TIME.serialize()) {
+        if (rangeMap.getTag(0, 0) != ATypeTag.SERIALIZED_DATETIME_TYPE_TAG
+                && rangeMap.getTag(0, 0) != ATypeTag.SERIALIZED_DATE_TYPE_TAG
+                && rangeMap.getTag(0, 0) != ATypeTag.SERIALIZED_TIME_TYPE_TAG) {
             throw new CompilationException(ErrorCode.COMPILATION_ERROR, op.getSourceLocation(),
                     "Only RangeMaps of type DATE, TIME, and DATETIME have been " + "implemented for interval-joins.");
         }
         LOGGER.fine("Interval Join - Forward Scan");
         IntervalPartitions intervalPartitions =
-                IntervalJoinUtils.getIntervalPartitions(op, fi, sideLeft, sideRight, rangeMap, context);
-        IntervalJoinUtils.setIntervalForwardScanJoinOp(op, fi, sideLeft, sideRight, context, intervalPartitions);
+                IntervalJoinUtils.getIntervalPartitions(op, outFields, rangeMap, context);
+        IntervalJoinUtils.setIntervalForwardScanJoinOp(op, outFields, context, intervalPartitions);
     }
 }

@@ -22,20 +22,23 @@ import java.util.Iterator;
 import java.util.LinkedList;
 
 import org.apache.asterix.dataflow.data.nontagged.serde.AIntervalSerializerDeserializer;
-import org.apache.asterix.runtime.operators.joins.AbstractStreamJoiner;
 import org.apache.asterix.runtime.operators.joins.IIntervalJoinChecker;
 import org.apache.asterix.runtime.operators.joins.IIntervalJoinCheckerFactory;
 import org.apache.asterix.runtime.operators.joins.IntervalJoinUtil;
+import org.apache.hyracks.api.comm.IFrame;
 import org.apache.hyracks.api.comm.IFrameTupleAccessor;
 import org.apache.hyracks.api.comm.IFrameWriter;
+import org.apache.hyracks.api.comm.VSizeFrame;
 import org.apache.hyracks.api.context.IHyracksTaskContext;
 import org.apache.hyracks.api.dataflow.value.RecordDescriptor;
 import org.apache.hyracks.api.exceptions.HyracksDataException;
+import org.apache.hyracks.dataflow.common.comm.io.FrameTupleAppender;
 import org.apache.hyracks.dataflow.common.comm.util.FrameUtils;
 import org.apache.hyracks.dataflow.std.buffermanager.IPartitionedDeletableTupleBufferManager;
 import org.apache.hyracks.dataflow.std.buffermanager.ITupleAccessor;
 import org.apache.hyracks.dataflow.std.buffermanager.TupleAccessor;
 import org.apache.hyracks.dataflow.std.buffermanager.VPartitionDeletableTupleBufferManager;
+import org.apache.hyracks.dataflow.std.join.IStreamJoiner;
 import org.apache.hyracks.dataflow.std.join.JoinData;
 import org.apache.hyracks.dataflow.std.join.RunFileStream;
 import org.apache.hyracks.dataflow.std.structures.RunFilePointer;
@@ -120,14 +123,35 @@ class IntervalSideTuple {
  * The left stream will spill to disk when memory is full.
  * The both right and left use memory to maintain active intervals for the join.
  */
-public class IntervalForwardScanJoiner extends AbstractStreamJoiner {
+public class IntervalForwardScanJoiner implements IStreamJoiner {
+
+    public enum TupleStatus {
+        UNKNOWN,
+        LOADED,
+        EMPTY;
+
+        public boolean isLoaded() {
+            return this.equals(LOADED);
+        }
+
+        public boolean isEmpty() {
+            return this.equals(EMPTY);
+        }
+
+        public boolean isKnown() {
+            return !this.equals(UNKNOWN);
+        }
+    }
+
+    protected static final int JOIN_PARTITIONS = 2;
+    protected static final int LEFT_PARTITION = 0;
+    protected static final int RIGHT_PARTITION = 1;
 
     private final IPartitionedDeletableTupleBufferManager bufferManager;
     private final IFrameWriter writer;
 
     private final ForwardScanActiveManager[] activeManager;
     private final ITupleAccessor[] memoryAccessor;
-    private final int[] streamIndex;
     private final RunFileStream[] runFileStream;
     private final RunFilePointer[] runFilePointer;
 
@@ -140,18 +164,30 @@ public class IntervalForwardScanJoiner extends AbstractStreamJoiner {
     private final int leftKey;
     private final int rightKey;
 
-    private final int partition;
     private final LinkedList<TuplePointer> processingGroup = new LinkedList<>();
     private static final LinkedList<TuplePointer> empty = new LinkedList<>();
 
-    private final boolean DEBUG = false;
+    protected final IFrame[] inputBuffer;
+    protected final FrameTupleAppender resultAppender;
+    protected final ITupleAccessor[] inputAccessor;
+    protected final JoinData[] joinData;
 
     public IntervalForwardScanJoiner(IHyracksTaskContext ctx, JoinData leftJoinData, JoinData rightJoinData,
-            int memorySize, int partition, IIntervalJoinCheckerFactory imjcf, int[] leftKeys, int[] rightKeys,
-            IFrameWriter writer, int nPartitions) throws HyracksDataException {
-        super(ctx, leftJoinData, rightJoinData);
+            int memorySize, IIntervalJoinCheckerFactory imjcf, int[] leftKeys, int[] rightKeys, IFrameWriter writer,
+            int nPartitions) throws HyracksDataException {
 
-        this.partition = partition;
+        inputAccessor = new TupleAccessor[JOIN_PARTITIONS];
+        inputAccessor[LEFT_PARTITION] = new TupleAccessor(leftJoinData.getRecordDescriptor());
+        inputAccessor[RIGHT_PARTITION] = new TupleAccessor(rightJoinData.getRecordDescriptor());
+
+        inputBuffer = new IFrame[JOIN_PARTITIONS];
+        inputBuffer[LEFT_PARTITION] = new VSizeFrame(ctx);
+        inputBuffer[RIGHT_PARTITION] = new VSizeFrame(ctx);
+
+        joinData = new JoinData[JOIN_PARTITIONS];
+        joinData[LEFT_PARTITION] = leftJoinData;
+        joinData[RIGHT_PARTITION] = rightJoinData;
+
         this.writer = writer;
 
         this.imjc = imjcf.createIntervalMergeJoinChecker(leftKeys, rightKeys, ctx, nPartitions);
@@ -159,10 +195,6 @@ public class IntervalForwardScanJoiner extends AbstractStreamJoiner {
 
         this.leftKey = leftKeys[0];
         this.rightKey = rightKeys[0];
-
-        streamIndex = new int[JOIN_PARTITIONS];
-        streamIndex[LEFT_PARTITION] = TupleAccessor.UNSET;
-        streamIndex[RIGHT_PARTITION] = TupleAccessor.UNSET;
 
         RecordDescriptor[] recordDescriptors = new RecordDescriptor[JOIN_PARTITIONS];
         recordDescriptors[LEFT_PARTITION] = leftJoinData.getRecordDescriptor();
@@ -195,6 +227,9 @@ public class IntervalForwardScanJoiner extends AbstractStreamJoiner {
         inputTuple[LEFT_PARTITION] = new IntervalSideTuple(imjc, inputAccessor[LEFT_PARTITION], leftKey);
         inputTuple[RIGHT_PARTITION] = new IntervalSideTuple(imjcInverse, inputAccessor[RIGHT_PARTITION], rightKey);
 
+        // Result
+        resultAppender = new FrameTupleAppender(new VSizeFrame(ctx));
+
     }
 
     private void addToResult(IFrameTupleAccessor accessor1, int index1, IFrameTupleAccessor accessor2, int index2,
@@ -217,7 +252,6 @@ public class IntervalForwardScanJoiner extends AbstractStreamJoiner {
         return TupleStatus.LOADED;
     }
 
-    @Override
     public void processJoin() throws HyracksDataException {
 
         runFileStream[LEFT_PARTITION].startReadingRunFile(inputAccessor[LEFT_PARTITION]);
