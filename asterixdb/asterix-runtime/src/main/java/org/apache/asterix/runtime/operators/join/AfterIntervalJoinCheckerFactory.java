@@ -16,26 +16,22 @@
  * specific language governing permissions and limitations
  * under the License.
  */
-package org.apache.hyracks.dataflow.std.join;
+package org.apache.asterix.runtime.operators.join;
 
-import org.apache.hyracks.api.dataflow.value.RecordDescriptor;
+import org.apache.hyracks.api.context.IHyracksTaskContext;
 
-public class JoinData {
+public class AfterIntervalJoinCheckerFactory implements IIntervalJoinCheckerFactory {
+    private static final long serialVersionUID = 1L;
 
-    private RunFileStream stream;
-    private final RecordDescriptor recordDescriptor;
-
-    public JoinData(RecordDescriptor recordDescriptor, RunFileStream runFileStream) {
-        this.recordDescriptor = recordDescriptor;
-        this.stream = runFileStream;
+    @Override
+    public IIntervalJoinChecker createIntervalMergeJoinChecker(int[] keys0, int[] keys1, IHyracksTaskContext ctx,
+            int nPartitions) {
+        return new AfterIntervalJoinChecker(keys0, keys1);
     }
 
-    public RunFileStream getRunFileStream() {
-        return stream;
+    @Override
+    public IIntervalJoinChecker createIntervalInverseMergeJoinChecker(int[] keys0, int[] keys1, IHyracksTaskContext ctx,
+            int nPartitions) {
+        return new BeforeIntervalJoinChecker(keys0, keys1);
     }
-
-    public RecordDescriptor getRecordDescriptor() {
-        return recordDescriptor;
-    }
-
 }

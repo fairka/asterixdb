@@ -181,9 +181,9 @@ public class UsedVariableVisitor implements ILogicalOperatorVisitor<Void, Void> 
                     }
                     break;
                 case PARTIAL_BROADCAST_RANGE_INTERSECT_EXCHANGE:
-                    PartialBroadcastRangeIntersectExchangePOperator intersectPOp =
+                    PartialBroadcastRangeIntersectExchangePOperator rangeIntersectPOp =
                             (PartialBroadcastRangeIntersectExchangePOperator) physOp;
-                    for (IntervalColumn intervalCol : intersectPOp.getIntervalFields()) {
+                    for (IntervalColumn intervalCol : rangeIntersectPOp.getIntervalFields()) {
                         usedVariables.add(intervalCol.getStartColumn());
                         usedVariables.add(intervalCol.getEndColumn());
                     }

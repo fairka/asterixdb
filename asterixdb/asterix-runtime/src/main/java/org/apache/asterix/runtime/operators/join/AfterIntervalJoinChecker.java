@@ -16,22 +16,22 @@
  * specific language governing permissions and limitations
  * under the License.
  */
-package org.apache.asterix.runtime.operators.joins;
+package org.apache.asterix.runtime.operators.join;
 
 import org.apache.asterix.om.pointables.nonvisitor.AIntervalPointable;
 import org.apache.hyracks.api.comm.IFrameTupleAccessor;
 import org.apache.hyracks.api.exceptions.HyracksDataException;
 
-public class BeforeIntervalJoinChecker extends AbstractIntervalJoinChecker {
+public class AfterIntervalJoinChecker extends AbstractIntervalJoinChecker {
     private static final long serialVersionUID = 1L;
 
-    public BeforeIntervalJoinChecker(int[] keysLeft, int[] keysRight) {
+    public AfterIntervalJoinChecker(int[] keysLeft, int[] keysRight) {
         super(keysLeft[0], keysRight[0]);
     }
 
     @Override
     public boolean compareInterval(AIntervalPointable ipLeft, AIntervalPointable ipRight) throws HyracksDataException {
-        return il.before(ipLeft, ipRight);
+        return il.after(ipLeft, ipRight);
     }
 
     @Override

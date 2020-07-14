@@ -16,22 +16,23 @@
  * specific language governing permissions and limitations
  * under the License.
  */
-package org.apache.asterix.runtime.operators.joins;
+package org.apache.asterix.runtime.operators.join;
 
 import org.apache.hyracks.api.context.IHyracksTaskContext;
 
-public class OverlapsIntervalJoinCheckerFactory implements IIntervalJoinCheckerFactory {
+public class CoveredByIntervalJoinCheckerFactory implements IIntervalJoinCheckerFactory {
     private static final long serialVersionUID = 1L;
 
     @Override
     public IIntervalJoinChecker createIntervalMergeJoinChecker(int[] keys0, int[] keys1, IHyracksTaskContext ctx,
             int nPartitions) {
-        return new OverlapsIntervalJoinChecker(keys0, keys1);
+        return new CoveredByIntervalJoinChecker(keys0, keys1);
     }
 
     @Override
     public IIntervalJoinChecker createIntervalInverseMergeJoinChecker(int[] keys0, int[] keys1, IHyracksTaskContext ctx,
             int nPartitions) {
-        return new OverlappedByIntervalJoinChecker(keys0, keys1);
+        return new CoversIntervalJoinChecker(keys0, keys1);
     }
+
 }

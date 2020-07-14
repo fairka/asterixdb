@@ -269,7 +269,7 @@ class SQLPPParser extends ScopeChecker implements IParser {
        public DataverseName dataverse;
        public String library;
        public String function;
-       public Token hint;
+       public Token hintToken;
        public SourceLocation sourceLoc;
     }
 
@@ -2307,7 +2307,7 @@ FunctionName FunctionName() throws ParseException:
   {
     FunctionName result = new FunctionName();
     result.sourceLoc = prefix.second;
-    result.hint = prefix.third;
+    result.hintToken = prefix.third;
     List<String> list = prefix.first;
     int ln = list.size();
     String last = list.get(ln - 1);
@@ -2474,10 +2474,7 @@ Triple<List<String>, SourceLocation, Token> MultipartIdentifierWithHints(SqlppHi
     list.add(item);
     sourceLoc = getSourceLocation(token);
     if (expectedHints != null && expectedHints.length > 0) {
-      Token hintToken = fetchHint(token, expectedHints);
-      if (hintToken != null) {
-        hint = hintToken;
-      }
+      hint = fetchHint(token, expectedHints);
     }
   }
   (<DOT> item = Identifier() { list.add(item); } )*
@@ -3451,8 +3448,8 @@ Expression FunctionCallExpr() throws ParseException:
       return windowExpr;
     } else {
       CallExpr callExpr = new CallExpr(signature, argList, filterExpr);
-      if (funcName.hint != null) {
-        switch (funcName.hint.hint) {
+      if (funcName.hintToken != null) {
+        switch (funcName.hintToken.hint) {
           case INDEXED_NESTED_LOOP_JOIN_HINT:
             callExpr.addHint(IndexedNLJoinExpressionAnnotation.INSTANCE);
             break;
@@ -3461,11 +3458,15 @@ Expression FunctionCallExpr() throws ParseException:
             break;
           case RANGE_HINT:
             try {
-              RangeAnnotation rangeAnn = RangeAnnotation.INSTANCE;
-              rangeAnn.setRangeMap(RangeMapBuilder.parseHint(parseExpression(funcName.hint.hintParams)));
+              RangeAnnotation rangeAnn = new RangeAnnotation();
+              rangeAnn.setRangeMap(RangeMapBuilder.parseHint(parseExpression(funcName.hintToken.hintParams)));
               callExpr.addHint(rangeAnn);
             } catch (CompilationException e) {
-              {if (true) throw new SqlppParseException(getSourceLocation(funcName.hint), e.getMessage());}
+              {
+                  SqlppParseException e2 = new SqlppParseException(getSourceLocation(funcName.hintToken), e.getMessage());
+                  e2.initCause(e);
+                  throw e2;
+              }
             }
             break;
         }

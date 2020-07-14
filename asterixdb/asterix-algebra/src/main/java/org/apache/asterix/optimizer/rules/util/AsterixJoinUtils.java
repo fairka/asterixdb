@@ -18,6 +18,7 @@
  */
 package org.apache.asterix.optimizer.rules.util;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.logging.Logger;
 
@@ -26,7 +27,6 @@ import org.apache.asterix.common.exceptions.CompilationException;
 import org.apache.asterix.common.exceptions.ErrorCode;
 import org.apache.asterix.om.types.ATypeTag;
 import org.apache.hyracks.algebricks.common.exceptions.AlgebricksException;
-import org.apache.hyracks.algebricks.common.utils.Triple;
 import org.apache.hyracks.algebricks.core.algebra.base.ILogicalExpression;
 import org.apache.hyracks.algebricks.core.algebra.base.IOptimizationContext;
 import org.apache.hyracks.algebricks.core.algebra.base.LogicalExpressionTag;
@@ -58,10 +58,12 @@ public class AsterixJoinUtils {
         AbstractFunctionCallExpression fexp = (AbstractFunctionCallExpression) conditionLE;
         List<LogicalVariable> varsLeft = op.getInputs().get(LEFT).getValue().getSchema();
         List<LogicalVariable> varsRight = op.getInputs().get(RIGHT).getValue().getSchema();
-        Triple<FunctionIdentifier, LogicalVariable, LogicalVariable> outFields = new Triple<>(null, null, null);
+        List<LogicalVariable> sideLeft = new ArrayList<>(1);
+        List<LogicalVariable> sideRight = new ArrayList<>(1);
 
-        IntervalJoinUtils.getIntervalJoinCondition(fexp, varsLeft, varsRight, outFields);
-        if (outFields.first == null) {
+        FunctionIdentifier fi =
+                IntervalJoinUtils.getIntervalJoinCondition(fexp, varsLeft, varsRight, sideLeft, sideRight);
+        if (fi == null) {
             return;
         }
         RangeAnnotation rangeAnnotation = IntervalJoinUtils.intervalJoinRangeMapAnnotation(fexp);
@@ -78,7 +80,7 @@ public class AsterixJoinUtils {
         }
         LOGGER.fine("Interval Join - Forward Scan");
         IntervalPartitions intervalPartitions =
-                IntervalJoinUtils.getIntervalPartitions(op, outFields, rangeMap, context);
-        IntervalJoinUtils.setIntervalForwardScanJoinOp(op, outFields, context, intervalPartitions);
+                IntervalJoinUtils.getIntervalPartitions(op, fi, sideLeft, sideRight, rangeMap, context);
+        IntervalJoinUtils.setIntervalForwardScanJoinOp(op, fi, sideLeft, sideRight, context, intervalPartitions);
     }
 }

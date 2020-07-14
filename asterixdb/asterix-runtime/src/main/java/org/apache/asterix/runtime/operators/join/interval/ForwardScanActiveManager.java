@@ -17,7 +17,7 @@
  * under the License.
  */
 
-package org.apache.asterix.runtime.operators.joins.intervalforwardscan;
+package org.apache.asterix.runtime.operators.join.interval;
 
 import java.util.Iterator;
 import java.util.LinkedList;
@@ -52,7 +52,6 @@ public class ForwardScanActiveManager {
             if (LOGGER.isLoggable(Level.FINE)) {
                 LOGGER.fine("Add to memory (partition: " + partition + ").");
             }
-            //            System.err.println("Add to memory (partition: " + partition + ").");
             return tp;
         }
         tpPool.giveBack(tp);

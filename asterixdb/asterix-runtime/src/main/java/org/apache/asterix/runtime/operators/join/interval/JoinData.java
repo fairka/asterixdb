@@ -16,19 +16,26 @@
  * specific language governing permissions and limitations
  * under the License.
  */
-package org.apache.asterix.runtime.operators.joins;
+package org.apache.asterix.runtime.operators.join.interval;
 
-import java.io.Serializable;
+import org.apache.hyracks.api.dataflow.value.RecordDescriptor;
 
-import org.apache.hyracks.api.context.IHyracksTaskContext;
-import org.apache.hyracks.api.exceptions.HyracksDataException;
+public class JoinData {
 
-public interface IIntervalJoinCheckerFactory extends Serializable {
+    private RunFileStream stream;
+    private final RecordDescriptor recordDescriptor;
 
-    IIntervalJoinChecker createIntervalMergeJoinChecker(int[] keys0, int[] keys1, IHyracksTaskContext ctx,
-            int nPartitions) throws HyracksDataException;
+    public JoinData(RecordDescriptor recordDescriptor, RunFileStream runFileStream) {
+        this.recordDescriptor = recordDescriptor;
+        this.stream = runFileStream;
+    }
 
-    IIntervalJoinChecker createIntervalInverseMergeJoinChecker(int[] keys0, int[] keys1, IHyracksTaskContext ctx,
-            int nPartitions) throws HyracksDataException;
+    public RunFileStream getRunFileStream() {
+        return stream;
+    }
+
+    public RecordDescriptor getRecordDescriptor() {
+        return recordDescriptor;
+    }
 
 }

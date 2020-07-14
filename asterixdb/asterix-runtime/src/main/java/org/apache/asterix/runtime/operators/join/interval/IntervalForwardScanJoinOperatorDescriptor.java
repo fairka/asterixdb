@@ -17,12 +17,12 @@
  * under the License.
  */
 
-package org.apache.asterix.runtime.operators.joins.intervalforwardscan;
+package org.apache.asterix.runtime.operators.join.interval;
 
 import java.nio.ByteBuffer;
 import java.util.logging.Logger;
 
-import org.apache.asterix.runtime.operators.joins.IIntervalJoinCheckerFactory;
+import org.apache.asterix.runtime.operators.join.IIntervalJoinCheckerFactory;
 import org.apache.hyracks.api.context.IHyracksJobletContext;
 import org.apache.hyracks.api.context.IHyracksTaskContext;
 import org.apache.hyracks.api.dataflow.ActivityId;
@@ -42,8 +42,6 @@ import org.apache.hyracks.dataflow.std.base.AbstractStateObject;
 import org.apache.hyracks.dataflow.std.base.AbstractUnaryInputSinkOperatorNodePushable;
 import org.apache.hyracks.dataflow.std.base.AbstractUnaryOutputSourceOperatorNodePushable;
 import org.apache.hyracks.dataflow.std.join.IStreamJoiner;
-import org.apache.hyracks.dataflow.std.join.JoinData;
-import org.apache.hyracks.dataflow.std.join.RunFileStream;
 
 public class IntervalForwardScanJoinOperatorDescriptor extends AbstractOperatorDescriptor {
     private static final long serialVersionUID = 1L;

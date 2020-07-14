@@ -23,8 +23,8 @@ import java.util.List;
 import java.util.logging.Logger;
 
 import org.apache.asterix.optimizer.rules.util.IntervalPartitions;
-import org.apache.asterix.runtime.operators.joins.IIntervalJoinCheckerFactory;
-import org.apache.asterix.runtime.operators.joins.intervalforwardscan.IntervalForwardScanJoinOperatorDescriptor;
+import org.apache.asterix.runtime.operators.join.IIntervalJoinCheckerFactory;
+import org.apache.asterix.runtime.operators.join.interval.IntervalForwardScanJoinOperatorDescriptor;
 import org.apache.hyracks.algebricks.common.exceptions.AlgebricksException;
 import org.apache.hyracks.algebricks.core.algebra.base.IHyracksJobBuilder;
 import org.apache.hyracks.algebricks.core.algebra.base.ILogicalOperator;
@@ -56,8 +56,8 @@ import org.apache.hyracks.dataflow.common.data.partition.range.RangeMap;
 
 public class IntervalForwardScanJoinPOperator extends AbstractJoinPOperator {
 
-    private final LogicalVariable keysLeftBranch;
-    private final LogicalVariable keysRightBranch;
+    private final List<LogicalVariable> keysLeftBranch;
+    private final List<LogicalVariable> keysRightBranch;
     protected final IIntervalJoinCheckerFactory mjcf;
     protected final IntervalPartitions intervalPartitions;
 
@@ -65,8 +65,8 @@ public class IntervalForwardScanJoinPOperator extends AbstractJoinPOperator {
     private static final Logger LOGGER = Logger.getLogger(IntervalForwardScanJoinPOperator.class.getName());
 
     public IntervalForwardScanJoinPOperator(JoinKind kind, JoinPartitioningType partitioningType,
-            LogicalVariable sideLeftOfEqualities, LogicalVariable sideRightOfEqualities, int memSizeInFrames,
-            IIntervalJoinCheckerFactory mjcf, IntervalPartitions intervalPartitions) {
+            List<LogicalVariable> sideLeftOfEqualities, List<LogicalVariable> sideRightOfEqualities,
+            int memSizeInFrames, IIntervalJoinCheckerFactory mjcf, IntervalPartitions intervalPartitions) {
         super(kind, partitioningType);
         this.keysLeftBranch = sideLeftOfEqualities;
         this.keysRightBranch = sideRightOfEqualities;
@@ -74,22 +74,14 @@ public class IntervalForwardScanJoinPOperator extends AbstractJoinPOperator {
         this.intervalPartitions = intervalPartitions;
         this.memSizeInFrames = memSizeInFrames;
 
-        LOGGER.fine("IntervalForwardScanJoinPOperator constructed with: JoinKind=" + kind + ", JoinPartitioningType="
-                + partitioningType + ", List<LogicalVariable>=" + sideLeftOfEqualities + ", List<LogicalVariable>="
-                + sideRightOfEqualities + ", int memSizeInFrames=" + memSizeInFrames
-                + ", IMergeJoinCheckerFactory mjcf=" + mjcf + ".");
     }
 
-    public List<LogicalVariable> getKeysLeftBranchAsList() {
-        List<LogicalVariable> keysLeft = new ArrayList<>(1);
-        keysLeft.add(keysLeftBranch);
-        return keysLeft;
+    public List<LogicalVariable> getKeysLeftBranch() {
+        return keysLeftBranch;
     }
 
-    public List<LogicalVariable> getKeysRightBranchAsCollection() {
-        List<LogicalVariable> keysRight = new ArrayList<>(1);
-        keysRight.add(keysRightBranch);
-        return keysRight;
+    public List<LogicalVariable> getKeysRightBranch() {
+        return keysRightBranch;
     }
 
     public IIntervalJoinCheckerFactory getIntervalMergeJoinCheckerFactory() {
@@ -181,8 +173,8 @@ public class IntervalForwardScanJoinPOperator extends AbstractJoinPOperator {
     public void contributeRuntimeOperator(IHyracksJobBuilder builder, JobGenContext context, ILogicalOperator op,
             IOperatorSchema opSchema, IOperatorSchema[] inputSchemas, IOperatorSchema outerPlanSchema)
             throws AlgebricksException {
-        int[] keysLeft = JobGenHelper.variablesToFieldIndexes(getKeysLeftBranchAsList(), inputSchemas[0]);
-        int[] keysRight = JobGenHelper.variablesToFieldIndexes(getKeysLeftBranchAsList(), inputSchemas[1]);
+        int[] keysLeft = JobGenHelper.variablesToFieldIndexes(keysLeftBranch, inputSchemas[0]);
+        int[] keysRight = JobGenHelper.variablesToFieldIndexes(keysRightBranch, inputSchemas[1]);
 
         IOperatorDescriptorRegistry spec = builder.getJobSpec();
         RecordDescriptor recordDescriptor =
@@ -207,18 +199,21 @@ public class IntervalForwardScanJoinPOperator extends AbstractJoinPOperator {
                 recordDescriptor, mjcf);
     }
 
-    private ArrayList<OrderColumn> getLeftLocalOrderColumn() {
-        ArrayList<OrderColumn> leftLocalOrderColumn = new ArrayList<>(1);
-        leftLocalOrderColumn
-                .add(new OrderColumn(keysLeftBranch, intervalPartitions.getLeftIntervalColumn().get(0).getOrder()));
-        return leftLocalOrderColumn;
+    private ArrayList<OrderColumn> getRightLocalOrderColumn() {
+        ArrayList<OrderColumn> rightLocalOrderColumn = new ArrayList<>();
+        for (LogicalVariable v : keysRightBranch) {
+            rightLocalOrderColumn
+                    .add(new OrderColumn(v, intervalPartitions.getRightIntervalColumn().get(0).getOrder()));
+        }
+        return rightLocalOrderColumn;
     }
 
-    private ArrayList<OrderColumn> getRightLocalOrderColumn() {
-        ArrayList<OrderColumn> rightLocalOrderColumn = new ArrayList<>(1);
-        rightLocalOrderColumn
-                .add(new OrderColumn(keysRightBranch, intervalPartitions.getRightIntervalColumn().get(0).getOrder()));
-        return rightLocalOrderColumn;
+    private ArrayList<OrderColumn> getLeftLocalOrderColumn() {
+        ArrayList<OrderColumn> leftLocalOrderColumn = new ArrayList<>();
+        for (LogicalVariable v : keysLeftBranch) {
+            leftLocalOrderColumn.add(new OrderColumn(v, intervalPartitions.getLeftIntervalColumn().get(0).getOrder()));
+        }
+        return leftLocalOrderColumn;
     }
 
 }
