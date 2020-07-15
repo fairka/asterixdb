@@ -35,8 +35,8 @@ import org.apache.hyracks.dataflow.common.comm.io.FrameTupleAppender;
 import org.apache.hyracks.dataflow.common.comm.util.FrameUtils;
 import org.apache.hyracks.dataflow.std.buffermanager.IPartitionedDeletableTupleBufferManager;
 import org.apache.hyracks.dataflow.std.buffermanager.ITupleAccessor;
+import org.apache.hyracks.dataflow.std.buffermanager.ITuplePointerAccessor;
 import org.apache.hyracks.dataflow.std.buffermanager.TupleAccessor;
-import org.apache.hyracks.dataflow.std.buffermanager.VPartitionDeletableTupleBufferManager;
 import org.apache.hyracks.dataflow.std.join.IStreamJoiner;
 import org.apache.hyracks.dataflow.std.structures.RunFilePointer;
 import org.apache.hyracks.dataflow.std.structures.TuplePointer;
@@ -76,7 +76,7 @@ public class IntervalForwardScanJoiner implements IStreamJoiner {
     private final IFrameWriter writer;
 
     private final ForwardScanActiveManager[] activeManager;
-    private final ITupleAccessor[] memoryAccessor;
+    private final ITuplePointerAccessor[] memoryAccessor;
     private final RunFileStream[] runFileStream;
     private final RunFilePointer[] runFilePointer;
 
@@ -102,7 +102,7 @@ public class IntervalForwardScanJoiner implements IStreamJoiner {
             int nPartitions) throws HyracksDataException {
 
         inputAccessor = new TupleAccessor[JOIN_PARTITIONS];
-        inputAccessor[LEFT_PARTITION] = new TupleAccessor(leftJoinData.getRecordDescriptor());
+        inputAccessor[LEFT_PARTITION] = new ITuplePointerAccessor(leftJoinData.getRecordDescriptor());
         inputAccessor[RIGHT_PARTITION] = new TupleAccessor(rightJoinData.getRecordDescriptor());
 
         inputBuffer = new IFrame[JOIN_PARTITIONS];
@@ -128,9 +128,9 @@ public class IntervalForwardScanJoiner implements IStreamJoiner {
                 new VPartitionDeletableTupleBufferManager(ctx, VPartitionDeletableTupleBufferManager.NO_CONSTRAIN,
                         JOIN_PARTITIONS, memorySize * ctx.getInitialFrameSize(), recordDescriptors);
 
-        memoryAccessor = new ITupleAccessor[JOIN_PARTITIONS];
-        memoryAccessor[LEFT_PARTITION] = bufferManager.getTupleAccessor(leftJoinData.getRecordDescriptor());
-        memoryAccessor[RIGHT_PARTITION] = bufferManager.getTupleAccessor(rightJoinData.getRecordDescriptor());
+        memoryAccessor = new ITuplePointerAccessor[JOIN_PARTITIONS];
+        memoryAccessor[LEFT_PARTITION] = bufferManager.getTuplePointerAccessor(leftJoinData.getRecordDescriptor());
+        memoryAccessor[RIGHT_PARTITION] = bufferManager.getTuplePointerAccessor(rightJoinData.getRecordDescriptor());
 
         activeManager = new ForwardScanActiveManager[JOIN_PARTITIONS];
         activeManager[LEFT_PARTITION] = new ForwardScanActiveManager(bufferManager, LEFT_PARTITION);

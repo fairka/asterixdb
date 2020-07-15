@@ -17,12 +17,13 @@
  * under the License.
  */
 
-package org.apache.hyracks.dataflow.std.buffermanager;
+package org.apache.asterix.runtime.operators.join.interval;
 
 import org.apache.hyracks.api.comm.IFrameTupleAccessor;
 import org.apache.hyracks.api.context.IHyracksFrameMgrContext;
 import org.apache.hyracks.api.dataflow.value.RecordDescriptor;
 import org.apache.hyracks.api.exceptions.HyracksDataException;
+import org.apache.hyracks.dataflow.std.buffermanager.*;
 import org.apache.hyracks.dataflow.std.sort.util.AppendDeletableFrameTupleAccessor;
 import org.apache.hyracks.dataflow.std.sort.util.IAppendDeletableFrameTupleAccessor;
 import org.apache.hyracks.dataflow.std.structures.TuplePointer;
@@ -85,11 +86,8 @@ public class VPartitionDeletableTupleBufferManager extends VPartitionTupleBuffer
     public void clearPartition(int partitionId) throws HyracksDataException {
         IFrameBufferManager partition = partitionArray[partitionId];
         if (partition != null) {
-            partition.resetIterator();
-            int i = partition.next();
-            while (partition.exists()) {
+            for (int i = 0; i < partition.getNumFrames(); ++i) {
                 accessor[partitionId].clear(partition.getFrame(i, tempInfo).getBuffer());
-                i = partition.next();
             }
         }
         policy[partitionId].reset();
@@ -98,32 +96,26 @@ public class VPartitionDeletableTupleBufferManager extends VPartitionTupleBuffer
 
     private void reOrganizeFrames(int partition) {
         policy[partition].reset();
-        partitionArray[partition].resetIterator();
-        int f = partitionArray[partition].next();
-        while (partitionArray[partition].exists()) {
-            partitionArray[partition].getFrame(f, tempInfo);
+        for (int i = 0; i < partitionArray[partition].getNumFrames(); ++i) {
+            partitionArray[partition].getFrame(i, tempInfo);
             accessor[partition].reset(tempInfo.getBuffer());
             accessor[partition].reOrganizeBuffer();
             if (accessor[partition].getTupleCount() == 0) {
-                partitionArray[partition].removeFrame(f);
+                partitionArray[partition].removeFrame(i);
                 framePool.deAllocateBuffer(tempInfo.getBuffer());
             } else {
-                policy[partition].pushNewFrame(f, accessor[partition].getContiguousFreeSpace());
+                policy[partition].pushNewFrame(i, accessor[partition].getContiguousFreeSpace());
             }
-            f = partitionArray[partition].next();
         }
     }
 
     private boolean canBeInsertedAfterCleanUpFragmentation(int partition, int requiredFreeSpace) {
-        partitionArray[partition].resetIterator();
-        int i = partitionArray[partition].next();
-        while (partitionArray[partition].exists()) {
+        for (int i = 0; i < partitionArray[partition].getNumFrames(); ++i) {
             partitionArray[partition].getFrame(i, tempInfo);
             accessor[partition].reset(tempInfo.getBuffer());
             if (accessor[partition].getTotalFreeSpace() >= requiredFreeSpace) {
                 return true;
             }
-            i = partitionArray[partition].next();
         }
         return false;
     }
@@ -165,84 +157,16 @@ public class VPartitionDeletableTupleBufferManager extends VPartitionTupleBuffer
                     new AppendDeletableFrameTupleAccessor(recordDescriptor);
 
             @Override
-            IFrameTupleAccessor getInnerAccessor() {
+            public IFrameTupleAccessor getInnerAccessor() {
                 return innerAccessor;
             }
 
             @Override
-            void resetInnerAccessor(TuplePointer tuplePointer) {
+            public void resetInnerAccessor(TuplePointer tuplePointer) {
                 partitionArray[parsePartitionId(tuplePointer.getFrameIndex())]
                         .getFrame(parseFrameIdInPartition(tuplePointer.getFrameIndex()), tempInfo);
                 innerAccessor.reset(tempInfo.getBuffer());
             }
         };
     }
-
-    @Override
-    public ITupleAccessor getTupleAccessor(final RecordDescriptor recordDescriptor) {
-        return new AbstractTupleAccessor() {
-            private AppendDeletableFrameTupleAccessor innerAccessor =
-                    new AppendDeletableFrameTupleAccessor(recordDescriptor);
-
-            @Override
-            IFrameTupleAccessor getInnerAccessor() {
-                return innerAccessor;
-            }
-
-            @Override
-            void resetInnerAccessor(TuplePointer tuplePointer) {
-                resetInnerAccessor(tuplePointer.getFrameIndex());
-            }
-
-            @Override
-            void resetInnerAccessor(int frameIndex) {
-                partitionArray[parsePartitionId(frameIndex)].getFrame(parseFrameIdInPartition(frameIndex), tempInfo);
-                innerAccessor.reset(tempInfo.getBuffer());
-            }
-
-            @Override
-            int getFrameCount() {
-                return partitionArray.length;
-            }
-
-            @Override
-            public void next() {
-                tupleId = nextTuple(frameId, tupleId);
-                if (tupleId > INITIALIZED) {
-                    return;
-                }
-
-                if (frameId + 1 < getFrameCount()) {
-                    ++frameId;
-                    resetInnerAccessor(frameId);
-                    tupleId = INITIALIZED;
-                    next();
-                }
-            }
-
-            public int nextTuple(int fId, int tId) {
-                if (fId != frameId) {
-                    resetInnerAccessor(fId);
-                }
-                int id = nextTupleInFrame(tId);
-                if (fId != frameId) {
-                    resetInnerAccessor(frameId);
-                }
-                return id;
-            }
-
-            public int nextTupleInFrame(int tId) {
-                int id = tId;
-                while (id + 1 < getTupleCount()) {
-                    ++id;
-                    if (getTupleEndOffset(id) > 0) {
-                        return id;
-                    }
-                }
-                return UNSET;
-            }
-
-        };
-    }
-
 }

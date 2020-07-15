@@ -3459,7 +3459,7 @@ Expression FunctionCallExpr() throws ParseException:
           case RANGE_HINT:
             try {
               RangeAnnotation rangeAnn = new RangeAnnotation();
-              rangeAnn.setRangeMap(RangeMapBuilder.parseHint(parseExpression(funcName.hintToken.hintParams)));
+              rangeAnn.setObject((Object) RangeMapBuilder.parseHint(parseExpression(funcName.hintToken.hintParams)));
               callExpr.addHint(rangeAnn);
             } catch (CompilationException e) {
               {

@@ -24,12 +24,13 @@ import org.apache.asterix.runtime.operators.join.IIntervalJoinChecker;
 import org.apache.asterix.runtime.operators.join.IntervalJoinUtil;
 import org.apache.hyracks.api.exceptions.HyracksDataException;
 import org.apache.hyracks.dataflow.std.buffermanager.ITupleAccessor;
+import org.apache.hyracks.dataflow.std.buffermanager.ITuplePointerAccessor;
 import org.apache.hyracks.dataflow.std.structures.TuplePointer;
 
 class IntervalSideTuple {
     // Tuple access
     int fieldId;
-    ITupleAccessor accessor;
+    ITuplePointerAccessor accessor;
     int tupleIndex;
     int frameIndex = -1;
 
@@ -40,7 +41,7 @@ class IntervalSideTuple {
     long start;
     long end;
 
-    public IntervalSideTuple(IIntervalJoinChecker imjc, ITupleAccessor accessor, int fieldId) {
+    public IntervalSideTuple(IIntervalJoinChecker imjc, ITuplePointerAccessor accessor, int fieldId) {
         this.imjc = imjc;
         this.accessor = accessor;
         this.fieldId = fieldId;
@@ -57,8 +58,7 @@ class IntervalSideTuple {
         end = AIntervalSerializerDeserializer.getIntervalEnd(accessor.getBuffer().array(), offset);
     }
 
-    public void loadTuple() {
-        tupleIndex = accessor.getTupleId();
+    public void loadTuple(int tupleIndex) {
         int offset = IntervalJoinUtil.getIntervalOffset(accessor, tupleIndex, fieldId);
         start = AIntervalSerializerDeserializer.getIntervalStart(accessor.getBuffer().array(), offset);
         end = AIntervalSerializerDeserializer.getIntervalEnd(accessor.getBuffer().array(), offset);
@@ -68,7 +68,7 @@ class IntervalSideTuple {
         return tupleIndex;
     }
 
-    public ITupleAccessor getAccessor() {
+    public ITuplePointerAccessor getAccessor() {
         return accessor;
     }
 

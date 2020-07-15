@@ -130,6 +130,7 @@ public class VPartitionTupleBufferManager implements IPartitionedTupleBufferMana
         numTuples[partitionId] = 0;
     }
 
+
     @Override
     public boolean insertTuple(int partition, byte[] byteArray, int[] fieldEndOffsets, int start, int size,
             TuplePointer pointer) throws HyracksDataException {
@@ -261,7 +262,7 @@ public class VPartitionTupleBufferManager implements IPartitionedTupleBufferMana
         Arrays.fill(partitionArray, null);
     }
 
-    static class PartitionFrameBufferManager implements IFrameBufferManager {
+    public static class PartitionFrameBufferManager implements IFrameBufferManager {
 
         int size = 0;
         ArrayList<ByteBuffer> buffers = new ArrayList<>();
@@ -318,55 +319,6 @@ public class VPartitionTupleBufferManager implements IPartitionedTupleBufferMana
 
         int iterator = -1;
 
-        @Override
-        public int next() {
-            while (++iterator < buffers.size()) {
-                if (buffers.get(iterator) != null) {
-                    break;
-                }
-            }
-            return iterator;
-        }
-
-        @Override
-        public boolean exists() {
-            return iterator < buffers.size() && buffers.get(iterator) != null;
-        }
-
-        @Override
-        public void resetIterator() {
-            iterator = -1;
-        }
-
-        @Override
-        public ITupleAccessor getTupleAccessor(final RecordDescriptor recordDescriptor) {
-            return new AbstractTupleAccessor() {
-                protected BufferInfo tempBI = new BufferInfo(null, -1, -1);
-                FrameTupleAccessor innerAccessor = new FrameTupleAccessor(recordDescriptor);
-
-                @Override
-                IFrameTupleAccessor getInnerAccessor() {
-                    return innerAccessor;
-                }
-
-                @Override
-                void resetInnerAccessor(int frameIndex) {
-                    getFrame(frameIndex, tempBI);
-                    innerAccessor.reset(tempBI.getBuffer(), tempBI.getStartOffset(), tempBI.getLength());
-                }
-
-                void resetInnerAccessor(TuplePointer tuplePointer) {
-                    getFrame(tuplePointer.getFrameIndex(), tempBI);
-                    innerAccessor.reset(tempBI.getBuffer(), tempBI.getStartOffset(), tempBI.getLength());
-                }
-
-                @Override
-                int getFrameCount() {
-                    return buffers.size();
-                }
-            };
-        }
-
     }
 
     @Override
@@ -384,36 +336,6 @@ public class VPartitionTupleBufferManager implements IPartitionedTupleBufferMana
                 partitionArray[parsePartitionId(tuplePointer.getFrameIndex())]
                         .getFrame(parseFrameIdInPartition(tuplePointer.getFrameIndex()), tempInfo);
                 innerAccessor.reset(tempInfo.getBuffer(), tempInfo.getStartOffset(), tempInfo.getLength());
-            }
-        };
-    }
-
-    @Override
-    public ITupleAccessor getTupleAccessor(final RecordDescriptor recordDescriptor) {
-        return new AbstractTupleAccessor() {
-            FrameTupleAccessor innerAccessor = new FrameTupleAccessor(recordDescriptor);
-
-            @Override
-            IFrameTupleAccessor getInnerAccessor() {
-                return innerAccessor;
-            }
-
-            @Override
-            void resetInnerAccessor(TuplePointer tuplePointer) {
-                partitionArray[parsePartitionId(tuplePointer.getFrameIndex())]
-                        .getFrame(parseFrameIdInPartition(tuplePointer.getFrameIndex()), tempInfo);
-                innerAccessor.reset(tempInfo.getBuffer(), tempInfo.getStartOffset(), tempInfo.getLength());
-            }
-
-            @Override
-            void resetInnerAccessor(int frameIndex) {
-                partitionArray[parsePartitionId(frameIndex)].getFrame(parseFrameIdInPartition(frameIndex), tempInfo);
-                innerAccessor.reset(tempInfo.getBuffer(), tempInfo.getStartOffset(), tempInfo.getLength());
-            }
-
-            @Override
-            int getFrameCount() {
-                return partitionArray.length;
             }
         };
     }

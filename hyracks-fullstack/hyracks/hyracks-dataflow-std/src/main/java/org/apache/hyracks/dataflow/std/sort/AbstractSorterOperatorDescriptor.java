@@ -210,7 +210,7 @@ public abstract class AbstractSorterOperatorDescriptor extends AbstractOperatorD
                             if (wrappingWriter != null) {
                                 wrappingWriter.close();
                             }
-                        } catch (Exception e) {
+                        } catch (Throwable e) {
                             if (th != null) {
                                 e.addSuppressed(th);
                                 throw HyracksDataException.create(e);
