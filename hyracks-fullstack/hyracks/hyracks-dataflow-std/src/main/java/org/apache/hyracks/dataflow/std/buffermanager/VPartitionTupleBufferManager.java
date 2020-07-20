@@ -310,8 +310,11 @@ public class VPartitionTupleBufferManager implements IPartitionedTupleBufferMana
             buffers = null;
         }
 
-        int iterator = -1;
-
+        @Override
+        public void removeFrame(int frameIndex) {
+            buffers.set(frameIndex, null);
+            size--;
+        }
     }
 
     @Override

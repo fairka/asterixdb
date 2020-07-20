@@ -17,36 +17,14 @@
  * under the License.
  */
 
-package org.apache.hyracks.dataflow.std.buffermanager;
+package org.apache.asterix.runtime.operators.join.interval;
 
-import org.apache.hyracks.api.comm.IFrameTupleAccessor;
+import org.apache.hyracks.api.exceptions.HyracksDataException;
+import org.apache.hyracks.dataflow.std.buffermanager.IPartitionedTupleBufferManager;
 import org.apache.hyracks.dataflow.std.structures.TuplePointer;
 
-// TODO determine correct interface.
-public interface ITupleAccessor extends IFrameTupleAccessor {
-    int getTupleStartOffset();
+public interface IPartitionedDeletableTupleBufferManager extends IPartitionedTupleBufferManager {
 
-    int getTupleEndOffset();
+    void deleteTuple(int partition, TuplePointer tuplePointer) throws HyracksDataException;
 
-    int getTupleLength();
-
-    int getFieldLength(int fieldId);
-
-    int getFieldEndOffset(int fieldId);
-
-    int getFieldStartOffset(int fieldId);
-
-    void reset(TuplePointer tuplePointer);
-
-    int getTupleId();
-
-    void setTupleId(int tupleId);
-
-    /**
-     * Only reset the iterator.
-     */
-
-    void next();
-
-    boolean exists();
 }

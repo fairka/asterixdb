@@ -110,4 +110,9 @@ public class VariableFrameMemoryManager implements IFrameBufferManager {
         freeSlotPolicy.reset();
         framePool.close();
     }
+
+    @Override
+    public void removeFrame(int frameIndex) {
+        logicalFrameStartSizes.remove(frameIndex);
+    }
 }

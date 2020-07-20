@@ -59,4 +59,5 @@ public interface IFrameBufferManager {
      */
     void close();
 
+    void removeFrame(int frameIndex);
 }

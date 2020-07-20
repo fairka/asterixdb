@@ -19,7 +19,6 @@
 
 package org.apache.hyracks.dataflow.std.sort.util;
 
-import java.io.PrintStream;
 import java.nio.ByteBuffer;
 
 import org.apache.hyracks.api.comm.FrameHelper;
