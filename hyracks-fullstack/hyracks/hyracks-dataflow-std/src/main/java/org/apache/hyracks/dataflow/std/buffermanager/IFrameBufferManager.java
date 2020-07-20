@@ -57,7 +57,6 @@ public interface IFrameBufferManager {
     /**
      * Releases the allocated resources.
      */
-    void removeFrame(int frameIndex);
-
     void close();
+
 }

@@ -41,7 +41,6 @@ import org.apache.hyracks.dataflow.std.base.AbstractOperatorDescriptor;
 import org.apache.hyracks.dataflow.std.base.AbstractStateObject;
 import org.apache.hyracks.dataflow.std.base.AbstractUnaryInputSinkOperatorNodePushable;
 import org.apache.hyracks.dataflow.std.base.AbstractUnaryOutputSourceOperatorNodePushable;
-import org.apache.hyracks.dataflow.std.join.IStreamJoiner;
 
 public class IntervalForwardScanJoinOperatorDescriptor extends AbstractOperatorDescriptor {
     private static final long serialVersionUID = 1L;
@@ -195,7 +194,7 @@ public class IntervalForwardScanJoinOperatorDescriptor extends AbstractOperatorD
                 try {
                     writer.open();
                     //Pass in Data
-                    IStreamJoiner joiner = new IntervalForwardScanJoiner(ctx, inputStates[LEFT_INPUT_INDEX].joinData,
+                    IntervalForwardScanJoiner joiner = new IntervalForwardScanJoiner(ctx, inputStates[LEFT_INPUT_INDEX].joinData,
                             inputStates[RIGHT_INPUT_INDEX].joinData, memoryForJoinInFrames, imjcf, leftKeys, rightKeys,
                             writer, nPartitions);
                     joiner.processJoin();

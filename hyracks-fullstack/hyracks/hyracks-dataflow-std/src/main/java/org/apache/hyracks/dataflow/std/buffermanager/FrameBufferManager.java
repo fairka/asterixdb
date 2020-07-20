@@ -58,8 +58,4 @@ public class FrameBufferManager implements IFrameBufferManager {
         buffers = null;
     }
 
-    @Override
-    public void removeFrame(int frameIndex) {
-    }
-
 }

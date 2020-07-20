@@ -35,7 +35,6 @@ import org.apache.hyracks.dataflow.common.comm.io.FrameTupleAppender;
 import org.apache.hyracks.dataflow.common.comm.util.FrameUtils;
 import org.apache.hyracks.dataflow.std.buffermanager.IPartitionedDeletableTupleBufferManager;
 import org.apache.hyracks.dataflow.std.buffermanager.ITuplePointerAccessor;
-import org.apache.hyracks.dataflow.std.join.IStreamJoiner;
 import org.apache.hyracks.dataflow.std.structures.RunFilePointer;
 import org.apache.hyracks.dataflow.std.structures.TuplePointer;
 
@@ -46,7 +45,7 @@ import org.apache.hyracks.dataflow.std.structures.TuplePointer;
  * The left stream will spill to disk when memory is full.
  * The both right and left use memory to maintain active intervals for the join.
  */
-public class IntervalForwardScanJoiner implements IStreamJoiner {
+public class IntervalForwardScanJoiner {
 
     public enum TupleStatus {
         UNKNOWN,
