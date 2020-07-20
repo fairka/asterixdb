@@ -33,7 +33,7 @@ import org.apache.hyracks.api.io.FileReference;
 import org.apache.hyracks.dataflow.common.comm.io.FrameTupleAppender;
 import org.apache.hyracks.dataflow.common.io.RunFileReader;
 import org.apache.hyracks.dataflow.common.io.RunFileWriter;
-import org.apache.hyracks.dataflow.std.buffermanager.ITupleAccessor;
+import org.apache.hyracks.dataflow.std.buffermanager.ITuplePointerAccessor;
 
 public class RunFileStream {
 
@@ -119,9 +119,8 @@ public class RunFileStream {
         runFileBuffer.reset();
     }
 
-    public void addToRunFile(ITupleAccessor accessor) throws HyracksDataException {
-        int idx = accessor.getTupleId();
-        addToRunFile(accessor, idx);
+    public void addToRunFile(ITuplePointerAccessor accessor, int tupleId) throws HyracksDataException {
+        addToRunFile(accessor, tupleId);
     }
 
     public void addToRunFile(IFrameTupleAccessor accessor, int idx) throws HyracksDataException {
@@ -133,11 +132,11 @@ public class RunFileStream {
         totalTupleCount++;
     }
 
-    public void startReadingRunFile(ITupleAccessor accessor) throws HyracksDataException {
+    public void startReadingRunFile(TupleIterator accessor) throws HyracksDataException {
         startReadingRunFile(accessor, 0);
     }
 
-    public void startReadingRunFile(ITupleAccessor accessor, long startOffset) throws HyracksDataException {
+    public void startReadingRunFile(TupleIterator accessor, long startOffset) throws HyracksDataException {
         if (runFileReader != null) {
             runFileReader.close();
         }
@@ -153,12 +152,12 @@ public class RunFileStream {
         loadNextBuffer(accessor);
     }
 
-    public boolean loadNextBuffer(ITupleAccessor accessor) throws HyracksDataException {
+    public boolean loadNextBuffer(TupleIterator iterator) throws HyracksDataException {
         final long tempFrame = runFileReader.position();
         if (runFileReader.nextFrame(runFileBuffer)) {
             previousReadPointer = tempFrame;
-            accessor.reset(runFileBuffer.getBuffer());
-            accessor.next();
+            iterator.reset(runFileBuffer.getBuffer());
+            iterator.next();
             readCount++;
             return true;
         }

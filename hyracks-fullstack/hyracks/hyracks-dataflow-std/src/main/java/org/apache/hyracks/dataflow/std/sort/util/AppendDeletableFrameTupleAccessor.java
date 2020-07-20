@@ -408,12 +408,4 @@ public class AppendDeletableFrameTupleAccessor implements IAppendDeletableFrameT
         return buffer;
     }
 
-    @Override
-    public void printStats(PrintStream ps) {
-        if (getLiveTupleCount() == 0) {
-            ps.print("");
-        }
-        ps.printf("(%d, %d)", getLiveTupleCount(), getIndexCount());
-    }
-
 }

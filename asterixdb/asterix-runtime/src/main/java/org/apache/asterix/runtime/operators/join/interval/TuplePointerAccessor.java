@@ -17,36 +17,28 @@
  * under the License.
  */
 
-package org.apache.hyracks.dataflow.std.buffermanager;
-
-import java.nio.ByteBuffer;
-import java.util.List;
+package org.apache.asterix.runtime.operators.join.interval;
 
 import org.apache.hyracks.api.comm.IFrameTupleAccessor;
 import org.apache.hyracks.api.dataflow.value.RecordDescriptor;
 import org.apache.hyracks.dataflow.common.comm.io.FrameTupleAccessor;
+import org.apache.hyracks.dataflow.std.buffermanager.AbstractTuplePointerAccessor;
 import org.apache.hyracks.dataflow.std.structures.TuplePointer;
 
-/**
- * tuple accessor class for a frame in a frame list using a tuple pointer.
- */
-public class TupleInFrameListAccessor extends AbstractTuplePointerAccessor {
+public class TuplePointerAccessor extends AbstractTuplePointerAccessor {
 
-    private IFrameTupleAccessor bufferAccessor;
-    private List<ByteBuffer> bufferFrames;
+    FrameTupleAccessor accessor;
 
-    public TupleInFrameListAccessor(RecordDescriptor rd, List<ByteBuffer> bufferFrames) {
-        bufferAccessor = new FrameTupleAccessor(rd);
-        this.bufferFrames = bufferFrames;
+    TuplePointerAccessor(RecordDescriptor recordDescriptor) {
+        accessor = new FrameTupleAccessor(recordDescriptor);
     }
 
     @Override
     public IFrameTupleAccessor getInnerAccessor() {
-        return bufferAccessor;
+        return accessor;
     }
 
     @Override
     public void resetInnerAccessor(TuplePointer tuplePointer) {
-        bufferAccessor.reset(bufferFrames.get(tuplePointer.getFrameIndex()));
     }
 }

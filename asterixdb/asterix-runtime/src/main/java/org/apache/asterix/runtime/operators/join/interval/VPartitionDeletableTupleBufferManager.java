@@ -19,11 +19,20 @@
 
 package org.apache.asterix.runtime.operators.join.interval;
 
+import static org.apache.hyracks.dataflow.std.buffermanager.EnumFreeSlotPolicy.LAST_FIT;
+
 import org.apache.hyracks.api.comm.IFrameTupleAccessor;
 import org.apache.hyracks.api.context.IHyracksFrameMgrContext;
 import org.apache.hyracks.api.dataflow.value.RecordDescriptor;
 import org.apache.hyracks.api.exceptions.HyracksDataException;
-import org.apache.hyracks.dataflow.std.buffermanager.*;
+import org.apache.hyracks.dataflow.std.buffermanager.AbstractTuplePointerAccessor;
+import org.apache.hyracks.dataflow.std.buffermanager.FrameFreeSlotPolicyFactory;
+import org.apache.hyracks.dataflow.std.buffermanager.IFrameBufferManager;
+import org.apache.hyracks.dataflow.std.buffermanager.IFrameFreeSlotPolicy;
+import org.apache.hyracks.dataflow.std.buffermanager.IPartitionedDeletableTupleBufferManager;
+import org.apache.hyracks.dataflow.std.buffermanager.IPartitionedMemoryConstrain;
+import org.apache.hyracks.dataflow.std.buffermanager.ITuplePointerAccessor;
+import org.apache.hyracks.dataflow.std.buffermanager.VPartitionTupleBufferManager;
 import org.apache.hyracks.dataflow.std.sort.util.AppendDeletableFrameTupleAccessor;
 import org.apache.hyracks.dataflow.std.sort.util.IAppendDeletableFrameTupleAccessor;
 import org.apache.hyracks.dataflow.std.structures.TuplePointer;
@@ -43,14 +52,14 @@ public class VPartitionDeletableTupleBufferManager extends VPartitionTupleBuffer
             int partitions, int frameLimitInBytes, RecordDescriptor[] recordDescriptors) throws HyracksDataException {
         super(ctx, constrain, partitions, frameLimitInBytes);
         int maxFrames = framePool.getMemoryBudgetBytes() / framePool.getMinFrameSize();
-        this.policy = new FrameFreeSlotLastFit[partitions];
+        this.policy = new IFrameFreeSlotPolicy[partitions];
         this.accessor = new AppendDeletableFrameTupleAccessor[partitions];
         this.minFreeSpace = new int[partitions];
         int i = 0;
         for (RecordDescriptor rd : recordDescriptors) {
             this.accessor[i] = new AppendDeletableFrameTupleAccessor(rd);
             this.minFreeSpace[i] = calculateMinFreeSpace(rd);
-            this.policy[i] = new FrameFreeSlotLastFit(maxFrames);
+            this.policy[i] = FrameFreeSlotPolicyFactory.createFreeSlotPolicy(LAST_FIT, maxFrames);
             ++i;
         }
     }

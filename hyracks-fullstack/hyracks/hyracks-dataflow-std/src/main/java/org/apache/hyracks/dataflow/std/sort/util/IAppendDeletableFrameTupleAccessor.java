@@ -75,5 +75,4 @@ public interface IAppendDeletableFrameTupleAccessor extends IFrameTupleAccessor 
      */
     int getContiguousFreeSpace();
 
-    void printStats(PrintStream ps);
 }

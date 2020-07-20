@@ -19,119 +19,51 @@
 
 package org.apache.asterix.runtime.operators.join.interval;
 
+import java.nio.ByteBuffer;
+
 import org.apache.hyracks.api.comm.IFrameTupleAccessor;
 import org.apache.hyracks.api.dataflow.value.RecordDescriptor;
+import org.apache.hyracks.api.exceptions.HyracksDataException;
 import org.apache.hyracks.dataflow.common.comm.io.FrameTupleAccessor;
-import org.apache.hyracks.dataflow.std.buffermanager.AbstractTupleAccessor;
-import org.apache.hyracks.dataflow.std.buffermanager.BufferInfo;
-import org.apache.hyracks.dataflow.std.buffermanager.IFrameBufferManager;
-import org.apache.hyracks.dataflow.std.buffermanager.ITupleAccessor;
-import org.apache.hyracks.dataflow.std.structures.TuplePointer;
 
 public class TupleIterator {
 
-    IFrameBufferManager bufferManager;
+    public static final int UNSET = -2;
+    public static final int INITIALIZED = -1;
+    private int tupleId = UNSET;
+    private IFrameTupleAccessor accessor;
 
-    public TupleIterator(IFrameBufferManager bufferManager) {
-        this.bufferManager = bufferManager;
+    public TupleIterator(RecordDescriptor recordDescriptor) throws HyracksDataException {
+        accessor = new FrameTupleAccessor(recordDescriptor);
     }
 
-    /**
-     * Create a iterator for frames.
-     *
-     * Allows the reuse of frame ids.
-     */
-    int next(){
-        return 0;
+    public int getTupleId() {
+        return tupleId;
     }
 
-    boolean exists(){
-        return false;
+    public void setTupleId(int tupleId) {
+        this.tupleId = tupleId;
     }
 
-    void resetIterator(){
-
+    public void next() {
+        ++tupleId;
     }
 
-    ITupleAccessor getTupleAccessor(RecordDescriptor rd){
-        return null;
+    public boolean exists() {
+        return INITIALIZED < tupleId && tupleId < accessor.getTupleCount();
     }
 
-//From VPartitionTupleBufferManager
-//    @Override
-//    public int next() {
-//        while (++iterator < buffers.size()) {
-//            if (buffers.get(iterator) != null) {
-//                break;
-//            }
-//        }
-//        return iterator;
-//    }
-//
-//    @Override
-//    public boolean exists() {
-//        return iterator < buffers.size() && buffers.get(iterator) != null;
-//    }
-//
-//    @Override
-//    public void resetIterator() {
-//        iterator = -1;
-//    }
-//
-//    @Override
-//    public ITupleAccessor getTupleAccessor(final RecordDescriptor recordDescriptor) {
-//        return new AbstractTupleAccessor() {
-//            protected BufferInfo tempBI = new BufferInfo(null, -1, -1);
-//            FrameTupleAccessor innerAccessor = new FrameTupleAccessor(recordDescriptor);
-//
-//            @Override IFrameTupleAccessor getInnerAccessor() {
-//                return innerAccessor;
-//            }
-//
-//            @Override
-//            void resetInnerAccessor(int frameIndex) {
-//                getFrame(frameIndex, tempBI);
-//                innerAccessor.reset(tempBI.getBuffer(), tempBI.getStartOffset(), tempBI.getLength());
-//            }
-//
-//            void resetInnerAccessor(TuplePointer tuplePointer) {
-//                getFrame(tuplePointer.getFrameIndex(), tempBI);
-//                innerAccessor.reset(tempBI.getBuffer(), tempBI.getStartOffset(), tempBI.getLength());
-//            }
-//
-//            @Override
-//            int getFrameCount() {
-//                return buffers.size();
-//            }
-//        };
-//    }
-//@Override
-//public ITupleAccessor getTupleAccessor(final RecordDescriptor recordDescriptor) {
-//    return new AbstractTupleAccessor() {
-//        FrameTupleAccessor innerAccessor = new FrameTupleAccessor(recordDescriptor);
-//
-//        @Override
-//        IFrameTupleAccessor getInnerAccessor() {
-//            return innerAccessor;
-//        }
-//
-//        @Override
-//        void resetInnerAccessor(TuplePointer tuplePointer) {
-//            partitionArray[parsePartitionId(tuplePointer.getFrameIndex())]
-//                    .getFrame(parseFrameIdInPartition(tuplePointer.getFrameIndex()), tempInfo);
-//            innerAccessor.reset(tempInfo.getBuffer(), tempInfo.getStartOffset(), tempInfo.getLength());
-//        }
-//
-//        @Override
-//        void resetInnerAccessor(int frameIndex) {
-//            partitionArray[parsePartitionId(frameIndex)].getFrame(parseFrameIdInPartition(frameIndex), tempInfo);
-//            innerAccessor.reset(tempInfo.getBuffer(), tempInfo.getStartOffset(), tempInfo.getLength());
-//        }
-//
-//        @Override
-//        int getFrameCount() {
-//            return partitionArray.length;
-//        }
-//    };
-//}
+    public IFrameTupleAccessor getAccessor() {
+        return accessor;
+    }
+
+    public void reset(ByteBuffer byteBuffer) {
+        accessor.reset(byteBuffer);
+        tupleId = INITIALIZED;
+    }
+
+    public void reset() {
+        tupleId = INITIALIZED;
+    }
+
 }

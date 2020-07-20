@@ -34,9 +34,7 @@ import org.apache.hyracks.api.exceptions.HyracksDataException;
 import org.apache.hyracks.dataflow.common.comm.io.FrameTupleAppender;
 import org.apache.hyracks.dataflow.common.comm.util.FrameUtils;
 import org.apache.hyracks.dataflow.std.buffermanager.IPartitionedDeletableTupleBufferManager;
-import org.apache.hyracks.dataflow.std.buffermanager.ITupleAccessor;
 import org.apache.hyracks.dataflow.std.buffermanager.ITuplePointerAccessor;
-import org.apache.hyracks.dataflow.std.buffermanager.TupleAccessor;
 import org.apache.hyracks.dataflow.std.join.IStreamJoiner;
 import org.apache.hyracks.dataflow.std.structures.RunFilePointer;
 import org.apache.hyracks.dataflow.std.structures.TuplePointer;
@@ -77,6 +75,7 @@ public class IntervalForwardScanJoiner implements IStreamJoiner {
 
     private final ForwardScanActiveManager[] activeManager;
     private final ITuplePointerAccessor[] memoryAccessor;
+    protected final TupleIterator[] inputTupleIterator;
     private final RunFileStream[] runFileStream;
     private final RunFilePointer[] runFilePointer;
 
@@ -94,16 +93,24 @@ public class IntervalForwardScanJoiner implements IStreamJoiner {
 
     protected final IFrame[] inputBuffer;
     protected final FrameTupleAppender resultAppender;
-    protected final ITupleAccessor[] inputAccessor;
+    protected final ITuplePointerAccessor[] inputAccessor;
     protected final JoinData[] joinData;
 
     public IntervalForwardScanJoiner(IHyracksTaskContext ctx, JoinData leftJoinData, JoinData rightJoinData,
             int memorySize, IIntervalJoinCheckerFactory imjcf, int[] leftKeys, int[] rightKeys, IFrameWriter writer,
             int nPartitions) throws HyracksDataException {
 
-        inputAccessor = new TupleAccessor[JOIN_PARTITIONS];
-        inputAccessor[LEFT_PARTITION] = new ITuplePointerAccessor(leftJoinData.getRecordDescriptor());
-        inputAccessor[RIGHT_PARTITION] = new TupleAccessor(rightJoinData.getRecordDescriptor());
+        RecordDescriptor[] recordDescriptors = new RecordDescriptor[JOIN_PARTITIONS];
+        recordDescriptors[LEFT_PARTITION] = leftJoinData.getRecordDescriptor();
+        recordDescriptors[RIGHT_PARTITION] = rightJoinData.getRecordDescriptor();
+
+        inputAccessor = new TuplePointerAccessor[JOIN_PARTITIONS];
+        inputAccessor[LEFT_PARTITION] = new TuplePointerAccessor(leftJoinData.getRecordDescriptor());
+        inputAccessor[RIGHT_PARTITION] = new TuplePointerAccessor(rightJoinData.getRecordDescriptor());
+
+        inputTupleIterator = new TupleIterator[JOIN_PARTITIONS];
+        inputTupleIterator[LEFT_PARTITION] = new TupleIterator(leftJoinData.getRecordDescriptor());
+        inputTupleIterator[RIGHT_PARTITION] = new TupleIterator(rightJoinData.getRecordDescriptor());
 
         inputBuffer = new IFrame[JOIN_PARTITIONS];
         inputBuffer[LEFT_PARTITION] = new VSizeFrame(ctx);
@@ -121,9 +128,6 @@ public class IntervalForwardScanJoiner implements IStreamJoiner {
         this.leftKey = leftKeys[0];
         this.rightKey = rightKeys[0];
 
-        RecordDescriptor[] recordDescriptors = new RecordDescriptor[JOIN_PARTITIONS];
-        recordDescriptors[LEFT_PARTITION] = leftJoinData.getRecordDescriptor();
-        recordDescriptors[RIGHT_PARTITION] = rightJoinData.getRecordDescriptor();
         bufferManager =
                 new VPartitionDeletableTupleBufferManager(ctx, VPartitionDeletableTupleBufferManager.NO_CONSTRAIN,
                         JOIN_PARTITIONS, memorySize * ctx.getInitialFrameSize(), recordDescriptors);
@@ -171,7 +175,8 @@ public class IntervalForwardScanJoiner implements IStreamJoiner {
     }
 
     private TupleStatus loadTuple(int partition) throws HyracksDataException {
-        if (!inputAccessor[partition].exists() && !runFileStream[partition].loadNextBuffer(inputAccessor[partition])) {
+        if (inputTupleIterator[partition].getAccessor().getTupleCount() <= 0
+                && !runFileStream[partition].loadNextBuffer(inputTupleIterator[partition])) {
             return TupleStatus.EMPTY;
         }
         return TupleStatus.LOADED;
@@ -179,8 +184,8 @@ public class IntervalForwardScanJoiner implements IStreamJoiner {
 
     public void processJoin() throws HyracksDataException {
 
-        runFileStream[LEFT_PARTITION].startReadingRunFile(inputAccessor[LEFT_PARTITION]);
-        runFileStream[RIGHT_PARTITION].startReadingRunFile(inputAccessor[RIGHT_PARTITION]);
+        runFileStream[LEFT_PARTITION].startReadingRunFile(inputTupleIterator[LEFT_PARTITION]);
+        runFileStream[RIGHT_PARTITION].startReadingRunFile(inputTupleIterator[RIGHT_PARTITION]);
 
         TupleStatus leftTs = loadTuple(LEFT_PARTITION);
         TupleStatus rightTs = loadTuple(RIGHT_PARTITION);
@@ -206,21 +211,21 @@ public class IntervalForwardScanJoiner implements IStreamJoiner {
         // Ensure a tuple is in memory.
         TupleStatus leftTs = loadTuple(LEFT_PARTITION);
         if (leftTs.isLoaded() && !activeManager[LEFT_PARTITION].hasRecords()) {
-            TuplePointer tp = activeManager[LEFT_PARTITION].addTuple(inputAccessor[LEFT_PARTITION]);
+            TuplePointer tp = activeManager[LEFT_PARTITION].addTuple(inputTupleIterator[LEFT_PARTITION]);
             if (tp == null) {
                 // Should never happen if memory budget is correct.
                 throw new HyracksDataException("Left partition does not have access to a single page of memory.");
             }
-            inputAccessor[LEFT_PARTITION].next();
+            inputTupleIterator[LEFT_PARTITION].next();
         }
         TupleStatus rightTs = loadTuple(RIGHT_PARTITION);
         if (rightTs.isLoaded() && !activeManager[RIGHT_PARTITION].hasRecords()) {
-            TuplePointer tp = activeManager[RIGHT_PARTITION].addTuple(inputAccessor[RIGHT_PARTITION]);
+            TuplePointer tp = activeManager[RIGHT_PARTITION].addTuple(inputTupleIterator[RIGHT_PARTITION]);
             if (tp == null) {
                 // Should never happen if memory budget is correct.
                 throw new HyracksDataException("Right partition does not have access to a single page of memory.");
             }
-            inputAccessor[RIGHT_PARTITION].next();
+            inputTupleIterator[RIGHT_PARTITION].next();
         }
         // If both sides have value in memory, run join.
         if (activeManager[LEFT_PARTITION].hasRecords() && activeManager[RIGHT_PARTITION].hasRecords()) {
@@ -254,7 +259,7 @@ public class IntervalForwardScanJoiner implements IStreamJoiner {
         while (ts.isLoaded() && activeManager[other].hasRecords()) {
             inputTuple[main].loadTuple();
             processTupleJoin(inputTuple[main], other, reversed, writer, empty);
-            inputAccessor[main].next();
+            inputTupleIterator[main].next();
             ts = loadTuple(main);
         }
     }
@@ -294,7 +299,7 @@ public class IntervalForwardScanJoiner implements IStreamJoiner {
             if (!memoryTuple[inner].hasMoreMatches(inputTuple[outer])) {
                 break;
             }
-            TuplePointer tp = activeManager[outer].addTuple(inputAccessor[outer]);
+            TuplePointer tp = activeManager[outer].addTuple(inputTupleIterator[outer]);
             if (tp != null) {
                 memoryTuple[outer].setTuple(tp);
 
@@ -317,7 +322,7 @@ public class IntervalForwardScanJoiner implements IStreamJoiner {
                 processingGroup.clear();
                 return;
             }
-            inputAccessor[outer].next();
+            inputTupleIterator[outer].next();
         }
     }
 
@@ -401,7 +406,7 @@ public class IntervalForwardScanJoiner implements IStreamJoiner {
         }
         // Mark where to start reading
         runFilePointer[freezePartition].reset(runFileStream[freezePartition].getReadPointer(),
-                inputAccessor[freezePartition].getTupleId());
+                inputTupleIterator[freezePartition].getTupleId());
         // Start writing
         runFileStream[freezePartition].startRunFileWriting();
         freezeAndClearMemory(writer, searchGroup);
@@ -409,15 +414,15 @@ public class IntervalForwardScanJoiner implements IStreamJoiner {
         if (runFileStream[LEFT_PARTITION].isWriting()) {
             processTupleSpill(LEFT_PARTITION, RIGHT_PARTITION, false, writer);
             // Memory is empty and we can start processing the run file.
-            unfreezeAndContinue(LEFT_PARTITION, inputAccessor[LEFT_PARTITION]);
+            unfreezeAndContinue(LEFT_PARTITION, inputTupleIterator[LEFT_PARTITION]);
         } else if (runFileStream[RIGHT_PARTITION].isWriting()) {
             processTupleSpill(RIGHT_PARTITION, LEFT_PARTITION, true, writer);
             // Memory is empty and we can start processing the run file.
-            unfreezeAndContinue(RIGHT_PARTITION, inputAccessor[RIGHT_PARTITION]);
+            unfreezeAndContinue(RIGHT_PARTITION, inputTupleIterator[RIGHT_PARTITION]);
         }
     }
 
-    private void unfreezeAndContinue(int frozenPartition, ITupleAccessor accessor) throws HyracksDataException {
+    private void unfreezeAndContinue(int frozenPartition, TupleIterator accessor) throws HyracksDataException {
         int flushPartition = frozenPartition == LEFT_PARTITION ? RIGHT_PARTITION : LEFT_PARTITION;
         runFileStream[frozenPartition].flushRunFile();
 

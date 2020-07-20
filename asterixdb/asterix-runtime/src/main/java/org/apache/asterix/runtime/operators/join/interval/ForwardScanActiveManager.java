@@ -27,7 +27,6 @@ import java.util.logging.Logger;
 
 import org.apache.hyracks.api.exceptions.HyracksDataException;
 import org.apache.hyracks.dataflow.std.buffermanager.IPartitionedDeletableTupleBufferManager;
-import org.apache.hyracks.dataflow.std.buffermanager.ITupleAccessor;
 import org.apache.hyracks.dataflow.std.structures.TuplePointer;
 import org.apache.hyracks.dataflow.std.structures.TuplePointerPool;
 
@@ -45,9 +44,9 @@ public class ForwardScanActiveManager {
         this.partition = joinBranch;
     }
 
-    public TuplePointer addTuple(ITupleAccessor accessor) throws HyracksDataException {
+    public TuplePointer addTuple(TupleIterator accessor) throws HyracksDataException {
         TuplePointer tp = tpPool.takeOne();
-        if (bufferManager.insertTuple(partition, accessor, accessor.getTupleId(), tp)) {
+        if (bufferManager.insertTuple(partition, accessor.getAccessor(), accessor.getTupleId(), tp)) {
             active.add(tp);
             if (LOGGER.isLoggable(Level.FINE)) {
                 LOGGER.fine("Add to memory (partition: " + partition + ").");

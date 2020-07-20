@@ -130,7 +130,6 @@ public class VPartitionTupleBufferManager implements IPartitionedTupleBufferMana
         numTuples[partitionId] = 0;
     }
 
-
     @Override
     public boolean insertTuple(int partition, byte[] byteArray, int[] fieldEndOffsets, int start, int size,
             TuplePointer pointer) throws HyracksDataException {
@@ -327,12 +326,12 @@ public class VPartitionTupleBufferManager implements IPartitionedTupleBufferMana
             FrameTupleAccessor innerAccessor = new FrameTupleAccessor(recordDescriptor);
 
             @Override
-            IFrameTupleAccessor getInnerAccessor() {
+            public IFrameTupleAccessor getInnerAccessor() {
                 return innerAccessor;
             }
 
             @Override
-            void resetInnerAccessor(TuplePointer tuplePointer) {
+            public void resetInnerAccessor(TuplePointer tuplePointer) {
                 partitionArray[parsePartitionId(tuplePointer.getFrameIndex())]
                         .getFrame(parseFrameIdInPartition(tuplePointer.getFrameIndex()), tempInfo);
                 innerAccessor.reset(tempInfo.getBuffer(), tempInfo.getStartOffset(), tempInfo.getLength());

@@ -246,8 +246,4 @@ public class DeletableFrameTupleAppender implements IAppendDeletableFrameTupleAc
         return buffer;
     }
 
-    @Override
-    public void printStats(PrintStream ps) {
-    }
-
 }
