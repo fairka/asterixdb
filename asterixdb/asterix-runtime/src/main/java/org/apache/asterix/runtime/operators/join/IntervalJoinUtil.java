@@ -57,18 +57,18 @@ public class IntervalJoinUtil {
         return intervalEnd;
     }
 
-//    public static long getIntervalStart(ITupleAccessor accessor, int fieldId) {
-//        int start = accessor.getTupleStartOffset() + accessor.getFieldSlotsLength()
-//                + accessor.getFieldStartOffset(fieldId) + 1;
-//        long intervalStart = AIntervalSerializerDeserializer.getIntervalStart(accessor.getBuffer().array(), start);
-//        return intervalStart;
-//    }
+    //    public static long getIntervalStart(ITupleAccessor accessor, int fieldId) {
+    //        int start = accessor.getTupleStartOffset() + accessor.getFieldSlotsLength()
+    //                + accessor.getFieldStartOffset(fieldId) + 1;
+    //        long intervalStart = AIntervalSerializerDeserializer.getIntervalStart(accessor.getBuffer().array(), start);
+    //        return intervalStart;
+    //    }
 
-//    public static long getIntervalEnd(ITupleAccessor accessor, int fieldId) {
-//        int start = accessor.getTupleStartOffset() + accessor.getFieldSlotsLength()
-//                + accessor.getFieldStartOffset(fieldId) + 1;
-//        long intervalEnd = AIntervalSerializerDeserializer.getIntervalEnd(accessor.getBuffer().array(), start);
-//        return intervalEnd;
-//    }
+    //    public static long getIntervalEnd(ITupleAccessor accessor, int fieldId) {
+    //        int start = accessor.getTupleStartOffset() + accessor.getFieldSlotsLength()
+    //                + accessor.getFieldStartOffset(fieldId) + 1;
+    //        long intervalEnd = AIntervalSerializerDeserializer.getIntervalEnd(accessor.getBuffer().array(), start);
+    //        return intervalEnd;
+    //    }
 
 }

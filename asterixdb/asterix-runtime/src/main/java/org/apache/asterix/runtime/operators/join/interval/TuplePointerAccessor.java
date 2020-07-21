@@ -41,4 +41,5 @@ public class TuplePointerAccessor extends AbstractTuplePointerAccessor {
     @Override
     public void resetInnerAccessor(TuplePointer tuplePointer) {
     }
+
 }

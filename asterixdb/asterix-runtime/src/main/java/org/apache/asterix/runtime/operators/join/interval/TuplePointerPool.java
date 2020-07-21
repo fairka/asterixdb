@@ -14,10 +14,12 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hyracks.dataflow.std.structures;
+package org.apache.asterix.runtime.operators.join.interval;
 
 import java.util.ArrayList;
 import java.util.List;
+
+import org.apache.hyracks.dataflow.std.structures.TuplePointer;
 
 public class TuplePointerPool {
     private final List<TuplePointer> tpList;

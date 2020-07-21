@@ -194,9 +194,9 @@ public class IntervalForwardScanJoinOperatorDescriptor extends AbstractOperatorD
                 try {
                     writer.open();
                     //Pass in Data
-                    IntervalForwardScanJoiner joiner = new IntervalForwardScanJoiner(ctx, inputStates[LEFT_INPUT_INDEX].joinData,
-                            inputStates[RIGHT_INPUT_INDEX].joinData, memoryForJoinInFrames, imjcf, leftKeys, rightKeys,
-                            writer, nPartitions);
+                    IntervalForwardScanJoiner joiner = new IntervalForwardScanJoiner(ctx,
+                            inputStates[LEFT_INPUT_INDEX].joinData, inputStates[RIGHT_INPUT_INDEX].joinData,
+                            memoryForJoinInFrames, imjcf, leftKeys, rightKeys, writer, nPartitions);
                     joiner.processJoin();
                 } catch (Exception ex) {
                     writer.fail();

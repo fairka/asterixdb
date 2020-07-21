@@ -27,7 +27,6 @@ import java.util.logging.Logger;
 
 import org.apache.hyracks.api.exceptions.HyracksDataException;
 import org.apache.hyracks.dataflow.std.structures.TuplePointer;
-import org.apache.hyracks.dataflow.std.structures.TuplePointerPool;
 
 public class ForwardScanActiveManager {
     private static final Logger LOGGER = Logger.getLogger(ForwardScanActiveManager.class.getName());

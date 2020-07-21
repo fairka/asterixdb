@@ -255,7 +255,7 @@ public class IntervalForwardScanJoiner {
         // Process left tuples one by one, check them with active memory from the right branch.
         TupleStatus ts = loadTuple(main);
         while (ts.isLoaded() && activeManager[other].hasRecords()) {
-            inputTuple[main].loadTuple();
+            inputTuple[main].loadTuple(inputTupleIterator[main].getTupleId());
             processTupleJoin(inputTuple[main], other, reversed, writer, empty);
             inputTupleIterator[main].next();
             ts = loadTuple(main);
@@ -292,7 +292,7 @@ public class IntervalForwardScanJoiner {
 
         // Add tuples from the stream.
         while (loadTuple(outer).isLoaded()) {
-            inputTuple[outer].loadTuple();
+            inputTuple[outer].loadTuple(inputTupleIterator[outer].getTupleId());
             memoryTuple[inner].setTuple(searchEndTp);
             if (!memoryTuple[inner].hasMoreMatches(inputTuple[outer])) {
                 break;

@@ -31,8 +31,8 @@ class IntervalSideTuple {
     // Tuple access
     int fieldId;
     ITuplePointerAccessor accessor;
-    int tupleIndex;
-    int frameIndex = -1;
+    int tupleIndex = -1;
+    int frameIndex = 0;
 
     // Join details
     final IIntervalJoinChecker imjc;
@@ -48,18 +48,20 @@ class IntervalSideTuple {
     }
 
     public void setTuple(TuplePointer tp) {
-        if (frameIndex != tp.getFrameIndex()) {
-            accessor.reset(tp);
-            frameIndex = tp.getFrameIndex();
-        }
+        accessor.reset(tp);
+        frameIndex = tp.getFrameIndex();
         tupleIndex = tp.getTupleIndex();
         int offset = IntervalJoinUtil.getIntervalOffset(accessor, tupleIndex, fieldId);
         start = AIntervalSerializerDeserializer.getIntervalStart(accessor.getBuffer().array(), offset);
         end = AIntervalSerializerDeserializer.getIntervalEnd(accessor.getBuffer().array(), offset);
     }
 
-    public void loadTuple() {
-        int offset = IntervalJoinUtil.getIntervalOffset(accessor, tupleIndex, fieldId);
+    public void loadTuple(int tupleId) {
+        TuplePointer tp = new TuplePointer(frameIndex, tupleId);
+        accessor.reset(tp);
+        frameIndex = tp.getFrameIndex();
+        tupleIndex = tp.getTupleIndex();
+        int offset = IntervalJoinUtil.getIntervalOffset(accessor, tupleIndex, frameIndex);
         start = AIntervalSerializerDeserializer.getIntervalStart(accessor.getBuffer().array(), offset);
         end = AIntervalSerializerDeserializer.getIntervalEnd(accessor.getBuffer().array(), offset);
     }
