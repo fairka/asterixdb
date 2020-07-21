@@ -27,7 +27,7 @@ public abstract class AbstractUnaryOutputSourceOperatorNodePushable extends Abst
     }
 
     @Override
-    public final int getInputArity() {
+    public int getInputArity() {
         return 0;
     }
 }
