@@ -22,7 +22,7 @@ package org.apache.asterix.runtime.operators.joins.intervalforwardscan;
 import java.nio.ByteBuffer;
 import java.util.logging.Logger;
 
-import org.apache.asterix.runtime.operators.joins.IIntervalJoinCheckerFactory;
+import org.apache.asterix.runtime.operators.joins.Utils.IIntervalJoinCheckerFactory;
 import org.apache.hyracks.api.comm.IFrameWriter;
 import org.apache.hyracks.api.context.IHyracksTaskContext;
 import org.apache.hyracks.api.dataflow.ActivityId;
@@ -44,20 +44,20 @@ public class IntervalForwardScanJoinOperatorDescriptor extends AbstractOperatorD
 
     private static final int LEFT_INPUT_INDEX = 0;
     private static final int RIGHT_INPUT_INDEX = 1;
-    private final int memoryForJoinInFrames;
+    private final int memoryInFrame;
     private final IIntervalJoinCheckerFactory imjcf;
 
     private static final Logger LOGGER = Logger.getLogger(IntervalForwardScanJoinOperatorDescriptor.class.getName());
     private final int[] leftKeys;
     private final int[] rightKeys;
 
-    public IntervalForwardScanJoinOperatorDescriptor(IOperatorDescriptorRegistry spec, int memoryInFrames,
+    public IntervalForwardScanJoinOperatorDescriptor(IOperatorDescriptorRegistry spec, int memoryInFrame,
             int[] leftKeys, int[] rightKeys, RecordDescriptor recordDescriptor, IIntervalJoinCheckerFactory imjcf) {
         super(spec, 2, 1);
         outRecDescs[0] = recordDescriptor;
         this.leftKeys = leftKeys;
         this.rightKeys = rightKeys;
-        this.memoryForJoinInFrames = memoryInFrames;
+        this.memoryInFrame = memoryInFrame;
         this.imjcf = imjcf;
     }
 
@@ -100,7 +100,6 @@ public class IntervalForwardScanJoinOperatorDescriptor extends AbstractOperatorD
             private final int inputArity;
             private final RecordDescriptor[] recordDescriptors;
             private ProducerConsumerFrame[] inputStates;
-            //private JoinComparator[] tupleComparators;
 
             public JoinerOperator(IHyracksTaskContext ctx, int partition, int nPartitions, int inputArity,
                     RecordDescriptor[] inRecordDesc) {
@@ -126,8 +125,8 @@ public class IntervalForwardScanJoinOperatorDescriptor extends AbstractOperatorD
                 try {
                     writer.open();
                     IStreamJoiner joiner = new IntervalForwardScanJoiner(ctx, inputStates[LEFT_INPUT_INDEX],
-                            inputStates[RIGHT_INPUT_INDEX], memoryForJoinInFrames, partition, imjcf, leftKeys,
-                            rightKeys, writer, nPartitions);
+                            inputStates[RIGHT_INPUT_INDEX], memoryInFrame, partition, imjcf, leftKeys, rightKeys,
+                            writer, nPartitions);
                     joiner.processJoin();
                 } catch (Exception ex) {
                     writer.fail();

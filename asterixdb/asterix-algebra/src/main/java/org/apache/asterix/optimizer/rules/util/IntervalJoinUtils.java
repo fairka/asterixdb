@@ -27,23 +27,24 @@ import java.util.List;
 import java.util.Map;
 
 import org.apache.asterix.algebra.operators.physical.IntervalForwardScanJoinPOperator;
+import org.apache.asterix.algebra.operators.physical.IntervalMergeJoinPOperator;
 import org.apache.asterix.common.annotations.RangeAnnotation;
 import org.apache.asterix.lang.common.util.FunctionUtil;
 import org.apache.asterix.om.functions.BuiltinFunctions;
-import org.apache.asterix.runtime.operators.joins.AfterIntervalJoinCheckerFactory;
-import org.apache.asterix.runtime.operators.joins.BeforeIntervalJoinCheckerFactory;
-import org.apache.asterix.runtime.operators.joins.CoveredByIntervalJoinCheckerFactory;
-import org.apache.asterix.runtime.operators.joins.CoversIntervalJoinCheckerFactory;
-import org.apache.asterix.runtime.operators.joins.EndedByIntervalJoinCheckerFactory;
-import org.apache.asterix.runtime.operators.joins.EndsIntervalJoinCheckerFactory;
-import org.apache.asterix.runtime.operators.joins.IIntervalJoinCheckerFactory;
-import org.apache.asterix.runtime.operators.joins.MeetsIntervalJoinCheckerFactory;
-import org.apache.asterix.runtime.operators.joins.MetByIntervalJoinCheckerFactory;
-import org.apache.asterix.runtime.operators.joins.OverlappedByIntervalJoinCheckerFactory;
-import org.apache.asterix.runtime.operators.joins.OverlappingIntervalJoinCheckerFactory;
-import org.apache.asterix.runtime.operators.joins.OverlapsIntervalJoinCheckerFactory;
-import org.apache.asterix.runtime.operators.joins.StartedByIntervalJoinCheckerFactory;
-import org.apache.asterix.runtime.operators.joins.StartsIntervalJoinCheckerFactory;
+import org.apache.asterix.runtime.operators.joins.Utils.AfterIntervalJoinCheckerFactory;
+import org.apache.asterix.runtime.operators.joins.Utils.BeforeIntervalJoinCheckerFactory;
+import org.apache.asterix.runtime.operators.joins.Utils.CoveredByIntervalJoinCheckerFactory;
+import org.apache.asterix.runtime.operators.joins.Utils.CoversIntervalJoinCheckerFactory;
+import org.apache.asterix.runtime.operators.joins.Utils.EndedByIntervalJoinCheckerFactory;
+import org.apache.asterix.runtime.operators.joins.Utils.EndsIntervalJoinCheckerFactory;
+import org.apache.asterix.runtime.operators.joins.Utils.IIntervalJoinCheckerFactory;
+import org.apache.asterix.runtime.operators.joins.Utils.MeetsIntervalJoinCheckerFactory;
+import org.apache.asterix.runtime.operators.joins.Utils.MetByIntervalJoinCheckerFactory;
+import org.apache.asterix.runtime.operators.joins.Utils.OverlappedByIntervalJoinCheckerFactory;
+import org.apache.asterix.runtime.operators.joins.Utils.OverlappingIntervalJoinCheckerFactory;
+import org.apache.asterix.runtime.operators.joins.Utils.OverlapsIntervalJoinCheckerFactory;
+import org.apache.asterix.runtime.operators.joins.Utils.StartedByIntervalJoinCheckerFactory;
+import org.apache.asterix.runtime.operators.joins.Utils.StartsIntervalJoinCheckerFactory;
 import org.apache.commons.lang3.mutable.Mutable;
 import org.apache.commons.lang3.mutable.MutableObject;
 import org.apache.hyracks.algebricks.common.exceptions.AlgebricksException;
@@ -108,8 +109,22 @@ public class IntervalJoinUtils {
             List<LogicalVariable> sideLeft, List<LogicalVariable> sideRight, IOptimizationContext context,
             IntervalPartitions intervalPartitions) {
 
-        IIntervalJoinCheckerFactory mjcf = getIntervalMergeJoinCheckerFactory(fi, intervalPartitions.getRangeMap());
+        IIntervalJoinCheckerFactory mjcf = getIntervalJoinCheckerFactory(fi, intervalPartitions.getRangeMap());
         op.setPhysicalOperator(new IntervalForwardScanJoinPOperator(op.getJoinKind(),
+                AbstractJoinPOperator.JoinPartitioningType.BROADCAST, sideLeft, sideRight,
+                context.getPhysicalOptimizationConfig().getMaxFramesForJoin(), mjcf, intervalPartitions));
+    }
+
+    protected static void setSortMergeIntervalJoinOp(AbstractBinaryJoinOperator op, FunctionIdentifier fi,
+            List<LogicalVariable> sideLeft, List<LogicalVariable> sideRight, IOptimizationContext context,
+            IntervalPartitions intervalPartitions) {
+        //        RangeId leftRangeId = context.newRangeId();
+        //        RangeId rightRangeId = context.newRangeId();
+        //        insertRangeForward(op, LEFT, leftRangeId, ijea.getRangeMap(), context);
+        //        insertRangeForward(op, RIGHT, rightRangeId, ijea.getRangeMap(), context);
+
+        IIntervalJoinCheckerFactory mjcf = getIntervalJoinCheckerFactory(fi, intervalPartitions.getRangeMap());
+        op.setPhysicalOperator(new IntervalMergeJoinPOperator(op.getJoinKind(),
                 AbstractJoinPOperator.JoinPartitioningType.BROADCAST, sideLeft, sideRight,
                 context.getPhysicalOptimizationConfig().getMaxFramesForJoin(), mjcf, intervalPartitions));
     }
@@ -226,8 +241,7 @@ public class IntervalJoinUtils {
      *
      * @see org.apache.asterix.optimizer.rules.temporal.TranslateIntervalExpressionRule
      */
-    private static IIntervalJoinCheckerFactory getIntervalMergeJoinCheckerFactory(FunctionIdentifier fi,
-            RangeMap rangeMap) {
+    private static IIntervalJoinCheckerFactory getIntervalJoinCheckerFactory(FunctionIdentifier fi, RangeMap rangeMap) {
         IIntervalJoinCheckerFactory mjcf = new OverlappingIntervalJoinCheckerFactory(rangeMap);
         if (fi.equals(BuiltinFunctions.INTERVAL_OVERLAPPED_BY)) {
             mjcf = new OverlappedByIntervalJoinCheckerFactory();
@@ -285,12 +299,12 @@ public class IntervalJoinUtils {
         IFunctionInfo startFi = FunctionUtil.getFunctionInfo(BuiltinFunctions.ACCESSOR_TEMPORAL_INTERVAL_START);
         @SuppressWarnings("unchecked")
         ScalarFunctionCallExpression startPartitionExp = new ScalarFunctionCallExpression(startFi, intervalExp);
-        assignExps.add(new MutableObject<ILogicalExpression>(startPartitionExp));
+        assignExps.add(new MutableObject<>(startPartitionExp));
         // End partition
         IFunctionInfo endFi = FunctionUtil.getFunctionInfo(BuiltinFunctions.ACCESSOR_TEMPORAL_INTERVAL_END);
         @SuppressWarnings("unchecked")
         ScalarFunctionCallExpression endPartitionExp = new ScalarFunctionCallExpression(endFi, intervalExp);
-        assignExps.add(new MutableObject<ILogicalExpression>(endPartitionExp));
+        assignExps.add(new MutableObject<>(endPartitionExp));
 
         AssignOperator ao = new AssignOperator(partitionVars, assignExps);
         ao.setExecutionMode(op.getExecutionMode());

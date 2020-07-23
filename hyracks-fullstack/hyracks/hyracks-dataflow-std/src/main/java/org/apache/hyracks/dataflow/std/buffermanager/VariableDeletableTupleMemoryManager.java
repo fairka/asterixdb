@@ -25,6 +25,7 @@ import java.util.ArrayList;
 import org.apache.hyracks.api.comm.IFrameTupleAccessor;
 import org.apache.hyracks.api.dataflow.value.RecordDescriptor;
 import org.apache.hyracks.api.exceptions.HyracksDataException;
+import org.apache.hyracks.dataflow.std.sort.util.AppendDeletableFrameTupleAccessor;
 import org.apache.hyracks.dataflow.std.sort.util.DeletableFrameTupleAppender;
 import org.apache.hyracks.dataflow.std.sort.util.IAppendDeletableFrameTupleAccessor;
 import org.apache.hyracks.dataflow.std.structures.TuplePointer;
@@ -185,9 +186,84 @@ public class VariableDeletableTupleMemoryManager implements IDeletableTupleBuffe
         };
     }
 
-    @Override
     public ITupleAccessor createTupleAccessor() {
-        return null;
-    };
+        return new AbstractTupleAccessor() {
+            private IAppendDeletableFrameTupleAccessor bufferAccessor =
+                    new AppendDeletableFrameTupleAccessor(recordDescriptor);
+
+            @Override
+            IFrameTupleAccessor getInnerAccessor() {
+                return bufferAccessor;
+            }
+
+            void resetInnerAccessor(TuplePointer tuplePointer) {
+                bufferAccessor.reset(frames.get(tuplePointer.getFrameIndex()));
+            }
+
+            @Override
+            void resetInnerAccessor(int frameIndex) {
+                bufferAccessor.reset(frames.get(frameIndex));
+            }
+
+            @Override
+            int getFrameCount() {
+                return frames.size();
+            }
+
+            @Override
+            public boolean hasNext() {
+                return hasNext(frameId, tupleId);
+            }
+
+            @Override
+            public void next() {
+                tupleId = nextTuple(frameId, tupleId);
+                if (tupleId > INITIALIZED) {
+                    return;
+                }
+
+                if (frameId + 1 < getFrameCount()) {
+                    ++frameId;
+                    resetInnerAccessor(frameId);
+                    tupleId = INITIALIZED;
+                    next();
+                }
+            }
+
+            public boolean hasNext(int fId, int tId) {
+                int id = nextTuple(fId, tId);
+                if (id > INITIALIZED) {
+                    return true;
+                }
+                if (fId + 1 < getFrameCount()) {
+                    return hasNext(fId + 1, INITIALIZED);
+                }
+                return false;
+            }
+
+            public int nextTuple(int fId, int tId) {
+                if (fId != frameId) {
+                    resetInnerAccessor(fId);
+                }
+                int id = nextTupleInFrame(tId);
+                if (fId != frameId) {
+                    resetInnerAccessor(frameId);
+                }
+                return id;
+            }
+
+            public int nextTupleInFrame(int tId) {
+                int id = tId;
+                while (id + 1 < getTupleCount()) {
+                    ++id;
+                    if (getTupleEndOffset(id) > 0) {
+                        return id;
+                    }
+                }
+                return UNSET;
+            }
+
+        };
+    }
 
 }
