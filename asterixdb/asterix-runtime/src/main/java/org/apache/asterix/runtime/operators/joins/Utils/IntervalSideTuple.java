@@ -43,8 +43,8 @@ public class IntervalSideTuple {
         this.fieldId = fieldId;
     }
 
-    public void setTuple(TuplePointer tp, boolean force) {
-        if (force || frameIndex != tp.getFrameIndex()) {
+    public void setTuple(TuplePointer tp) {
+        if (frameIndex != tp.getFrameIndex()) {
             accessor.reset(tp);
             frameIndex = tp.getFrameIndex();
         }
@@ -77,12 +77,12 @@ public class IntervalSideTuple {
         return end;
     }
 
-    public boolean compareJoin(IntervalSideTuple ist) throws HyracksDataException {
-        return imjc.checkToSaveInResult(accessor, tupleIndex, ist.accessor, ist.tupleIndex, false);
+    public boolean hasMoreMatches(IntervalSideTuple ist) throws HyracksDataException {
+        return imjc.checkIfMoreMatches(accessor, tupleIndex, ist.accessor, ist.tupleIndex);
     }
 
-    public boolean addToMemory(IntervalSideTuple ist) throws HyracksDataException {
-        return imjc.checkToSaveInMemory(accessor, tupleIndex, ist.accessor, ist.tupleIndex);
+    public boolean compareJoin(IntervalSideTuple ist) throws HyracksDataException {
+        return imjc.checkToSaveInResult(accessor, tupleIndex, ist.accessor, ist.tupleIndex, false);
     }
 
     public boolean removeFromMemory(IntervalSideTuple ist) throws HyracksDataException {
@@ -91,10 +91,6 @@ public class IntervalSideTuple {
 
     public boolean checkForEarlyExit(IntervalSideTuple ist) throws HyracksDataException {
         return imjc.checkForEarlyExit(accessor, tupleIndex, ist.accessor, ist.tupleIndex);
-    }
-
-    public boolean hasMoreMatches(IntervalSideTuple ist) throws HyracksDataException {
-        return imjc.checkIfMoreMatches(accessor, tupleIndex, ist.accessor, ist.tupleIndex);
     }
 
     public boolean startsBefore(IntervalSideTuple ist) {

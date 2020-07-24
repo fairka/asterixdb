@@ -37,8 +37,15 @@ public class BeforeIntervalJoinChecker extends AbstractIntervalJoinChecker {
         IntervalJoinUtil.getIntervalPointable(accessorRight, idRight, tvp, ipRight);
         ipLeft.getStart(startLeft);
         ipRight.getStart(startRight);
-        return ch.compare(ipLeft.getByteArray(), ipLeft.getStartOffset(), ipRight.getLength(), ipRight.getByteArray(),
+        return ch.compare(ipLeft.getByteArray(), ipLeft.getStartOffset(), ipLeft.getLength(), ipRight.getByteArray(),
                 ipRight.getStartOffset(), ipRight.getLength()) < 0;
+    }
+
+    //THis needs to be fixed
+    @Override
+    public boolean checkToRemoveInMemory(IFrameTupleAccessor accessorLeft, int leftTupleIndex,
+            IFrameTupleAccessor accessorRight, int rightTupleIndex) {
+        return false;
     }
 
     @Override

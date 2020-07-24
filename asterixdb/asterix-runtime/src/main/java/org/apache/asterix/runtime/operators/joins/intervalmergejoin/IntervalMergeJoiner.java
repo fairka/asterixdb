@@ -112,7 +112,7 @@ public class IntervalMergeJoiner {
     protected long[] frameCounts = { 0, 0 };
     protected long[] tupleCounts = { 0, 0 };
 
-    private final boolean DEBUG = false;
+    private final boolean DEBUG = true;
 
     public IntervalMergeJoiner(IHyracksTaskContext ctx, int memorySize, int partition, IntervalMergeStatus status,
             IntervalMergeJoinLocks locks, IIntervalJoinChecker mjc, int[] leftKeys, int[] rightKeys,
@@ -291,10 +291,9 @@ public class IntervalMergeJoiner {
         if (memoryHasTuples()) {
             inputTuple[LEFT_PARTITION].loadTuple();
             Iterator<TuplePointer> memoryIterator = memoryBuffer.iterator();
-            boolean first = true;
             while (memoryIterator.hasNext()) {
                 TuplePointer tp = memoryIterator.next();
-                memoryTuple.setTuple(tp, first);
+                memoryTuple.setTuple(tp);
                 if (DEBUG) {
                     String string = TuplePrinterUtil.printTuple("    stream: ", inputAccessor[LEFT_PARTITION]);
                     String string2 = TuplePrinterUtil.printTuple("    memory: ", memoryTuple.getAccessor(),

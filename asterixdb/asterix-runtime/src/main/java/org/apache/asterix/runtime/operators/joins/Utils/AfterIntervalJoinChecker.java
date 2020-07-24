@@ -41,6 +41,13 @@ public class AfterIntervalJoinChecker extends AbstractIntervalJoinChecker {
                 ipRight.getStartOffset(), ipRight.getLength()) > 0;
     }
 
+    //THis needs to be fixed
+    @Override
+    public boolean checkToRemoveInMemory(IFrameTupleAccessor accessorLeft, int leftTupleIndex,
+            IFrameTupleAccessor accessorRight, int rightTupleIndex) {
+        return false;
+    }
+
     @Override
     public boolean compareInterval(AIntervalPointable ipLeft, AIntervalPointable ipRight) throws HyracksDataException {
         return il.after(ipLeft, ipRight);

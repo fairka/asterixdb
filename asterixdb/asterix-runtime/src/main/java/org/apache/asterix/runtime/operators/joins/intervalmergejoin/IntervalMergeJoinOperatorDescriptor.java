@@ -53,9 +53,8 @@ public class IntervalMergeJoinOperatorDescriptor extends AbstractOperatorDescrip
     private final int memoryForJoin;
     private final IIntervalJoinCheckerFactory mergeJoinCheckerFactory;
 
-    public IntervalMergeJoinOperatorDescriptor(IOperatorDescriptorRegistry spec, int memoryForJoin,
-            RecordDescriptor recordDescriptor, int[] leftKeys, int[] rightKeys,
-            IIntervalJoinCheckerFactory mergeJoinCheckerFactory) {
+    public IntervalMergeJoinOperatorDescriptor(IOperatorDescriptorRegistry spec, int memoryForJoin, int[] leftKeys,
+            int[] rightKeys, RecordDescriptor recordDescriptor, IIntervalJoinCheckerFactory mergeJoinCheckerFactory) {
         super(spec, 2, 1);
         outRecDescs[0] = recordDescriptor;
         this.leftKeys = leftKeys;

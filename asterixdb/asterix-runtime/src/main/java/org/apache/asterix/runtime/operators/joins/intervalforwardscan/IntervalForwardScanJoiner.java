@@ -279,17 +279,17 @@ public class IntervalForwardScanJoiner extends AbstractStreamJoiner {
         // Add tuples from the stream.
         while (loadTuple(outer).isLoaded()) {
             inputTuple[outer].loadTuple();
-            memoryTuple[inner].setTuple(searchEndTp, false);
+            memoryTuple[inner].setTuple(searchEndTp);
             if (!memoryTuple[inner].hasMoreMatches(inputTuple[outer])) {
                 break;
             }
             TuplePointer tp = activeManager[outer].addTuple(inputAccessor[outer]);
             if (tp != null) {
-                memoryTuple[outer].setTuple(tp, false);
+                memoryTuple[outer].setTuple(tp);
                 // Search group.
                 for (Iterator<TuplePointer> groupIterator = processingGroup.iterator(); groupIterator.hasNext();) {
                     TuplePointer groupTp = groupIterator.next();
-                    memoryTuple[inner].setTuple(groupTp, false);
+                    memoryTuple[inner].setTuple(groupTp);
 
                     // Add to result if matched.
                     if (memoryTuple[LEFT_PARTITION].compareJoin(memoryTuple[RIGHT_PARTITION])) {
@@ -319,12 +319,12 @@ public class IntervalForwardScanJoiner extends AbstractStreamJoiner {
 
     private void processSingleWithMemory(int outer, int inner, TuplePointer searchTp, IFrameWriter writer)
             throws HyracksDataException {
-        memoryTuple[inner].setTuple(searchTp, false);
+        memoryTuple[inner].setTuple(searchTp);
 
         // Compare with tuple in memory
         for (Iterator<TuplePointer> iterator = activeManager[outer].getIterator(); iterator.hasNext();) {
             TuplePointer matchTp = iterator.next();
-            memoryTuple[outer].setTuple(matchTp, false);
+            memoryTuple[outer].setTuple(matchTp);
 
             if (memoryTuple[inner].removeFromMemory(memoryTuple[outer])) {
                 // Remove if the tuple no long matches.
@@ -349,7 +349,7 @@ public class IntervalForwardScanJoiner extends AbstractStreamJoiner {
             if (searchGroup.contains(outerTp)) {
                 continue;
             }
-            memoryTuple[outer].setTuple(outerTp, false);
+            memoryTuple[outer].setTuple(outerTp);
             processTupleJoin(memoryTuple[outer], inner, reversed, writer, searchGroup);
         }
     }
@@ -362,7 +362,7 @@ public class IntervalForwardScanJoiner extends AbstractStreamJoiner {
             if (searchGroup.contains(innerTp)) {
                 continue;
             }
-            memoryTuple[inner].setTuple(innerTp, false);
+            memoryTuple[inner].setTuple(innerTp);
             if (testTuple.removeFromMemory(memoryTuple[inner])) {
                 // Remove if the tuple no long matches.
                 activeManager[inner].remove(innerIterator, innerTp);
