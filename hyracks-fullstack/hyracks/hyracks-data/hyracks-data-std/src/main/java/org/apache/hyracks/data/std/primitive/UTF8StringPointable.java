@@ -19,10 +19,8 @@
 package org.apache.hyracks.data.std.primitive;
 
 import java.io.IOException;
-import java.io.UnsupportedEncodingException;
-import java.nio.charset.StandardCharsets;
+import java.nio.charset.Charset;
 
-import org.apache.commons.lang3.CharSet;
 import org.apache.hyracks.api.dataflow.value.ITypeTraits;
 import org.apache.hyracks.api.exceptions.HyracksDataException;
 import org.apache.hyracks.api.io.IJsonSerializable;
@@ -38,6 +36,8 @@ import org.apache.hyracks.util.string.UTF8StringUtil;
 
 import com.fasterxml.jackson.databind.JsonNode;
 
+import it.unimi.dsi.fastutil.ints.IntCollection;
+
 public final class UTF8StringPointable extends AbstractPointable implements IHashable, IComparable {
 
     public static final UTF8StringPointableFactory FACTORY = new UTF8StringPointableFactory();
@@ -49,6 +49,9 @@ public final class UTF8StringPointable extends AbstractPointable implements IHas
     private int metaLength;
     private int hashValue;
     private int stringLength;
+
+    public static final UTF8StringPointable SPACE_STRING_POINTABLE = generateUTF8Pointable(" ");
+    public static final Charset CESU8_CHARSET = Charset.forName("CESU8");
 
     /**
      * reset those meta length.
@@ -114,6 +117,26 @@ public final class UTF8StringPointable extends AbstractPointable implements IHas
         return UTF8StringUtil.charSize(bytes, start + offset);
     }
 
+    public int codePointAt(int offset) {
+        return UTF8StringUtil.codePointAt(bytes, start + offset);
+    }
+
+    public int codePointSize(int offset) {
+        return UTF8StringUtil.codePointSize(bytes, start + offset);
+    }
+
+    public void getCodePoints(IntCollection codePointSet) {
+        int byteIdx = 0;
+        while (byteIdx < utf8Length) {
+            codePointSet.add(codePointAt(metaLength + byteIdx));
+            byteIdx += codePointSize(metaLength + byteIdx);
+        }
+
+        if (byteIdx != utf8Length) {
+            throw new IllegalArgumentException("Decoding error: malformed bytes");
+        }
+    }
+
     /**
      * Gets the length of the string in characters.
      * The first time call will need to go through the entire string, the following call will just return the pre-caculated result
@@ -168,11 +191,7 @@ public final class UTF8StringPointable extends AbstractPointable implements IHas
 
     @Override
     public String toString() {
-        try {
-            return new String(bytes, getCharStartOffset(), getUTF8Length(), StandardCharsets.UTF_8.name());
-        } catch (UnsupportedEncodingException e) {
-            throw new IllegalStateException(e);
-        }
+        return new String(bytes, getCharStartOffset(), getUTF8Length(), CESU8_CHARSET);
     }
 
     public int ignoreCaseCompareTo(UTF8StringPointable other) {
@@ -337,43 +356,45 @@ public final class UTF8StringPointable extends AbstractPointable implements IHas
     }
 
     /**
+     * Return the substring. Note that the offset and length are in the unit of code point.
      * @return {@code true} if substring was successfully written into given {@code out}, or
-     *         {@code false} if substring could not be obtained ({@code charOffset} or {@code charLength}
+     *         {@code false} if substring could not be obtained ({@code codePointOffset} or {@code codePointLength}
      *         are less than 0 or starting position is greater than the input length)
      */
-    public boolean substr(int charOffset, int charLength, UTF8StringBuilder builder, GrowableArray out)
+    public boolean substr(int codePointOffset, int codePointLength, UTF8StringBuilder builder, GrowableArray out)
             throws IOException {
-        return substr(this, charOffset, charLength, builder, out);
+        return substr(this, codePointOffset, codePointLength, builder, out);
     }
 
     /**
+     * Return the substring. Note that the offset and length are in the unit of code point.
      * @return {@code true} if substring was successfully written into given {@code out}, or
-     *         {@code false} if substring could not be obtained ({@code charOffset} or {@code charLength}
+     *         {@code false} if substring could not be obtained ({@code codePointOffset} or {@code codePointLength}
      *         are less than 0 or starting position is greater than the input length)
      */
-    public static boolean substr(UTF8StringPointable src, int charOffset, int charLength, UTF8StringBuilder builder,
-            GrowableArray out) throws IOException {
-        if (charOffset < 0 || charLength < 0) {
+    public static boolean substr(UTF8StringPointable src, int codePointOffset, int codePointLength,
+            UTF8StringBuilder builder, GrowableArray out) throws IOException {
+        if (codePointOffset < 0 || codePointLength < 0) {
             return false;
         }
 
         int utfLen = src.getUTF8Length();
-        int chIdx = 0;
+        int codePointIdx = 0;
         int byteIdx = 0;
-        while (byteIdx < utfLen && chIdx < charOffset) {
-            byteIdx += src.charSize(src.getMetaDataLength() + byteIdx);
-            chIdx++;
+        while (byteIdx < utfLen && codePointIdx < codePointOffset) {
+            byteIdx += src.codePointSize(src.getMetaDataLength() + byteIdx);
+            codePointIdx++;
         }
         if (byteIdx >= utfLen) {
             return false;
         }
 
-        builder.reset(out, Math.min(utfLen - byteIdx, (int) (charLength * 1.0 * byteIdx / chIdx)));
-        chIdx = 0;
-        while (byteIdx < utfLen && chIdx < charLength) {
-            builder.appendChar(src.charAt(src.getMetaDataLength() + byteIdx));
-            chIdx++;
-            byteIdx += src.charSize(src.getMetaDataLength() + byteIdx);
+        builder.reset(out, Math.min(utfLen - byteIdx, (int) (codePointLength * 1.0 * byteIdx / codePointIdx)));
+        codePointIdx = 0;
+        while (byteIdx < utfLen && codePointIdx < codePointLength) {
+            builder.appendCodePoint(src.codePointAt(src.getMetaDataLength() + byteIdx));
+            codePointIdx++;
+            byteIdx += src.codePointSize(src.getMetaDataLength() + byteIdx);
         }
         builder.finish();
         return true;
@@ -543,16 +564,11 @@ public final class UTF8StringPointable extends AbstractPointable implements IHas
         builder.finish();
     }
 
-    public void trim(UTF8StringBuilder builder, GrowableArray out, boolean left, boolean right, CharSet charSet)
-            throws IOException {
-        trim(this, builder, out, left, right, charSet);
-    }
-
     /**
      * Generates a trimmed string of an input source string.
      *
      * @param srcPtr
-     *            , the input source string.
+     *            , the input source string
      * @param builder
      *            , the result string builder.
      * @param out
@@ -561,23 +577,23 @@ public final class UTF8StringPointable extends AbstractPointable implements IHas
      *            , whether to trim the left side.
      * @param right
      *            , whether to trim the right side.
-     * @param charSet
-     *            , the chars that should be trimmed.
+     * @param codePointSet
+     *            , the set of code points that should be trimmed.
      * @throws IOException
      */
     public static void trim(UTF8StringPointable srcPtr, UTF8StringBuilder builder, GrowableArray out, boolean left,
-            boolean right, CharSet charSet) throws IOException {
+            boolean right, IntCollection codePointSet) throws IOException {
         final int srcUtfLen = srcPtr.getUTF8Length();
         final int srcStart = srcPtr.getMetaDataLength();
         // Finds the start Index (inclusive).
         int startIndex = 0;
         if (left) {
             while (startIndex < srcUtfLen) {
-                char ch = srcPtr.charAt(srcStart + startIndex);
-                if (!charSet.contains(ch)) {
+                int codepoint = srcPtr.codePointAt(srcStart + startIndex);
+                if (!codePointSet.contains(codepoint)) {
                     break;
                 }
-                startIndex += srcPtr.charSize(srcStart + startIndex);
+                startIndex += srcPtr.codePointSize(srcStart + startIndex);
             }
         }
 
@@ -587,9 +603,9 @@ public final class UTF8StringPointable extends AbstractPointable implements IHas
             endIndex = startIndex;
             int cursorIndex = startIndex;
             while (cursorIndex < srcUtfLen) {
-                char ch = srcPtr.charAt(srcStart + cursorIndex);
-                cursorIndex += srcPtr.charSize(srcStart + cursorIndex);
-                if (!charSet.contains(ch)) {
+                int codePioint = srcPtr.codePointAt(srcStart + cursorIndex);
+                cursorIndex += srcPtr.codePointSize(srcStart + cursorIndex);
+                if (!codePointSet.contains(codePioint)) {
                     endIndex = cursorIndex;
                 }
             }
@@ -600,6 +616,26 @@ public final class UTF8StringPointable extends AbstractPointable implements IHas
         builder.reset(out, len);
         builder.appendUtf8StringPointable(srcPtr, srcPtr.getStartOffset() + srcStart + startIndex, len);
         builder.finish();
+    }
+
+    /**
+     * Generates a trimmed string from the original string.
+     *
+     * @param builder
+     *            , the result string builder.
+     * @param out
+     *            , the storage for the output string.
+     * @param left
+     *            , whether to trim the left side.
+     * @param right
+     *            , whether to trim the right side.
+     * @param codePointSet
+     *            , the set of code points that should be trimmed.
+     * @throws IOException
+     */
+    public void trim(UTF8StringBuilder builder, GrowableArray out, boolean left, boolean right,
+            IntCollection codePointSet) throws IOException {
+        trim(this, builder, out, left, right, codePointSet);
     }
 
     /**
@@ -620,7 +656,27 @@ public final class UTF8StringPointable extends AbstractPointable implements IHas
         int srcEnd = srcPtr.getStartOffset() + srcPtr.getLength() - 1;
         for (int cursorIndex = srcEnd; cursorIndex >= srcStart; cursorIndex--) {
             if (UTF8StringUtil.isCharStart(srcPtr.bytes, cursorIndex)) {
+                char ch = UTF8StringUtil.charAt(srcPtr.bytes, cursorIndex);
                 int charSize = UTF8StringUtil.charSize(srcPtr.bytes, cursorIndex);
+
+                if (Character.isLowSurrogate(ch)) {
+                    while (cursorIndex >= srcStart) {
+                        cursorIndex--;
+                        if (UTF8StringUtil.isCharStart(srcPtr.bytes, cursorIndex)) {
+                            ch = UTF8StringUtil.charAt(srcPtr.bytes, cursorIndex);
+                            if (Character.isHighSurrogate(ch) == false) {
+                                throw new IllegalArgumentException(
+                                        "Decoding Error: no corresponding high surrogate found for the following low surrogate");
+                            }
+
+                            charSize += UTF8StringUtil.charSize(srcPtr.bytes, cursorIndex);
+                            break;
+                        }
+                    }
+                } else if (Character.isHighSurrogate(ch)) {
+                    throw new IllegalArgumentException("Decoding Error: get a high surrogate without low surrogate");
+                }
+
                 builder.appendUtf8StringPointable(srcPtr, cursorIndex, charSize);
             }
         }

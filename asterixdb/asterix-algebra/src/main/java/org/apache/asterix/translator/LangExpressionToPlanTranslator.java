@@ -845,7 +845,7 @@ abstract class LangExpressionToPlanTranslator
         AbstractFunctionCallExpression f = lookupFunction(signature, args, sourceLoc);
 
         if (f == null) {
-            throw new CompilationException(ErrorCode.UNKNOWN_FUNCTION, sourceLoc, signature.getName());
+            throw new CompilationException(ErrorCode.UNKNOWN_FUNCTION, sourceLoc, signature.toString(false));
         }
 
         if (fcall.hasAggregateFilterExpr()) {
@@ -891,8 +891,7 @@ abstract class LangExpressionToPlanTranslator
     private AbstractFunctionCallExpression lookupUserDefinedFunction(FunctionSignature signature,
             List<Mutable<ILogicalExpression>> args, SourceLocation sourceLoc) throws CompilationException {
         try {
-            Function function =
-                    FunctionUtil.lookupUserDefinedFunctionDecl(metadataProvider.getMetadataTxnContext(), signature);
+            Function function = metadataProvider.lookupUserDefinedFunction(signature);
             if (function == null) {
                 return null;
             }
