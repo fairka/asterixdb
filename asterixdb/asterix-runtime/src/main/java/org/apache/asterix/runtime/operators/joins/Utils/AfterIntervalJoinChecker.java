@@ -31,11 +31,6 @@ public class AfterIntervalJoinChecker extends AbstractIntervalJoinChecker {
     }
 
     @Override
-    public boolean checkToRemoveRightActive() {
-        return false;
-    }
-
-    @Override
     public boolean checkToSaveInMemory(ITupleAccessor accessorLeft, ITupleAccessor accessorRight)
             throws HyracksDataException {
         IntervalJoinUtil.getIntervalPointable(accessorLeft, idLeft, tvp, ipLeft);
@@ -44,12 +39,6 @@ public class AfterIntervalJoinChecker extends AbstractIntervalJoinChecker {
         ipRight.getStart(startRight);
         return ch.compare(ipLeft.getByteArray(), ipLeft.getStartOffset(), ipLeft.getLength(), ipRight.getByteArray(),
                 ipRight.getStartOffset(), ipRight.getLength()) > 0;
-    }
-
-    @Override
-    public boolean checkToRemoveInMemory(ITupleAccessor accessorLeft, ITupleAccessor accessorRight)
-            throws HyracksDataException {
-        return !checkToSaveInMemory(accessorLeft, accessorRight);
     }
 
     @Override

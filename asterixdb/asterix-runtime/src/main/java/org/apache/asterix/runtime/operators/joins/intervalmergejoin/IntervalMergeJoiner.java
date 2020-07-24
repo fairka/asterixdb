@@ -18,6 +18,7 @@
  */
 package org.apache.asterix.runtime.operators.joins.intervalmergejoin;
 
+import java.nio.ByteBuffer;
 import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.logging.Level;
@@ -26,11 +27,14 @@ import java.util.logging.Logger;
 import org.apache.asterix.runtime.operators.joins.TuplePrinterUtil;
 import org.apache.asterix.runtime.operators.joins.Utils.IIntervalJoinChecker;
 import org.apache.asterix.runtime.operators.joins.Utils.IntervalSideTuple;
+import org.apache.hyracks.api.comm.IFrame;
 import org.apache.hyracks.api.comm.IFrameTupleAccessor;
 import org.apache.hyracks.api.comm.IFrameWriter;
+import org.apache.hyracks.api.comm.VSizeFrame;
 import org.apache.hyracks.api.context.IHyracksTaskContext;
 import org.apache.hyracks.api.dataflow.value.RecordDescriptor;
 import org.apache.hyracks.api.exceptions.HyracksDataException;
+import org.apache.hyracks.dataflow.common.comm.io.FrameTupleAppender;
 import org.apache.hyracks.dataflow.common.comm.util.FrameUtils;
 import org.apache.hyracks.dataflow.std.buffermanager.DeallocatableFramePool;
 import org.apache.hyracks.dataflow.std.buffermanager.IDeallocatableFramePool;
@@ -49,7 +53,25 @@ import org.apache.hyracks.dataflow.std.structures.TuplePointer;
  * The left stream will spill to disk when memory is full.
  * The right stream spills to memory and pause when memory is full.
  */
-public class IntervalMergeJoiner extends AbstractIntervalMergeJoiner {
+public class IntervalMergeJoiner {
+
+    public enum TupleStatus {
+        UNKNOWN,
+        LOADED,
+        EMPTY;
+
+        public boolean isLoaded() {
+            return this.equals(LOADED);
+        }
+
+        public boolean isEmpty() {
+            return this.equals(EMPTY);
+        }
+
+        public boolean isKnown() {
+            return !this.equals(UNKNOWN);
+        }
+    }
 
     private static final Logger LOGGER = Logger.getLogger(IntervalMergeJoiner.class.getName());
 
@@ -77,15 +99,40 @@ public class IntervalMergeJoiner extends AbstractIntervalMergeJoiner {
     private final int partition;
     private final int memorySize;
 
+    protected static final int JOIN_PARTITIONS = 2;
+    protected static final int LEFT_PARTITION = 0;
+    protected static final int RIGHT_PARTITION = 1;
+
+    protected final IFrame[] inputBuffer;
+    protected final FrameTupleAppender resultAppender;
+    protected final ITupleAccessor[] inputAccessor;
+    protected final IntervalMergeStatus status;
+
+    private final IntervalMergeJoinLocks locks;
+    protected long[] frameCounts = { 0, 0 };
+    protected long[] tupleCounts = { 0, 0 };
+
     private final boolean DEBUG = false;
 
     public IntervalMergeJoiner(IHyracksTaskContext ctx, int memorySize, int partition, IntervalMergeStatus status,
             IntervalMergeJoinLocks locks, IIntervalJoinChecker mjc, int[] leftKeys, int[] rightKeys,
             RecordDescriptor leftRd, RecordDescriptor rightRd) throws HyracksDataException {
-        super(ctx, partition, status, locks, leftRd, rightRd);
         this.mjc = mjc;
         this.partition = partition;
         this.memorySize = memorySize;
+        this.status = status;
+        this.locks = locks;
+
+        inputAccessor = new TupleAccessor[JOIN_PARTITIONS];
+        inputAccessor[LEFT_PARTITION] = new TupleAccessor(leftRd);
+        inputAccessor[RIGHT_PARTITION] = new TupleAccessor(rightRd);
+
+        inputBuffer = new IFrame[JOIN_PARTITIONS];
+        inputBuffer[LEFT_PARTITION] = new VSizeFrame(ctx);
+        inputBuffer[RIGHT_PARTITION] = new VSizeFrame(ctx);
+
+        // Result
+        this.resultAppender = new FrameTupleAppender(new VSizeFrame(ctx));
 
         // Memory (right buffer)
         if (memorySize < 1) {
@@ -367,5 +414,51 @@ public class IntervalMergeJoiner extends AbstractIntervalMergeJoiner {
         if (LOGGER.isLoggable(Level.FINE)) {
             LOGGER.fine("Unfreezing right partition.");
         }
+    }
+
+    protected TupleStatus loadMemoryTuple(int branch) {
+        TupleStatus loaded;
+        if (inputAccessor[branch] != null && inputAccessor[branch].exists()) {
+            // Still processing frame.
+            int test = inputAccessor[branch].getTupleCount();
+            loaded = TupleStatus.LOADED;
+        } else if (status.branch[branch].hasMore()) {
+            loaded = TupleStatus.UNKNOWN;
+        } else {
+            // No more frames or tuples to process.
+            loaded = TupleStatus.EMPTY;
+        }
+        return loaded;
+    }
+
+    protected TupleStatus pauseAndLoadRightTuple() {
+        status.continueRightLoad = true;
+        locks.getRight(partition).signal();
+        try {
+            while (status.continueRightLoad && status.branch[RIGHT_PARTITION].getStatus()
+                    .isEqualOrBefore(IntervalMergeBranchStatus.Stage.DATA_PROCESSING)) {
+                locks.getLeft(partition).await();
+            }
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+        }
+        if (inputAccessor[RIGHT_PARTITION] != null && !inputAccessor[RIGHT_PARTITION].exists()
+                && status.branch[RIGHT_PARTITION].getStatus() == IntervalMergeBranchStatus.Stage.CLOSED) {
+            status.branch[RIGHT_PARTITION].noMore();
+            return TupleStatus.EMPTY;
+        }
+        return TupleStatus.LOADED;
+    }
+
+    public void setFrame(int branch, ByteBuffer buffer) throws HyracksDataException {
+        inputBuffer[branch].getBuffer().clear();
+        if (inputBuffer[branch].getFrameSize() < buffer.capacity()) {
+            inputBuffer[branch].resize(buffer.capacity());
+        }
+        inputBuffer[branch].getBuffer().put(buffer.array(), 0, buffer.capacity());
+        inputAccessor[branch].reset(inputBuffer[branch].getBuffer());
+        inputAccessor[branch].next();
+        frameCounts[branch]++;
+        tupleCounts[branch] += inputAccessor[branch].getTupleCount();
     }
 }

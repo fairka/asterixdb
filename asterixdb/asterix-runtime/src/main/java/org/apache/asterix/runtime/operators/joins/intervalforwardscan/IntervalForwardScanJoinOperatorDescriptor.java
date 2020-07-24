@@ -112,7 +112,7 @@ public class IntervalForwardScanJoinOperatorDescriptor extends AbstractOperatorD
             }
 
             @Override
-            public int getInputArity() {
+            public final int getInputArity() {
                 return inputArity;
             }
 

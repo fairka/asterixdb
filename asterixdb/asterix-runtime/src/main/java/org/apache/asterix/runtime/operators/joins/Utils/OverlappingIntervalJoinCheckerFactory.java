@@ -28,7 +28,7 @@ import org.apache.hyracks.dataflow.common.data.partition.range.RangeMap;
 
 //import org.apache.hyracks.dataflow.std.misc.RangeForwardOperatorDescriptor.RangeForwardTaskState;
 
-public class OverlappingIntervalJoinCheckerFactory extends AbstractIntervalJoinCheckerFactory {
+public class OverlappingIntervalJoinCheckerFactory implements IIntervalJoinCheckerFactory {
     private static final long serialVersionUID = 1L;
     private final RangeMap rangeMap;
 

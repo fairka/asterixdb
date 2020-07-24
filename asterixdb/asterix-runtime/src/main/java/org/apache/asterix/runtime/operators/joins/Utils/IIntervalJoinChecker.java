@@ -52,9 +52,6 @@ public interface IIntervalJoinChecker extends Serializable {
      * @return boolean
      * @throws HyracksDataException
      */
-    boolean checkToRemoveInMemory(ITupleAccessor accessorLeft, ITupleAccessor accessorRight)
-            throws HyracksDataException;
-
     boolean checkToRemoveInMemory(IFrameTupleAccessor accessorLeft, int leftTupleIndex,
             IFrameTupleAccessor accessorRight, int rightTupleIndex) throws HyracksDataException;
 
@@ -80,31 +77,18 @@ public interface IIntervalJoinChecker extends Serializable {
      * @return boolean
      * @throws HyracksDataException
      */
-    boolean checkIfMoreMatches(ITupleAccessor accessorLeft, ITupleAccessor accessorRight) throws HyracksDataException;
-
     boolean checkIfMoreMatches(IFrameTupleAccessor accessorLeft, int leftTupleIndex, IFrameTupleAccessor accessorRight,
             int rightTupleIndex) throws HyracksDataException;
-
-    boolean checkToSaveInResult(ITupleAccessor accessorLeft, ITupleAccessor accessorRight) throws HyracksDataException;
 
     boolean checkToSaveInResult(IFrameTupleAccessor accessorLeft, int leftTupleIndex, IFrameTupleAccessor accessorRight,
             int rightTupleIndex, boolean reversed) throws HyracksDataException;
 
-    public boolean checkToRemoveLeftActive();
-
-    public boolean checkToRemoveRightActive();
-
-    public boolean checkToIncrementMerge(ITupleAccessor accessorLeft, ITupleAccessor accessorRight)
-            throws HyracksDataException;
-
-    public boolean compareInterval(AIntervalPointable ipLeft, AIntervalPointable ipRight) throws HyracksDataException;
+    boolean compareInterval(AIntervalPointable ipLeft, AIntervalPointable ipRight) throws HyracksDataException;
 
     boolean checkToLoadNextRightTuple(IFrameTupleAccessor accessorLeft, int leftTupleIndex,
             IFrameTupleAccessor accessorRight, int rightTupleIndex) throws HyracksDataException;
 
     boolean checkForEarlyExit(IFrameTupleAccessor accessorLeft, int leftTupleIndex, IFrameTupleAccessor accessorRight,
             int rightTupleIndex) throws HyracksDataException;
-
-    boolean checkToRemoveInMemory(long start0, long start1);
 
 }

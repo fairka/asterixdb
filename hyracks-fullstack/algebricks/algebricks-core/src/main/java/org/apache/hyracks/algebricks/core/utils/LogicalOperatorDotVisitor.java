@@ -757,6 +757,8 @@ public class LogicalOperatorDotVisitor implements ILogicalOperatorVisitor<String
                     case PARTIAL_BROADCAST_ORDERED_FOLLOWING:
                         stringBuilder.append("Data is partially broadcasted to partitions.");
                         break;
+                    case PARTIAL_BROADCAST_ORDERED_INTERSECT:
+                        stringBuilder.append("Data is partially broadcasted to partitions.");
                 }
                 if (nodeDomain instanceof DefaultNodeGroupDomain) {
                     DefaultNodeGroupDomain nd = (DefaultNodeGroupDomain) nodeDomain;

@@ -19,7 +19,6 @@
 
 package org.apache.hyracks.dataflow.std.sort.util;
 
-import java.io.PrintStream;
 import java.nio.ByteBuffer;
 import java.util.Comparator;
 import java.util.PriorityQueue;
@@ -28,6 +27,8 @@ import org.apache.commons.lang3.tuple.Pair;
 import org.apache.hyracks.api.comm.IFrameTupleAccessor;
 import org.apache.hyracks.api.dataflow.value.RecordDescriptor;
 import org.apache.hyracks.api.exceptions.HyracksDataException;
+import org.apache.hyracks.dataflow.std.util.IntegerPair;
+import org.apache.hyracks.dataflow.std.util.IntegerPairPool;
 import org.apache.hyracks.util.IntSerDeUtils;
 
 /**
@@ -406,14 +407,6 @@ public class AppendDeletableFrameTupleAccessor implements IAppendDeletableFrameT
     @Override
     public ByteBuffer getBuffer() {
         return buffer;
-    }
-
-    @Override
-    public void printStats(PrintStream ps) {
-        if (getLiveTupleCount() == 0) {
-            ps.print("");
-        }
-        ps.printf("(%d, %d)", getLiveTupleCount(), getIndexCount());
     }
 
 }

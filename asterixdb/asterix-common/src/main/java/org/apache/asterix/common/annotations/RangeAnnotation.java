@@ -18,11 +18,10 @@
  */
 package org.apache.asterix.common.annotations;
 
-import org.apache.hyracks.algebricks.core.algebra.expressions.AbstractExpressionAnnotation;
 import org.apache.hyracks.algebricks.core.algebra.expressions.IExpressionAnnotation;
 import org.apache.hyracks.dataflow.common.data.partition.range.RangeMap;
 
-public class RangeAnnotation extends AbstractExpressionAnnotation {
+public class RangeAnnotation implements IExpressionAnnotation {
 
     private static final String RANGE_HINT_STRING = "range";
     public static final RangeAnnotation INSTANCE = new RangeAnnotation();
@@ -30,29 +29,20 @@ public class RangeAnnotation extends AbstractExpressionAnnotation {
     private RangeMap map;
 
     @Override
-    public IExpressionAnnotation copy() {
-        RangeAnnotation clone = new RangeAnnotation();
-        clone.setObject(object);
-        return clone;
-    }
-
-    public void setRangeMap(RangeMap map) {
-        this.map = map;
-    }
-
-    public RangeMap getRangeMap() {
+    public Object getObject() {
         return map;
     }
 
-    public static boolean isRangeHint(String hint) {
-        return hint.startsWith(RANGE_HINT_STRING);
+    @Override
+    public void setObject(Object side) {
+        this.map = (RangeMap) side;
     }
 
-    public static int getHintLength(String hint) {
-        if (hint.startsWith(RANGE_HINT_STRING)) {
-            return RANGE_HINT_STRING.length();
-        }
-        return 0;
+    @Override
+    public IExpressionAnnotation copy() {
+        RangeAnnotation rangAnn = new RangeAnnotation();
+        rangAnn.map = map;
+        return rangAnn;
     }
 
 }

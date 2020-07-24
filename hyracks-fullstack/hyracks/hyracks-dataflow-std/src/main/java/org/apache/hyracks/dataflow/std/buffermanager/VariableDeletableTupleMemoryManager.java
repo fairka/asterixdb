@@ -21,23 +21,22 @@ package org.apache.hyracks.dataflow.std.buffermanager;
 
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 import org.apache.hyracks.api.comm.IFrameTupleAccessor;
 import org.apache.hyracks.api.dataflow.value.RecordDescriptor;
 import org.apache.hyracks.api.exceptions.HyracksDataException;
 import org.apache.hyracks.dataflow.std.sort.util.AppendDeletableFrameTupleAccessor;
-import org.apache.hyracks.dataflow.std.sort.util.DeletableFrameTupleAppender;
 import org.apache.hyracks.dataflow.std.sort.util.IAppendDeletableFrameTupleAccessor;
 import org.apache.hyracks.dataflow.std.structures.TuplePointer;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
 
 /**
  * Enable the delete record operation in the memory management. This is only used in the {@link org.apache.hyracks.dataflow.std.sort.HeapSortRunGenerator}
  */
 public class VariableDeletableTupleMemoryManager implements IDeletableTupleBufferManager {
 
-    private static final Logger LOG = LogManager.getLogger();
+    private static final Logger LOG = Logger.getLogger(VariableDeletableTupleMemoryManager.class.getName());
 
     private final int minFreeSpace;
     private final IFramePool pool;
@@ -52,7 +51,7 @@ public class VariableDeletableTupleMemoryManager implements IDeletableTupleBuffe
         this.pool = framePool;
         int maxFrames = framePool.getMemoryBudgetBytes() / framePool.getMinFrameSize();
         this.policy = new FrameFreeSlotLastFit(maxFrames);
-        this.accessor = new DeletableFrameTupleAppender(recordDescriptor);
+        this.accessor = new AppendDeletableFrameTupleAccessor(recordDescriptor);
         this.frames = new ArrayList<>();
         this.minFreeSpace = calculateMinFreeSpace(recordDescriptor);
         this.recordDescriptor = recordDescriptor;
@@ -159,11 +158,11 @@ public class VariableDeletableTupleMemoryManager implements IDeletableTupleBuffe
     @Override
     public void close() {
         pool.close();
-        policy.close();
+        policy.reset();
         frames.clear();
         numTuples = 0;
-        if (LOG.isDebugEnabled()) {
-            LOG.debug("VariableTupleMemoryManager has reorganized " + statsReOrg + " times");
+        if (LOG.isLoggable(Level.FINE)) {
+            LOG.fine("VariableTupleMemoryManager has reorganized " + statsReOrg + " times");
         }
         statsReOrg = 0;
     }
@@ -171,8 +170,8 @@ public class VariableDeletableTupleMemoryManager implements IDeletableTupleBuffe
     @Override
     public ITuplePointerAccessor createTuplePointerAccessor() {
         return new AbstractTuplePointerAccessor() {
-            private final IAppendDeletableFrameTupleAccessor bufferAccessor =
-                    new DeletableFrameTupleAppender(recordDescriptor);
+            private IAppendDeletableFrameTupleAccessor bufferAccessor =
+                    new AppendDeletableFrameTupleAccessor(recordDescriptor);
 
             @Override
             IFrameTupleAccessor getInnerAccessor() {

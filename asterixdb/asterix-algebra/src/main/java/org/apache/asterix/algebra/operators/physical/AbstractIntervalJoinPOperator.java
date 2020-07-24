@@ -32,7 +32,6 @@ import org.apache.hyracks.algebricks.core.algebra.base.PhysicalOperatorTag;
 import org.apache.hyracks.algebricks.core.algebra.operators.logical.AbstractBinaryJoinOperator.JoinKind;
 import org.apache.hyracks.algebricks.core.algebra.operators.logical.AbstractLogicalOperator;
 import org.apache.hyracks.algebricks.core.algebra.operators.logical.IOperatorSchema;
-import org.apache.hyracks.algebricks.core.algebra.operators.logical.OrderOperator.IOrder.OrderKind;
 import org.apache.hyracks.algebricks.core.algebra.operators.physical.AbstractJoinPOperator;
 import org.apache.hyracks.algebricks.core.algebra.properties.ILocalStructuralProperty;
 import org.apache.hyracks.algebricks.core.algebra.properties.IPartitioningProperty;
@@ -141,7 +140,7 @@ public abstract class AbstractIntervalJoinPOperator extends AbstractJoinPOperato
     protected ArrayList<OrderColumn> getLeftRangeOrderColumn() {
         ArrayList<OrderColumn> order = new ArrayList<>();
         for (LogicalVariable v : keysLeftBranch) {
-            order.add(new OrderColumn(v, mjcf.isOrderAsc() ? OrderKind.ASC : OrderKind.DESC));
+            order.add(new OrderColumn(v, intervalPartitions.getRightIntervalColumn().get(0).getOrder()));
         }
         return order;
     }
@@ -149,7 +148,7 @@ public abstract class AbstractIntervalJoinPOperator extends AbstractJoinPOperato
     protected ArrayList<OrderColumn> getRightRangeOrderColumn() {
         ArrayList<OrderColumn> orderRight = new ArrayList<>();
         for (LogicalVariable v : keysRightBranch) {
-            orderRight.add(new OrderColumn(v, mjcf.isOrderAsc() ? OrderKind.ASC : OrderKind.DESC));
+            orderRight.add(new OrderColumn(v, intervalPartitions.getLeftIntervalColumn().get(0).getOrder()));
         }
         return orderRight;
     }
