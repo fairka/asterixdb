@@ -41,7 +41,6 @@ public class BeforeIntervalJoinChecker extends AbstractIntervalJoinChecker {
                 ipRight.getStartOffset(), ipRight.getLength()) < 0;
     }
 
-    //THis needs to be fixed
     @Override
     public boolean checkToRemoveInMemory(IFrameTupleAccessor accessorLeft, int leftTupleIndex,
             IFrameTupleAccessor accessorRight, int rightTupleIndex) {
@@ -61,6 +60,12 @@ public class BeforeIntervalJoinChecker extends AbstractIntervalJoinChecker {
 
     @Override
     public boolean checkIfMoreMatches(IFrameTupleAccessor accessorLeft, int leftTupleIndex,
+            IFrameTupleAccessor accessorRight, int rightTupleIndex) {
+        return true;
+    }
+
+    @Override
+    public boolean checkToLoadNextRightTuple(IFrameTupleAccessor accessorLeft, int leftTupleIndex,
             IFrameTupleAccessor accessorRight, int rightTupleIndex) {
         return true;
     }

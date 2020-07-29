@@ -65,4 +65,10 @@ public class AfterIntervalJoinChecker extends AbstractIntervalJoinChecker {
         return true;
     }
 
+    @Override
+    public boolean checkToLoadNextRightTuple(IFrameTupleAccessor accessorLeft, int leftTupleIndex,
+            IFrameTupleAccessor accessorRight, int rightTupleIndex) {
+        return true;
+    }
+
 }

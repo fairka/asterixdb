@@ -41,8 +41,8 @@ public class IntervalMergeBranchStatus implements IRunFileStreamStatus, Serializ
 
     private Stage stage = Stage.UNKNOWN;
 
-    private boolean runFileWriting = false;
-    private boolean runFileReading = false;
+    private boolean runFileWriting = true;
+    private boolean runFileReading = true;
 
     public Stage getStatus() {
         return stage;
