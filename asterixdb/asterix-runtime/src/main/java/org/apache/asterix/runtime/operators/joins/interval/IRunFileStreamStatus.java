@@ -16,16 +16,16 @@
  * specific language governing permissions and limitations
  * under the License.
  */
-package org.apache.hyracks.dataflow.std.join;
+package org.apache.asterix.runtime.operators.joins.interval;
 
 public interface IRunFileStreamStatus {
 
-    public boolean isRunFileWriting();
+    boolean isRunFileWriting();
 
-    public void setRunFileWriting(boolean runFileWriting);
+    void setRunFileWriting(boolean runFileWriting);
 
-    public boolean isRunFileReading();
+    boolean isRunFileReading();
 
-    public void setRunFileReading(boolean runFileReading);
+    void setRunFileReading(boolean runFileReading);
 
 }

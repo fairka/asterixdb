@@ -73,5 +73,4 @@ public interface IAppendDeletableFrameTupleAccessor extends IFrameTupleAccessor 
      * @return how many contiguous free space in the buffer.
      */
     int getContiguousFreeSpace();
-
 }

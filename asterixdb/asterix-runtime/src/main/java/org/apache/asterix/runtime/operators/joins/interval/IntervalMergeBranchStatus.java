@@ -20,8 +20,6 @@ package org.apache.asterix.runtime.operators.joins.interval;
 
 import java.io.Serializable;
 
-import org.apache.hyracks.dataflow.std.join.IRunFileStreamStatus;
-
 public class IntervalMergeBranchStatus implements IRunFileStreamStatus, Serializable {
     private static final long serialVersionUID = 1L;
 

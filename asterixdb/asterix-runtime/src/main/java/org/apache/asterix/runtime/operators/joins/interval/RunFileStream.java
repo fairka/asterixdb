@@ -34,7 +34,6 @@ import org.apache.hyracks.dataflow.common.comm.io.FrameTupleAppender;
 import org.apache.hyracks.dataflow.common.io.RunFileReader;
 import org.apache.hyracks.dataflow.common.io.RunFileWriter;
 import org.apache.hyracks.dataflow.std.buffermanager.ITupleAccessor;
-import org.apache.hyracks.dataflow.std.join.IRunFileStreamStatus;
 
 public class RunFileStream {
 
