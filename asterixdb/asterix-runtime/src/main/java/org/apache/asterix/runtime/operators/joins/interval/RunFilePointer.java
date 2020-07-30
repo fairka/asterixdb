@@ -16,37 +16,31 @@
  * specific language governing permissions and limitations
  * under the License.
  */
-package org.apache.hyracks.dataflow.std.structures;
+package org.apache.asterix.runtime.operators.joins.interval;
 
 import java.util.Comparator;
+
+import org.apache.hyracks.dataflow.std.structures.IResetable;
 
 public final class RunFilePointer implements IResetable<RunFilePointer> {
     public static final int INVALID_ID = -1;
     private long fileOffset;
     private int tupleIndex;
 
-    public static final Comparator<RunFilePointer> ASC = new Comparator<RunFilePointer>() {
-        @Override
-        public int compare(RunFilePointer tp1, RunFilePointer tp2) {
-            int c = (int) (tp1.getFileOffset() - tp2.getFileOffset());
-            if (c == 0) {
-                c = tp1.getTupleIndex() - tp2.getTupleIndex();
-            }
-            return c;
+    public static final Comparator<RunFilePointer> ASC = (tp1, tp2) -> {
+        int c = (int) (tp1.getFileOffset() - tp2.getFileOffset());
+        if (c == 0) {
+            c = tp1.getTupleIndex() - tp2.getTupleIndex();
         }
-
+        return c;
     };
 
-    public static final Comparator<RunFilePointer> DESC = new Comparator<RunFilePointer>() {
-        @Override
-        public int compare(RunFilePointer tp1, RunFilePointer tp2) {
-            int c = (int) (tp2.getFileOffset() - tp1.getFileOffset());
-            if (c == 0) {
-                c = tp2.getTupleIndex() - tp1.getTupleIndex();
-            }
-            return c;
+    public static final Comparator<RunFilePointer> DESC = (tp1, tp2) -> {
+        int c = (int) (tp2.getFileOffset() - tp1.getFileOffset());
+        if (c == 0) {
+            c = tp2.getTupleIndex() - tp1.getTupleIndex();
         }
-
+        return c;
     };
 
     public RunFilePointer() {

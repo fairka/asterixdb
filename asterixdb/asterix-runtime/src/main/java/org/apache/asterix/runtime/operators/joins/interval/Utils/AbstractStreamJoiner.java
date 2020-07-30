@@ -16,9 +16,9 @@
  * specific language governing permissions and limitations
  * under the License.
  */
-package org.apache.asterix.runtime.operators.joins.Utils;
+package org.apache.asterix.runtime.operators.joins.interval.Utils;
 
-import org.apache.asterix.runtime.operators.joins.intervalmergejoin.IntervalMergeBranchStatus;
+import org.apache.asterix.runtime.operators.joins.interval.IntervalMergeBranchStatus;
 import org.apache.hyracks.api.comm.IFrame;
 import org.apache.hyracks.api.comm.VSizeFrame;
 import org.apache.hyracks.api.context.IHyracksTaskContext;

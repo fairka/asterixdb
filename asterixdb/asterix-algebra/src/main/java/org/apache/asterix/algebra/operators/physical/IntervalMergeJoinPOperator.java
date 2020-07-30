@@ -23,8 +23,8 @@ import java.util.List;
 import java.util.logging.Logger;
 
 import org.apache.asterix.optimizer.rules.util.IntervalPartitions;
-import org.apache.asterix.runtime.operators.joins.Utils.IIntervalJoinCheckerFactory;
-import org.apache.asterix.runtime.operators.joins.intervalmergejoin.IntervalMergeJoinOperatorDescriptor;
+import org.apache.asterix.runtime.operators.joins.interval.IntervalMergeJoinOperatorDescriptor;
+import org.apache.asterix.runtime.operators.joins.interval.Utils.IIntervalJoinCheckerFactory;
 import org.apache.hyracks.algebricks.common.exceptions.AlgebricksException;
 import org.apache.hyracks.algebricks.core.algebra.base.IHyracksJobBuilder;
 import org.apache.hyracks.algebricks.core.algebra.base.ILogicalOperator;
@@ -62,7 +62,7 @@ public class IntervalMergeJoinPOperator extends AbstractJoinPOperator {
     protected final IntervalPartitions intervalPartitions;
 
     private final int memSizeInFrames;
-    private static final Logger LOGGER = Logger.getLogger(IntervalForwardScanJoinPOperator.class.getName());
+    private static final Logger LOGGER = Logger.getLogger(IntervalMergeJoinPOperator.class.getName());
 
     public IntervalMergeJoinPOperator(JoinKind kind, JoinPartitioningType partitioningType,
             List<LogicalVariable> sideLeftOfEqualities, List<LogicalVariable> sideRightOfEqualities,

@@ -16,22 +16,19 @@
  * specific language governing permissions and limitations
  * under the License.
  */
-package org.apache.asterix.runtime.operators.joins.Utils;
+package org.apache.asterix.runtime.operators.joins.interval.Utils;
 
 import org.apache.asterix.om.pointables.nonvisitor.AIntervalPointable;
 import org.apache.hyracks.api.comm.IFrameTupleAccessor;
 import org.apache.hyracks.api.exceptions.HyracksDataException;
 
-public class CoveredByIntervalJoinChecker extends AbstractIntervalInverseJoinChecker {
+public class OverlappingIntervalJoinChecker extends AbstractIntervalJoinChecker {
     private static final long serialVersionUID = 1L;
+    private final long partitionStart;
 
-    public CoveredByIntervalJoinChecker(int[] keysLeft, int[] keysRight) {
+    public OverlappingIntervalJoinChecker(int[] keysLeft, int[] keysRight, long partitionStart) {
         super(keysLeft[0], keysRight[0]);
-    }
-
-    @Override
-    public boolean compareInterval(AIntervalPointable ipLeft, AIntervalPointable ipRight) throws HyracksDataException {
-        return il.coveredBy(ipLeft, ipRight);
+        this.partitionStart = partitionStart;
     }
 
     /**
@@ -42,7 +39,18 @@ public class CoveredByIntervalJoinChecker extends AbstractIntervalInverseJoinChe
             IFrameTupleAccessor accessorRight, int rightTupleIndex) throws HyracksDataException {
         long start0 = IntervalJoinUtil.getIntervalStart(accessorLeft, leftTupleIndex, idLeft);
         long end1 = IntervalJoinUtil.getIntervalEnd(accessorRight, rightTupleIndex, idRight);
-        return start0 <= end1;
+        return start0 < end1;
+    }
+
+    /**
+     * Right (second argument) interval starts before left (first argument) interval ends.
+     */
+    @Override
+    public boolean checkForEarlyExit(IFrameTupleAccessor accessorLeft, int leftTupleIndex,
+            IFrameTupleAccessor accessorRight, int rightTupleIndex) throws HyracksDataException {
+        long start1 = IntervalJoinUtil.getIntervalStart(accessorRight, rightTupleIndex, idRight);
+        long end0 = IntervalJoinUtil.getIntervalEnd(accessorLeft, leftTupleIndex, idLeft);
+        return end0 <= start1;
     }
 
     /**
@@ -53,8 +61,28 @@ public class CoveredByIntervalJoinChecker extends AbstractIntervalInverseJoinChe
             IFrameTupleAccessor accessorRight, int rightTupleIndex) throws HyracksDataException {
         long start0 = IntervalJoinUtil.getIntervalStart(accessorLeft, leftTupleIndex, idLeft);
         long end1 = IntervalJoinUtil.getIntervalEnd(accessorRight, rightTupleIndex, idRight);
-        return start0 > end1;
-
+        return start0 >= end1;
     }
 
+    @Override
+    public boolean checkToSaveInResult(IFrameTupleAccessor accessorLeft, int leftTupleIndex,
+            IFrameTupleAccessor accessorRight, int rightTupleIndex, boolean reversed) throws HyracksDataException {
+        if (reversed) {
+            IntervalJoinUtil.getIntervalPointable(accessorLeft, leftTupleIndex, idLeft, tvp, ipRight);
+            IntervalJoinUtil.getIntervalPointable(accessorRight, rightTupleIndex, idRight, tvp, ipLeft);
+        } else {
+            IntervalJoinUtil.getIntervalPointable(accessorLeft, leftTupleIndex, idLeft, tvp, ipLeft);
+            IntervalJoinUtil.getIntervalPointable(accessorRight, rightTupleIndex, idRight, tvp, ipRight);
+        }
+        if (ipLeft.getStartValue() < partitionStart && ipRight.getStartValue() < partitionStart) {
+            // Both tuples will match in a different partition.
+            return false;
+        }
+        return il.overlapping(ipLeft, ipRight);
+    }
+
+    @Override
+    public boolean compareInterval(AIntervalPointable ipLeft, AIntervalPointable ipRight) throws HyracksDataException {
+        return il.overlapping(ipLeft, ipRight);
+    }
 }

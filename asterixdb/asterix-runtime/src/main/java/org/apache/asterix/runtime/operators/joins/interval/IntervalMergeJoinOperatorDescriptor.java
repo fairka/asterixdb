@@ -17,13 +17,12 @@
  * under the License.
  */
 
-package org.apache.asterix.runtime.operators.joins.intervalmergejoin;
+package org.apache.asterix.runtime.operators.joins.interval;
 
 import java.nio.ByteBuffer;
-import java.util.logging.Logger;
 
-import org.apache.asterix.runtime.operators.joins.Utils.IIntervalJoinChecker;
-import org.apache.asterix.runtime.operators.joins.Utils.IIntervalJoinCheckerFactory;
+import org.apache.asterix.runtime.operators.joins.interval.Utils.IIntervalJoinChecker;
+import org.apache.asterix.runtime.operators.joins.interval.Utils.IIntervalJoinCheckerFactory;
 import org.apache.hyracks.api.context.IHyracksTaskContext;
 import org.apache.hyracks.api.dataflow.ActivityId;
 import org.apache.hyracks.api.dataflow.IActivity;
@@ -54,8 +53,6 @@ public class IntervalMergeJoinOperatorDescriptor extends AbstractOperatorDescrip
 
     private final int probeKey;
     private final int buildKey;
-
-    private static final Logger LOGGER = Logger.getLogger(IntervalMergeJoinOperatorDescriptor.class.getName());
 
     public IntervalMergeJoinOperatorDescriptor(IOperatorDescriptorRegistry spec, int memoryForJoin, int[] leftKeys,
             int[] rightKeys, RecordDescriptor recordDescriptor, IIntervalJoinCheckerFactory imjcf) {
@@ -119,7 +116,6 @@ public class IntervalMergeJoinOperatorDescriptor extends AbstractOperatorDescrip
                             new TaskId(getActivityId(), partition));
 
                     IntervalMergeStatus status = new IntervalMergeStatus();
-
                     IIntervalJoinChecker imjc =
                             imjcf.createIntervalMergeJoinChecker(leftKeys, rightKeys, ctx, nPartitions);
 
@@ -131,7 +127,6 @@ public class IntervalMergeJoinOperatorDescriptor extends AbstractOperatorDescrip
                 public void nextFrame(ByteBuffer buffer) throws HyracksDataException {
                     ByteBuffer copyBuffer = ctx.allocateFrame(buffer.capacity());
                     FrameUtils.copyAndFlip(buffer, copyBuffer);
-                    //Buffer
                     state.joiner.processBuildFrame(copyBuffer);
                 }
 
@@ -171,8 +166,7 @@ public class IntervalMergeJoinOperatorDescriptor extends AbstractOperatorDescrip
 
                 @Override
                 public void nextFrame(ByteBuffer buffer) throws HyracksDataException {
-                    state.joiner.initializeProbeFrame(buffer);
-                    state.joiner.processProbeFrame(writer);
+                    state.joiner.processProbeFrame(buffer, writer);
                 }
 
                 @Override

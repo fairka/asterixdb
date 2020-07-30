@@ -16,14 +16,22 @@
  * specific language governing permissions and limitations
  * under the License.
  */
+package org.apache.asterix.runtime.operators.joins.interval.Utils;
 
-package org.apache.hyracks.dataflow.std.buffermanager;
+import org.apache.hyracks.api.context.IHyracksTaskContext;
 
-import org.apache.hyracks.api.exceptions.HyracksDataException;
-import org.apache.hyracks.dataflow.std.structures.TuplePointer;
+public class BeforeIntervalJoinCheckerFactory implements IIntervalJoinCheckerFactory {
+    private static final long serialVersionUID = 1L;
 
-public interface IPartitionedDeletableTupleBufferManager extends IPartitionedTupleBufferManager {
+    @Override
+    public IIntervalJoinChecker createIntervalMergeJoinChecker(int[] keys0, int[] keys1, IHyracksTaskContext ctx,
+            int nPartitions) {
+        return new BeforeIntervalJoinChecker(keys0, keys1);
+    }
 
-    void deleteTuple(int partition, TuplePointer tuplePointer) throws HyracksDataException;
-
+    @Override
+    public IIntervalJoinChecker createIntervalInverseMergeJoinChecker(int[] keys0, int[] keys1, IHyracksTaskContext ctx,
+            int nPartitions) {
+        return new AfterIntervalJoinChecker(keys0, keys1);
+    }
 }

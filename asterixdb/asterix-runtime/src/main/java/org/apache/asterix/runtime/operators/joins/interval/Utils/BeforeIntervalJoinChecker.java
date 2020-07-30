@@ -16,17 +16,17 @@
  * specific language governing permissions and limitations
  * under the License.
  */
-package org.apache.asterix.runtime.operators.joins.Utils;
+package org.apache.asterix.runtime.operators.joins.interval.Utils;
 
 import org.apache.asterix.om.pointables.nonvisitor.AIntervalPointable;
 import org.apache.hyracks.api.comm.IFrameTupleAccessor;
 import org.apache.hyracks.api.exceptions.HyracksDataException;
 import org.apache.hyracks.dataflow.std.buffermanager.ITupleAccessor;
 
-public class AfterIntervalJoinChecker extends AbstractIntervalJoinChecker {
+public class BeforeIntervalJoinChecker extends AbstractIntervalJoinChecker {
     private static final long serialVersionUID = 1L;
 
-    public AfterIntervalJoinChecker(int[] keysLeft, int[] keysRight) {
+    public BeforeIntervalJoinChecker(int[] keysLeft, int[] keysRight) {
         super(keysLeft[0], keysRight[0]);
     }
 
@@ -38,10 +38,9 @@ public class AfterIntervalJoinChecker extends AbstractIntervalJoinChecker {
         ipLeft.getStart(startLeft);
         ipRight.getStart(startRight);
         return ch.compare(ipLeft.getByteArray(), ipLeft.getStartOffset(), ipLeft.getLength(), ipRight.getByteArray(),
-                ipRight.getStartOffset(), ipRight.getLength()) > 0;
+                ipRight.getStartOffset(), ipRight.getLength()) < 0;
     }
 
-    //THis needs to be fixed
     @Override
     public boolean checkToRemoveInMemory(IFrameTupleAccessor accessorLeft, int leftTupleIndex,
             IFrameTupleAccessor accessorRight, int rightTupleIndex) {
@@ -50,12 +49,12 @@ public class AfterIntervalJoinChecker extends AbstractIntervalJoinChecker {
 
     @Override
     public boolean compareInterval(AIntervalPointable ipLeft, AIntervalPointable ipRight) throws HyracksDataException {
-        return il.after(ipLeft, ipRight);
+        return il.before(ipLeft, ipRight);
     }
 
     @Override
     public boolean checkForEarlyExit(IFrameTupleAccessor accessorLeft, int leftTupleIndex,
-            IFrameTupleAccessor accessorRight, int rightTupleIndex) throws HyracksDataException {
+            IFrameTupleAccessor accessorRight, int rightTupleIndex) {
         return false;
     }
 

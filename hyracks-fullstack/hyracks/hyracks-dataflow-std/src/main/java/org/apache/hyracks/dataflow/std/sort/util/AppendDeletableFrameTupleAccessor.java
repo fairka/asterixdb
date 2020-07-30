@@ -78,13 +78,7 @@ import org.apache.hyracks.util.IntSerDeUtils;
 public class AppendDeletableFrameTupleAccessor implements IAppendDeletableFrameTupleAccessor {
 
     public static final Comparator<Pair<Integer, Integer>> INDEX_OFFSET_ASC_COMPARATOR =
-            new Comparator<Pair<Integer, Integer>>() {
-                @Override
-                public int compare(Pair<Integer, Integer> p1, Pair<Integer, Integer> p2) {
-                    return p1.getValue() - p2.getValue();
-                }
-
-            };
+            Comparator.comparingInt(Pair::getValue);
 
     private static final int SIZE_INDEX_COUNT = 4;
     private static final int SIZE_DELETED_SPACE = 4;

@@ -16,21 +16,21 @@
  * specific language governing permissions and limitations
  * under the License.
  */
-package org.apache.asterix.runtime.operators.joins.Utils;
+package org.apache.asterix.runtime.operators.joins.interval.Utils;
 
 import org.apache.asterix.om.pointables.nonvisitor.AIntervalPointable;
 import org.apache.hyracks.api.exceptions.HyracksDataException;
 
-public class CoversIntervalJoinChecker extends AbstractIntervalJoinChecker {
+public class OverlapsIntervalJoinChecker extends AbstractIntervalJoinChecker {
     private static final long serialVersionUID = 1L;
 
-    public CoversIntervalJoinChecker(int[] keysLeft, int[] keysRight) {
+    public OverlapsIntervalJoinChecker(int[] keysLeft, int[] keysRight) {
         super(keysLeft[0], keysRight[0]);
     }
 
     @Override
     public boolean compareInterval(AIntervalPointable ipLeft, AIntervalPointable ipRight) throws HyracksDataException {
-        return il.covers(ipLeft, ipRight);
+        return il.overlaps(ipLeft, ipRight);
     }
 
 }

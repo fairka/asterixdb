@@ -20,7 +20,6 @@ package org.apache.hyracks.dataflow.std.buffermanager;
 
 import java.nio.ByteBuffer;
 
-import org.apache.hyracks.api.dataflow.value.RecordDescriptor;
 import org.apache.hyracks.api.exceptions.HyracksDataException;
 
 /**
@@ -58,21 +57,6 @@ public interface IFrameBufferManager {
     /**
      * Releases the allocated resources.
      */
-    void removeFrame(int frameIndex);
-
     void close();
-
-    /**
-     * Create a iterator for frames.
-     *
-     * Allows the reuse of frame ids.
-     */
-    int next();
-
-    boolean exists();
-
-    void resetIterator();
-
-    ITupleAccessor getTupleAccessor(RecordDescriptor rd);
 
 }

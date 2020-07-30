@@ -26,19 +26,18 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 
-import org.apache.asterix.algebra.operators.physical.IntervalForwardScanJoinPOperator;
 import org.apache.asterix.algebra.operators.physical.IntervalMergeJoinPOperator;
 import org.apache.asterix.common.annotations.RangeAnnotation;
 import org.apache.asterix.lang.common.util.FunctionUtil;
 import org.apache.asterix.om.functions.BuiltinFunctions;
-import org.apache.asterix.runtime.operators.joins.Utils.AfterIntervalJoinCheckerFactory;
-import org.apache.asterix.runtime.operators.joins.Utils.BeforeIntervalJoinCheckerFactory;
-import org.apache.asterix.runtime.operators.joins.Utils.CoveredByIntervalJoinCheckerFactory;
-import org.apache.asterix.runtime.operators.joins.Utils.CoversIntervalJoinCheckerFactory;
-import org.apache.asterix.runtime.operators.joins.Utils.IIntervalJoinCheckerFactory;
-import org.apache.asterix.runtime.operators.joins.Utils.OverlappedByIntervalJoinCheckerFactory;
-import org.apache.asterix.runtime.operators.joins.Utils.OverlappingIntervalJoinCheckerFactory;
-import org.apache.asterix.runtime.operators.joins.Utils.OverlapsIntervalJoinCheckerFactory;
+import org.apache.asterix.runtime.operators.joins.interval.Utils.AfterIntervalJoinCheckerFactory;
+import org.apache.asterix.runtime.operators.joins.interval.Utils.BeforeIntervalJoinCheckerFactory;
+import org.apache.asterix.runtime.operators.joins.interval.Utils.CoveredByIntervalJoinCheckerFactory;
+import org.apache.asterix.runtime.operators.joins.interval.Utils.CoversIntervalJoinCheckerFactory;
+import org.apache.asterix.runtime.operators.joins.interval.Utils.IIntervalJoinCheckerFactory;
+import org.apache.asterix.runtime.operators.joins.interval.Utils.OverlappedByIntervalJoinCheckerFactory;
+import org.apache.asterix.runtime.operators.joins.interval.Utils.OverlappingIntervalJoinCheckerFactory;
+import org.apache.asterix.runtime.operators.joins.interval.Utils.OverlapsIntervalJoinCheckerFactory;
 import org.apache.commons.lang3.mutable.Mutable;
 import org.apache.commons.lang3.mutable.MutableObject;
 import org.apache.hyracks.algebricks.common.exceptions.AlgebricksException;
@@ -101,15 +100,15 @@ public class IntervalJoinUtils {
         return null;
     }
 
-    protected static void setIntervalForwardScanJoinOp(AbstractBinaryJoinOperator op, FunctionIdentifier fi,
-            List<LogicalVariable> sideLeft, List<LogicalVariable> sideRight, IOptimizationContext context,
-            IntervalPartitions intervalPartitions) throws CompilationException {
-
-        IIntervalJoinCheckerFactory mjcf = getIntervalJoinCheckerFactory(fi, intervalPartitions.getRangeMap());
-        op.setPhysicalOperator(new IntervalForwardScanJoinPOperator(op.getJoinKind(),
-                AbstractJoinPOperator.JoinPartitioningType.BROADCAST, sideLeft, sideRight,
-                context.getPhysicalOptimizationConfig().getMaxFramesForJoin(), mjcf, intervalPartitions));
-    }
+    //    protected static void setIntervalForwardScanJoinOp(AbstractBinaryJoinOperator op, FunctionIdentifier fi,
+    //            List<LogicalVariable> sideLeft, List<LogicalVariable> sideRight, IOptimizationContext context,
+    //            IntervalPartitions intervalPartitions) throws CompilationException {
+    //
+    //        IIntervalJoinCheckerFactory mjcf = getIntervalJoinCheckerFactory(fi, intervalPartitions.getRangeMap());
+    //        op.setPhysicalOperator(new IntervalForwardScanJoinPOperator(op.getJoinKind(),
+    //                AbstractJoinPOperator.JoinPartitioningType.BROADCAST, sideLeft, sideRight,
+    //                context.getPhysicalOptimizationConfig().getMaxFramesForJoin(), mjcf, intervalPartitions));
+    //    }
 
     protected static void setSortMergeIntervalJoinOp(AbstractBinaryJoinOperator op, FunctionIdentifier fi,
             List<LogicalVariable> sideLeft, List<LogicalVariable> sideRight, IOptimizationContext context,

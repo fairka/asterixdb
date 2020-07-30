@@ -16,7 +16,7 @@
  * specific language governing permissions and limitations
  * under the License.
  */
-package org.apache.hyracks.dataflow.std.join;
+package org.apache.asterix.runtime.operators.joins.interval;
 
 import java.nio.ByteBuffer;
 import java.util.logging.Level;
@@ -34,6 +34,7 @@ import org.apache.hyracks.dataflow.common.comm.io.FrameTupleAppender;
 import org.apache.hyracks.dataflow.common.io.RunFileReader;
 import org.apache.hyracks.dataflow.common.io.RunFileWriter;
 import org.apache.hyracks.dataflow.std.buffermanager.ITupleAccessor;
+import org.apache.hyracks.dataflow.std.join.IRunFileStreamStatus;
 
 public class RunFileStream {
 

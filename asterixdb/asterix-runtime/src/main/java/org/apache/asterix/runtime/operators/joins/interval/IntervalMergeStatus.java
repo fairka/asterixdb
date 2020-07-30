@@ -16,22 +16,21 @@
  * specific language governing permissions and limitations
  * under the License.
  */
-package org.apache.asterix.runtime.operators.joins.Utils;
+package org.apache.asterix.runtime.operators.joins.interval;
 
-import org.apache.hyracks.api.context.IHyracksTaskContext;
+import java.io.Serializable;
 
-public class AfterIntervalJoinCheckerFactory implements IIntervalJoinCheckerFactory {
+public class IntervalMergeStatus implements Serializable {
     private static final long serialVersionUID = 1L;
 
-    @Override
-    public IIntervalJoinChecker createIntervalMergeJoinChecker(int[] keys0, int[] keys1, IHyracksTaskContext ctx,
-            int nPartitions) {
-        return new AfterIntervalJoinChecker(keys0, keys1);
+    public boolean reloadingLeftFrame = false;
+    public boolean continueRightLoad = false;
+
+    public IntervalMergeBranchStatus[] branch = new IntervalMergeBranchStatus[2];
+
+    public IntervalMergeStatus() {
+        branch[0] = new IntervalMergeBranchStatus();
+        branch[1] = new IntervalMergeBranchStatus();
     }
 
-    @Override
-    public IIntervalJoinChecker createIntervalInverseMergeJoinChecker(int[] keys0, int[] keys1, IHyracksTaskContext ctx,
-            int nPartitions) {
-        return new BeforeIntervalJoinChecker(keys0, keys1);
-    }
 }

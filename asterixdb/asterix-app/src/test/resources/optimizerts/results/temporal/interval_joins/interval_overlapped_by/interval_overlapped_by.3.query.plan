@@ -4,7 +4,7 @@
       -- ASSIGN  |PARTITIONED|
         -- STREAM_PROJECT  |PARTITIONED|
           -- ONE_TO_ONE_EXCHANGE  |PARTITIONED|
-            -- INTERVAL_FORWARD_SCAN_JOIN [$$30] [$$31]  |PARTITIONED|
+            -- INTERVAL_MERGE_JOIN [$$30] [$$31]  |PARTITIONED|
               -- ONE_TO_ONE_EXCHANGE  |PARTITIONED|
                 -- STABLE_SORT [$$30(ASC)]  |PARTITIONED|
                   -- ONE_TO_ONE_EXCHANGE  |PARTITIONED|
