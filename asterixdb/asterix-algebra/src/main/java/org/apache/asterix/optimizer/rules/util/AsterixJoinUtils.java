@@ -77,10 +77,8 @@ public class AsterixJoinUtils {
                     "Only DATE, TIME, and DATETIME type rangemaps have been "
                             + "implemented for this interval operation.");
         }
-        //        LOGGER.fine("Interval Join - Forward Scan");
         IntervalPartitions intervalPartitions =
                 IntervalJoinUtils.getIntervalPartitions(op, fi, sideLeft, sideRight, rangeMap, context);
-        //IntervalJoinUtils.setIntervalForwardScanJoinOp(op, fi, sideLeft, sideRight, context, intervalPartitions);
         IntervalJoinUtils.setSortMergeIntervalJoinOp(op, fi, sideLeft, sideRight, context, intervalPartitions);
     }
 }

@@ -44,7 +44,7 @@ public abstract class AbstractIntervalJoinChecker implements IIntervalJoinChecke
     protected final AIntervalPointable ipRight = (AIntervalPointable) AIntervalPointable.FACTORY.createPointable();
 
     protected final IBinaryComparator ch = BinaryComparatorFactoryProvider.INSTANCE
-            .getBinaryComparatorFactory(BuiltinType.ANY, BuiltinType.ANY, true).createBinaryComparator();;
+            .getBinaryComparatorFactory(BuiltinType.ANY, BuiltinType.ANY, true).createBinaryComparator();
     protected final IPointable startLeft = VoidPointable.FACTORY.createPointable();
     protected final IPointable startRight = VoidPointable.FACTORY.createPointable();
 
@@ -68,7 +68,7 @@ public abstract class AbstractIntervalJoinChecker implements IIntervalJoinChecke
 
     @Override
     public boolean checkToLoadNextRightTuple(IFrameTupleAccessor accessorLeft, int leftTupleIndex,
-            IFrameTupleAccessor accessorRight, int rightTupleIndex) throws HyracksDataException {
+            IFrameTupleAccessor accessorRight, int rightTupleIndex) {
         long start1 = IntervalJoinUtil.getIntervalStart(accessorRight, rightTupleIndex, idRight);
         long end0 = IntervalJoinUtil.getIntervalEnd(accessorLeft, leftTupleIndex, idLeft);
         return end0 > start1;
@@ -101,7 +101,7 @@ public abstract class AbstractIntervalJoinChecker implements IIntervalJoinChecke
      */
     @Override
     public boolean checkIfMoreMatches(IFrameTupleAccessor accessorLeft, int leftTupleIndex,
-            IFrameTupleAccessor accessorRight, int rightTupleIndex) throws HyracksDataException {
+            IFrameTupleAccessor accessorRight, int rightTupleIndex) {
         long start1 = IntervalJoinUtil.getIntervalStart(accessorRight, rightTupleIndex, idRight);
         long end0 = IntervalJoinUtil.getIntervalEnd(accessorLeft, leftTupleIndex, idLeft);
         return end0 > start1;

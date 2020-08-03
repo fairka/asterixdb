@@ -36,7 +36,7 @@ public class OverlappingIntervalJoinChecker extends AbstractIntervalJoinChecker 
      */
     @Override
     public boolean checkToSaveInMemory(IFrameTupleAccessor accessorLeft, int leftTupleIndex,
-            IFrameTupleAccessor accessorRight, int rightTupleIndex) throws HyracksDataException {
+            IFrameTupleAccessor accessorRight, int rightTupleIndex) {
         long start0 = IntervalJoinUtil.getIntervalStart(accessorLeft, leftTupleIndex, idLeft);
         long end1 = IntervalJoinUtil.getIntervalEnd(accessorRight, rightTupleIndex, idRight);
         return start0 < end1;
@@ -47,7 +47,7 @@ public class OverlappingIntervalJoinChecker extends AbstractIntervalJoinChecker 
      */
     @Override
     public boolean checkForEarlyExit(IFrameTupleAccessor accessorLeft, int leftTupleIndex,
-            IFrameTupleAccessor accessorRight, int rightTupleIndex) throws HyracksDataException {
+            IFrameTupleAccessor accessorRight, int rightTupleIndex) {
         long start1 = IntervalJoinUtil.getIntervalStart(accessorRight, rightTupleIndex, idRight);
         long end0 = IntervalJoinUtil.getIntervalEnd(accessorLeft, leftTupleIndex, idLeft);
         return end0 <= start1;
@@ -58,7 +58,7 @@ public class OverlappingIntervalJoinChecker extends AbstractIntervalJoinChecker 
      */
     @Override
     public boolean checkToRemoveInMemory(IFrameTupleAccessor accessorLeft, int leftTupleIndex,
-            IFrameTupleAccessor accessorRight, int rightTupleIndex) throws HyracksDataException {
+            IFrameTupleAccessor accessorRight, int rightTupleIndex) {
         long start0 = IntervalJoinUtil.getIntervalStart(accessorLeft, leftTupleIndex, idLeft);
         long end1 = IntervalJoinUtil.getIntervalEnd(accessorRight, rightTupleIndex, idRight);
         return start0 >= end1;

@@ -55,7 +55,7 @@ public class AfterIntervalJoinChecker extends AbstractIntervalJoinChecker {
 
     @Override
     public boolean checkForEarlyExit(IFrameTupleAccessor accessorLeft, int leftTupleIndex,
-            IFrameTupleAccessor accessorRight, int rightTupleIndex) throws HyracksDataException {
+            IFrameTupleAccessor accessorRight, int rightTupleIndex) {
         return false;
     }
 

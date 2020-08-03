@@ -16,7 +16,7 @@
  * specific language governing permissions and limitations
  * under the License.
  */
-package org.apache.asterix.runtime.operators.joins.interval;
+package org.apache.asterix.runtime.operators.joins.interval.Utils;
 
 import java.util.Comparator;
 

@@ -39,7 +39,7 @@ public class CoveredByIntervalJoinChecker extends AbstractIntervalInverseJoinChe
      */
     @Override
     public boolean checkToSaveInMemory(IFrameTupleAccessor accessorLeft, int leftTupleIndex,
-            IFrameTupleAccessor accessorRight, int rightTupleIndex) throws HyracksDataException {
+            IFrameTupleAccessor accessorRight, int rightTupleIndex) {
         long start0 = IntervalJoinUtil.getIntervalStart(accessorLeft, leftTupleIndex, idLeft);
         long end1 = IntervalJoinUtil.getIntervalEnd(accessorRight, rightTupleIndex, idRight);
         return start0 <= end1;
@@ -50,7 +50,7 @@ public class CoveredByIntervalJoinChecker extends AbstractIntervalInverseJoinChe
      */
     @Override
     public boolean checkToRemoveInMemory(IFrameTupleAccessor accessorLeft, int leftTupleIndex,
-            IFrameTupleAccessor accessorRight, int rightTupleIndex) throws HyracksDataException {
+            IFrameTupleAccessor accessorRight, int rightTupleIndex) {
         long start0 = IntervalJoinUtil.getIntervalStart(accessorLeft, leftTupleIndex, idLeft);
         long end1 = IntervalJoinUtil.getIntervalEnd(accessorRight, rightTupleIndex, idRight);
         return start0 > end1;

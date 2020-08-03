@@ -80,14 +80,6 @@ public class IntervalMergeJoinPOperator extends AbstractJoinPOperator {
                 + ", IMergeJoinCheckerFactory mjcf=" + mjcf + ".");
     }
 
-    public List<LogicalVariable> getKeysLeftBranch() {
-        return keysLeftBranch;
-    }
-
-    public List<LogicalVariable> getKeysRightBranch() {
-        return keysRightBranch;
-    }
-
     public IIntervalJoinCheckerFactory getIntervalMergeJoinCheckerFactory() {
         return mjcf;
     }

@@ -100,24 +100,9 @@ public class IntervalJoinUtils {
         return null;
     }
 
-    //    protected static void setIntervalForwardScanJoinOp(AbstractBinaryJoinOperator op, FunctionIdentifier fi,
-    //            List<LogicalVariable> sideLeft, List<LogicalVariable> sideRight, IOptimizationContext context,
-    //            IntervalPartitions intervalPartitions) throws CompilationException {
-    //
-    //        IIntervalJoinCheckerFactory mjcf = getIntervalJoinCheckerFactory(fi, intervalPartitions.getRangeMap());
-    //        op.setPhysicalOperator(new IntervalForwardScanJoinPOperator(op.getJoinKind(),
-    //                AbstractJoinPOperator.JoinPartitioningType.BROADCAST, sideLeft, sideRight,
-    //                context.getPhysicalOptimizationConfig().getMaxFramesForJoin(), mjcf, intervalPartitions));
-    //    }
-
     protected static void setSortMergeIntervalJoinOp(AbstractBinaryJoinOperator op, FunctionIdentifier fi,
             List<LogicalVariable> sideLeft, List<LogicalVariable> sideRight, IOptimizationContext context,
             IntervalPartitions intervalPartitions) throws CompilationException {
-        //        RangeId leftRangeId = context.newRangeId();
-        //        RangeId rightRangeId = context.newRangeId();
-        //        insertRangeForward(op, LEFT, leftRangeId, ijea.getRangeMap(), context);
-        //        insertRangeForward(op, RIGHT, rightRangeId, ijea.getRangeMap(), context);
-
         IIntervalJoinCheckerFactory mjcf = getIntervalJoinCheckerFactory(fi, intervalPartitions.getRangeMap());
         op.setPhysicalOperator(new IntervalMergeJoinPOperator(op.getJoinKind(),
                 AbstractJoinPOperator.JoinPartitioningType.BROADCAST, sideLeft, sideRight,
@@ -164,18 +149,6 @@ public class IntervalJoinUtils {
             leftPartitioningType = PartitioningType.PARTIAL_BROADCAST_ORDERED_INTERSECT;
         } else if (fi.equals(BuiltinFunctions.INTERVAL_COVERED_BY)) {
             rightPartitioningType = PartitioningType.PARTIAL_BROADCAST_ORDERED_INTERSECT;
-        } else if (fi.equals(BuiltinFunctions.INTERVAL_STARTS)) {
-            //Not Implemented
-        } else if (fi.equals(BuiltinFunctions.INTERVAL_STARTED_BY)) {
-            //Not Implemented
-        } else if (fi.equals(BuiltinFunctions.INTERVAL_ENDS)) {
-            //Not Implemented
-        } else if (fi.equals(BuiltinFunctions.INTERVAL_ENDED_BY)) {
-            //Not Implemented
-        } else if (fi.equals(BuiltinFunctions.INTERVAL_MEETS)) {
-            //Not Implemented
-        } else if (fi.equals(BuiltinFunctions.INTERVAL_MET_BY)) {
-            //Not Implemented
         } else if (fi.equals(BuiltinFunctions.INTERVAL_BEFORE)) {
             leftPartitioningType = PartitioningType.PARTIAL_BROADCAST_ORDERED_FOLLOWING;
         } else if (fi.equals(BuiltinFunctions.INTERVAL_AFTER)) {

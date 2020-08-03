@@ -207,7 +207,6 @@ public class PropertiesUtil {
                     }
                 }
             }
-
             default: {
                 return (dlvd.getPartitioningType() == reqd.getPartitioningType());
             }
