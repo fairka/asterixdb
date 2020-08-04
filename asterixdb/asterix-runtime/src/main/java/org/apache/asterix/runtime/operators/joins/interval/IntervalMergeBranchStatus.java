@@ -20,9 +20,7 @@ package org.apache.asterix.runtime.operators.joins.interval;
 
 import java.io.Serializable;
 
-import org.apache.asterix.runtime.operators.joins.interval.Utils.IRunFileStreamStatus;
-
-public class IntervalMergeBranchStatus implements IRunFileStreamStatus, Serializable {
+public class IntervalMergeBranchStatus implements Serializable {
     private static final long serialVersionUID = 1L;
 
     public enum Stage {
@@ -72,22 +70,18 @@ public class IntervalMergeBranchStatus implements IRunFileStreamStatus, Serializ
         this.hasMore = false;
     }
 
-    @Override
     public boolean isRunFileWriting() {
         return runFileWriting;
     }
 
-    @Override
     public void setRunFileWriting(boolean runFileWriting) {
         this.runFileWriting = runFileWriting;
     }
 
-    @Override
     public boolean isRunFileReading() {
         return runFileReading;
     }
 
-    @Override
     public void setRunFileReading(boolean runFileReading) {
         this.runFileReading = runFileReading;
     }

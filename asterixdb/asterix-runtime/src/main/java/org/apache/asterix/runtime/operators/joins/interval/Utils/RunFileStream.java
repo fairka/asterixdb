@@ -19,8 +19,6 @@
 package org.apache.asterix.runtime.operators.joins.interval.Utils;
 
 import java.nio.ByteBuffer;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 
 import org.apache.commons.io.FileUtils;
 import org.apache.hyracks.api.comm.IFrame;
@@ -37,14 +35,11 @@ import org.apache.hyracks.dataflow.std.buffermanager.ITupleAccessor;
 
 public class RunFileStream {
 
-    private static final Logger LOGGER = Logger.getLogger(RunFileStream.class.getName());
-
     private final String key;
     private final IFrame runFileBuffer;
     private final IFrameTupleAppender runFileAppender;
     private RunFileWriter runFileWriter;
     private RunFileReader runFileReader;
-    private final IRunFileStreamStatus status;
     private FileReference runfile;
 
     private final IHyracksTaskContext ctx;
@@ -55,18 +50,19 @@ public class RunFileStream {
     private long totalTupleCount = 0;
     private long previousReadPointer;
 
+    private boolean reading = false;
+    private boolean writing = false;
+
     /**
      * The RunFileSream uses two frames to buffer read and write operations.
      *
      * @param ctx
      * @param key
-     * @param status
      * @throws HyracksDataException
      */
-    public RunFileStream(IHyracksTaskContext ctx, String key, IRunFileStreamStatus status) throws HyracksDataException {
+    public RunFileStream(IHyracksTaskContext ctx, String key) throws HyracksDataException {
         this.ctx = ctx;
         this.key = key;
-        this.status = status;
 
         // TODO make the stream only use one buffer.
         runFileBuffer = new VSizeFrame(ctx);
@@ -100,16 +96,11 @@ public class RunFileStream {
 
         runFileWriter = new RunFileWriter(runfile, ctx.getIoManager());
         runFileWriter.open();
-        if (LOGGER.isLoggable(Level.FINE)) {
-            LOGGER.fine("A new run file has been started (key: " + key + ", number: " + runFileCounter + ", file: "
-                    + runfile + ").");
-        }
-
         totalTupleCount = 0;
     }
 
     public void startRunFileWriting() throws HyracksDataException {
-        status.setRunFileWriting(true);
+        writing = true;
         runFileBuffer.reset();
     }
 
@@ -135,14 +126,12 @@ public class RunFileStream {
         if (runFileReader != null) {
             runFileReader.close();
         }
-        status.setRunFileReading(true);
-
+        reading = true;
         // Create reader
         runFileReader = runFileWriter.createReader();
         runFileReader.open();
         runFileReader.seek(startOffset);
         previousReadPointer = 0;
-
         // Load first frame
         loadNextBuffer(accessor);
     }
@@ -160,8 +149,7 @@ public class RunFileStream {
     }
 
     public void flushRunFile() throws HyracksDataException {
-        status.setRunFileWriting(false);
-
+        writing = false;
         // Flush buffer.
         if (runFileAppender.getTupleCount() > 0) {
             runFileAppender.write(runFileWriter, true);
@@ -171,7 +159,7 @@ public class RunFileStream {
     }
 
     public void closeRunFileReading() throws HyracksDataException {
-        status.setRunFileReading(false);
+        reading = false;
         runFileReader.close();
         previousReadPointer = -1;
     }
@@ -192,11 +180,11 @@ public class RunFileStream {
     }
 
     public boolean isReading() {
-        return status.isRunFileReading();
+        return reading;
     }
 
     public boolean isWriting() {
-        return status.isRunFileWriting();
+        return writing;
     }
 
     public long getReadPointer() {

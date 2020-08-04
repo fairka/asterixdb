@@ -20,7 +20,6 @@ package org.apache.asterix.algebra.operators.physical;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.logging.Logger;
 
 import org.apache.asterix.optimizer.rules.util.IntervalPartitions;
 import org.apache.asterix.runtime.operators.joins.interval.IntervalMergeJoinOperatorDescriptor;
@@ -62,7 +61,6 @@ public class IntervalMergeJoinPOperator extends AbstractJoinPOperator {
     protected final IntervalPartitions intervalPartitions;
 
     private final int memSizeInFrames;
-    private static final Logger LOGGER = Logger.getLogger(IntervalMergeJoinPOperator.class.getName());
 
     public IntervalMergeJoinPOperator(JoinKind kind, JoinPartitioningType partitioningType,
             List<LogicalVariable> sideLeftOfEqualities, List<LogicalVariable> sideRightOfEqualities,
@@ -73,11 +71,6 @@ public class IntervalMergeJoinPOperator extends AbstractJoinPOperator {
         this.mjcf = mjcf;
         this.intervalPartitions = intervalPartitions;
         this.memSizeInFrames = memSizeInFrames;
-
-        LOGGER.fine("IntervalForwardScanJoinPOperator constructed with: JoinKind=" + kind + ", JoinPartitioningType="
-                + partitioningType + ", List<LogicalVariable>=" + sideLeftOfEqualities + ", List<LogicalVariable>="
-                + sideRightOfEqualities + ", int memSizeInFrames=" + memSizeInFrames
-                + ", IMergeJoinCheckerFactory mjcf=" + mjcf + ".");
     }
 
     public IIntervalJoinCheckerFactory getIntervalMergeJoinCheckerFactory() {

@@ -68,19 +68,19 @@ public class IntervalMergeJoinOperatorDescriptor extends AbstractOperatorDescrip
 
     @Override
     public void contributeActivities(IActivityGraphBuilder builder) {
-        ActivityId leftAid = new ActivityId(odId, JOIN_BUILD_ACTIVITY_ID);
-        ActivityId rightAid = new ActivityId(odId, JOIN_PROBE_ACTIVITY_ID);
+        ActivityId buildAid = new ActivityId(odId, JOIN_BUILD_ACTIVITY_ID);
+        ActivityId probeAid = new ActivityId(odId, JOIN_PROBE_ACTIVITY_ID);
 
-        IActivity leftAN = new JoinProbeActivityNode(rightAid);
-        IActivity rightAN = new JoinBuildActivityNode(leftAid, rightAid);
+        IActivity probeAN = new JoinProbeActivityNode(probeAid);
+        IActivity buildAN = new JoinBuildActivityNode(buildAid, probeAid);
 
-        builder.addActivity(this, rightAN);
-        builder.addSourceEdge(1, rightAN, 0);
+        builder.addActivity(this, buildAN);
+        builder.addSourceEdge(0, buildAN, 0);
 
-        builder.addActivity(this, leftAN);
-        builder.addSourceEdge(0, leftAN, 0);
-        builder.addTargetEdge(0, leftAN, 0);
-        builder.addBlockingEdge(rightAN, leftAN);
+        builder.addActivity(this, probeAN);
+        builder.addSourceEdge(1, probeAN, 0);
+        builder.addTargetEdge(0, probeAN, 0);
+        builder.addBlockingEdge(buildAN, probeAN);
     }
 
     public static class JoinCacheTaskState extends AbstractStateObject {

@@ -20,7 +20,6 @@ package org.apache.asterix.optimizer.rules.util;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.logging.Logger;
 
 import org.apache.asterix.common.annotations.RangeAnnotation;
 import org.apache.asterix.common.exceptions.CompilationException;
@@ -40,8 +39,6 @@ public class AsterixJoinUtils {
 
     private static final int LEFT = 0;
     private static final int RIGHT = 1;
-
-    private static final Logger LOGGER = Logger.getLogger(AsterixJoinUtils.class.getName());
 
     private AsterixJoinUtils() {
     }
