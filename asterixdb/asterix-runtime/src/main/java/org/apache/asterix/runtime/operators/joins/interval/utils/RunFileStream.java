@@ -16,7 +16,7 @@
  * specific language governing permissions and limitations
  * under the License.
  */
-package org.apache.asterix.runtime.operators.joins.interval.Utils;
+package org.apache.asterix.runtime.operators.joins.interval.utils;
 
 import java.nio.ByteBuffer;
 
@@ -141,7 +141,6 @@ public class RunFileStream {
         if (runFileReader.nextFrame(runFileBuffer)) {
             previousReadPointer = tempFrame;
             accessor.reset(runFileBuffer.getBuffer());
-            accessor.next();
             readCount++;
             return true;
         }

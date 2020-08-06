@@ -16,21 +16,30 @@
  * specific language governing permissions and limitations
  * under the License.
  */
-package org.apache.asterix.runtime.operators.joins.interval.Utils;
 
-import org.apache.asterix.om.pointables.nonvisitor.AIntervalPointable;
-import org.apache.hyracks.api.exceptions.HyracksDataException;
+package org.apache.asterix.runtime.operators.joins.interval.utils;
 
-public class CoversIntervalJoinChecker extends AbstractIntervalJoinChecker {
-    private static final long serialVersionUID = 1L;
+import org.apache.hyracks.api.comm.IFrameTupleAccessor;
+import org.apache.hyracks.api.dataflow.value.RecordDescriptor;
+import org.apache.hyracks.dataflow.common.comm.io.FrameTupleAccessor;
+import org.apache.hyracks.dataflow.std.buffermanager.AbstractTuplePointerAccessor;
+import org.apache.hyracks.dataflow.std.structures.TuplePointer;
 
-    public CoversIntervalJoinChecker(int[] keysLeft, int[] keysRight) {
-        super(keysLeft[0], keysRight[0]);
+public class TuplePointerAccessor extends AbstractTuplePointerAccessor {
+
+    FrameTupleAccessor accessor;
+
+    public TuplePointerAccessor(RecordDescriptor recordDescriptor) {
+        accessor = new FrameTupleAccessor(recordDescriptor);
     }
 
     @Override
-    public boolean compareInterval(AIntervalPointable ipLeft, AIntervalPointable ipRight) throws HyracksDataException {
-        return il.covers(ipLeft, ipRight);
+    protected IFrameTupleAccessor getInnerAccessor() {
+        return accessor;
+    }
+
+    @Override
+    protected void resetInnerAccessor(TuplePointer tuplePointer) {
     }
 
 }

@@ -16,21 +16,22 @@
  * specific language governing permissions and limitations
  * under the License.
  */
-package org.apache.asterix.runtime.operators.joins.interval.Utils;
+package org.apache.asterix.runtime.operators.joins.interval.utils;
 
-import org.apache.asterix.om.pointables.nonvisitor.AIntervalPointable;
-import org.apache.hyracks.api.exceptions.HyracksDataException;
+import org.apache.hyracks.api.context.IHyracksTaskContext;
 
-public class OverlapsIntervalJoinChecker extends AbstractIntervalJoinChecker {
+public class BeforeIntervalJoinCheckerFactory implements IIntervalJoinCheckerFactory {
     private static final long serialVersionUID = 1L;
 
-    public OverlapsIntervalJoinChecker(int[] keysLeft, int[] keysRight) {
-        super(keysLeft[0], keysRight[0]);
+    @Override
+    public IIntervalJoinChecker createIntervalMergeJoinChecker(int[] keys0, int[] keys1, IHyracksTaskContext ctx,
+            int nPartitions) {
+        return new BeforeIntervalJoinChecker(keys0, keys1);
     }
 
     @Override
-    public boolean compareInterval(AIntervalPointable ipLeft, AIntervalPointable ipRight) throws HyracksDataException {
-        return il.overlaps(ipLeft, ipRight);
+    public IIntervalJoinChecker createIntervalInverseMergeJoinChecker(int[] keys0, int[] keys1, IHyracksTaskContext ctx,
+            int nPartitions) {
+        return new AfterIntervalJoinChecker(keys0, keys1);
     }
-
 }

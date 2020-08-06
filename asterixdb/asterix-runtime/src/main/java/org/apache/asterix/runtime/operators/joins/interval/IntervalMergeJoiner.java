@@ -22,10 +22,10 @@ import java.nio.ByteBuffer;
 import java.util.Iterator;
 import java.util.LinkedList;
 
-import org.apache.asterix.runtime.operators.joins.interval.Utils.IIntervalJoinChecker;
-import org.apache.asterix.runtime.operators.joins.interval.Utils.IntervalSideTuple;
-import org.apache.asterix.runtime.operators.joins.interval.Utils.RunFilePointer;
-import org.apache.asterix.runtime.operators.joins.interval.Utils.RunFileStream;
+import org.apache.asterix.runtime.operators.joins.interval.utils.IIntervalJoinChecker;
+import org.apache.asterix.runtime.operators.joins.interval.utils.IntervalSideTuple;
+import org.apache.asterix.runtime.operators.joins.interval.utils.RunFilePointer;
+import org.apache.asterix.runtime.operators.joins.interval.utils.RunFileStream;
 import org.apache.hyracks.api.comm.IFrame;
 import org.apache.hyracks.api.comm.IFrameTupleAccessor;
 import org.apache.hyracks.api.comm.IFrameWriter;
@@ -94,9 +94,8 @@ public class IntervalMergeJoiner {
     protected long[] frameCounts = { 0, 0 };
     protected long[] tupleCounts = { 0, 0 };
 
-    public IntervalMergeJoiner(IHyracksTaskContext ctx, int memorySize, IntervalMergeStatus status,
-            IIntervalJoinChecker mjc, int buildKeys, int probeKeys, RecordDescriptor buildRd, RecordDescriptor probeRd)
-            throws HyracksDataException {
+    public IntervalMergeJoiner(IHyracksTaskContext ctx, int memorySize, IIntervalJoinChecker mjc, int buildKeys,
+            int probeKeys, RecordDescriptor buildRd, RecordDescriptor probeRd) throws HyracksDataException {
         this.mjc = mjc;
 
         // Memory (right buffer)
@@ -221,14 +220,14 @@ public class IntervalMergeJoiner {
         // append to memory
         if (mjc.checkToSaveInMemory(inputAccessor[BUILD_PARTITION], inputAccessor[PROBE_PARTITION])) {
             if (!addToMemory(inputAccessor[PROBE_PARTITION])) {
-                unfreezeAndContinue(writer, inputAccessor[BUILD_PARTITION]);
+                unfreezeAndClearMemory(writer, inputAccessor[BUILD_PARTITION]);
                 return;
             }
         }
         inputAccessor[PROBE_PARTITION].next();
     }
 
-    private void unfreezeAndContinue(IFrameWriter writer, ITupleAccessor accessor) throws HyracksDataException {
+    private void unfreezeAndClearMemory(IFrameWriter writer, ITupleAccessor accessor) throws HyracksDataException {
         runFilePointer.reset(runFileStream.getReadPointer(), inputAccessor[BUILD_PARTITION].getTupleId());
         TupleStatus buildTs = loadBuildTuple();
         while (buildTs.isLoaded() && memoryHasTuples()) {

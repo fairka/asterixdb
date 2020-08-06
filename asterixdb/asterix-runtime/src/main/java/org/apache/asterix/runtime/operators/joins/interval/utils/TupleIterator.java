@@ -16,37 +16,51 @@
  * specific language governing permissions and limitations
  * under the License.
  */
-
-package org.apache.hyracks.dataflow.std.buffermanager;
+package org.apache.asterix.runtime.operators.joins.interval.utils;
 
 import java.nio.ByteBuffer;
-import java.util.List;
 
 import org.apache.hyracks.api.comm.IFrameTupleAccessor;
 import org.apache.hyracks.api.dataflow.value.RecordDescriptor;
+import org.apache.hyracks.api.exceptions.HyracksDataException;
 import org.apache.hyracks.dataflow.common.comm.io.FrameTupleAccessor;
-import org.apache.hyracks.dataflow.std.structures.TuplePointer;
 
-/**
- * tuple accessor class for a frame in a frame list using a tuple pointer.
- */
-public class TupleInFrameListAccessor extends AbstractTuplePointerAccessor {
+public class TupleIterator {
+    public static final int UNSET = -2;
+    public static final int INITIALIZED = -1;
+    private int tupleId = UNSET;
+    private IFrameTupleAccessor accessor;
 
-    private IFrameTupleAccessor bufferAccessor;
-    private List<ByteBuffer> bufferFrames;
-
-    public TupleInFrameListAccessor(RecordDescriptor rd, List<ByteBuffer> bufferFrames) {
-        bufferAccessor = new FrameTupleAccessor(rd);
-        this.bufferFrames = bufferFrames;
+    public TupleIterator(RecordDescriptor recordDescriptor) throws HyracksDataException {
+        accessor = new FrameTupleAccessor(recordDescriptor);
     }
 
-    @Override
-    protected IFrameTupleAccessor getInnerAccessor() {
-        return bufferAccessor;
+    public int getTupleId() {
+        return tupleId;
     }
 
-    @Override
-    protected void resetInnerAccessor(TuplePointer tuplePointer) {
-        bufferAccessor.reset(bufferFrames.get(tuplePointer.getFrameIndex()));
+    public void setTupleId(int tupleId) {
+        this.tupleId = tupleId;
+    }
+
+    public void next() {
+        ++tupleId;
+    }
+
+    public boolean exists() {
+        return INITIALIZED < tupleId && tupleId < accessor.getTupleCount();
+    }
+
+    public IFrameTupleAccessor getAccessor() {
+        return accessor;
+    }
+
+    public void reset(ByteBuffer byteBuffer) {
+        accessor.reset(byteBuffer);
+        tupleId = INITIALIZED;
+    }
+
+    public void reset() {
+        tupleId = INITIALIZED;
     }
 }

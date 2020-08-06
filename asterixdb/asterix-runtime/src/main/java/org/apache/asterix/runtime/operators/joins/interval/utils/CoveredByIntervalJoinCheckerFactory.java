@@ -16,7 +16,7 @@
  * specific language governing permissions and limitations
  * under the License.
  */
-package org.apache.asterix.runtime.operators.joins.interval.Utils;
+package org.apache.asterix.runtime.operators.joins.interval.utils;
 
 import org.apache.hyracks.api.context.IHyracksTaskContext;
 

@@ -16,7 +16,7 @@
  * specific language governing permissions and limitations
  * under the License.
  */
-package org.apache.asterix.runtime.operators.joins.interval.Utils;
+package org.apache.asterix.runtime.operators.joins.interval.utils;
 
 import org.apache.asterix.om.pointables.nonvisitor.AIntervalPointable;
 import org.apache.hyracks.api.comm.IFrameTupleAccessor;
@@ -38,7 +38,7 @@ public class BeforeIntervalJoinChecker extends AbstractIntervalJoinChecker {
         ipLeft.getStart(startLeft);
         ipRight.getStart(startRight);
         return ch.compare(ipLeft.getByteArray(), ipLeft.getStartOffset(), ipLeft.getLength(), ipRight.getByteArray(),
-                ipRight.getStartOffset(), ipRight.getLength()) < 0;
+                ipRight.getStartOffset(), ipRight.getLength()) <= 0;
     }
 
     @Override

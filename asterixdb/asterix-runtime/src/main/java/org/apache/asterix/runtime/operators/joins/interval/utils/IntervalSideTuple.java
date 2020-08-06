@@ -17,7 +17,7 @@
  * under the License.
  */
 
-package org.apache.asterix.runtime.operators.joins.interval.Utils;
+package org.apache.asterix.runtime.operators.joins.interval.utils;
 
 import org.apache.asterix.dataflow.data.nontagged.serde.AIntervalSerializerDeserializer;
 import org.apache.hyracks.api.exceptions.HyracksDataException;
@@ -97,78 +97,3 @@ public class IntervalSideTuple {
         return start <= ist.start;
     }
 }
-
-//    // Tuple access
-//    int fieldId;
-//    ITupleAccessor accessor;
-//    int tupleIndex;
-//    int frameIndex = -1;
-//
-//    // Join details
-//    final IIntervalJoinChecker imjc;
-//
-//    // Interval details
-//    long start;
-//    long end;
-//
-//    public IntervalSideTuple(IIntervalJoinChecker imjc, ITupleAccessor accessor, int fieldId) {
-//        this.imjc = imjc;
-//        this.accessor = accessor;
-//        this.fieldId = fieldId;
-//    }
-//
-//    public void setTuple(TuplePointer tp) {
-//        if (frameIndex != tp.getFrameIndex()) {
-//            accessor.reset(tp);
-//            frameIndex = tp.getFrameIndex();
-//        }
-//        tupleIndex = tp.getTupleIndex();
-//        int offset = IntervalJoinUtil.getIntervalOffset(accessor, tupleIndex, fieldId);
-//        start = AIntervalSerializerDeserializer.getIntervalStart(accessor.getBuffer().array(), offset);
-//        end = AIntervalSerializerDeserializer.getIntervalEnd(accessor.getBuffer().array(), offset);
-//    }
-//
-//    public void loadTuple() {
-//        tupleIndex = accessor.getTupleId();
-//        int offset = IntervalJoinUtil.getIntervalOffset(accessor, tupleIndex, fieldId);
-//        start = AIntervalSerializerDeserializer.getIntervalStart(accessor.getBuffer().array(), offset);
-//        end = AIntervalSerializerDeserializer.getIntervalEnd(accessor.getBuffer().array(), offset);
-//    }
-//
-//    public int getTupleIndex() {
-//        return tupleIndex;
-//    }
-//
-//    public ITupleAccessor getAccessor() {
-//        return accessor;
-//    }
-//
-//    public long getStart() {
-//        return start;
-//    }
-//
-//    public long getEnd() {
-//        return end;
-//    }
-//
-//    public boolean hasMoreMatches(IntervalSideTuple ist) throws HyracksDataException {
-//        return imjc.checkIfMoreMatches(accessor, tupleIndex, ist.accessor, ist.tupleIndex);
-//    }
-//
-//    public boolean compareJoin(IntervalSideTuple ist) throws HyracksDataException {
-//        return imjc.checkToSaveInResult(accessor, tupleIndex, ist.accessor, ist.tupleIndex, false);
-//    }
-//
-//    public boolean removeFromMemory(IntervalSideTuple ist) throws HyracksDataException {
-//        return imjc.checkToRemoveInMemory(accessor, tupleIndex, ist.accessor, ist.tupleIndex);
-//    }
-//
-//    public boolean checkForEarlyExit(IntervalSideTuple ist) throws HyracksDataException {
-//        return imjc.checkForEarlyExit(accessor, tupleIndex, ist.accessor, ist.tupleIndex);
-//    }
-//
-//    public boolean startsBefore(IntervalSideTuple ist) {
-//        return start <= ist.start;
-//    }
-//
-//}

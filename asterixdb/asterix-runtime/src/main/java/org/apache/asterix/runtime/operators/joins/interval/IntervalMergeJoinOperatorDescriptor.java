@@ -21,8 +21,8 @@ package org.apache.asterix.runtime.operators.joins.interval;
 
 import java.nio.ByteBuffer;
 
-import org.apache.asterix.runtime.operators.joins.interval.Utils.IIntervalJoinChecker;
-import org.apache.asterix.runtime.operators.joins.interval.Utils.IIntervalJoinCheckerFactory;
+import org.apache.asterix.runtime.operators.joins.interval.utils.IIntervalJoinChecker;
+import org.apache.asterix.runtime.operators.joins.interval.utils.IIntervalJoinCheckerFactory;
 import org.apache.hyracks.api.context.IHyracksTaskContext;
 import org.apache.hyracks.api.dataflow.ActivityId;
 import org.apache.hyracks.api.dataflow.IActivity;
@@ -115,12 +115,10 @@ public class IntervalMergeJoinOperatorDescriptor extends AbstractOperatorDescrip
                     state = new JoinCacheTaskState(ctx.getJobletContext().getJobId(),
                             new TaskId(getActivityId(), partition));
 
-                    IntervalMergeStatus status = new IntervalMergeStatus();
                     IIntervalJoinChecker imjc =
                             imjcf.createIntervalMergeJoinChecker(leftKeys, rightKeys, ctx, nPartitions);
 
-                    state.joiner =
-                            new IntervalMergeJoiner(ctx, memoryForJoin, status, imjc, buildKey, probeKey, rd0, rd1);
+                    state.joiner = new IntervalMergeJoiner(ctx, memoryForJoin, imjc, buildKey, probeKey, rd0, rd1);
                 }
 
                 @Override

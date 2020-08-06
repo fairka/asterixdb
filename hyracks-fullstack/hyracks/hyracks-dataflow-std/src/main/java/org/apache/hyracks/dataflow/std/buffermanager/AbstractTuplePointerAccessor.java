@@ -28,9 +28,9 @@ public abstract class AbstractTuplePointerAccessor implements ITuplePointerAcces
 
     protected int tid = -1;
 
-    abstract IFrameTupleAccessor getInnerAccessor();
+    protected abstract IFrameTupleAccessor getInnerAccessor();
 
-    abstract void resetInnerAccessor(TuplePointer tuplePointer);
+    protected abstract void resetInnerAccessor(TuplePointer tuplePointer);
 
     @Override
     public void reset(TuplePointer tuplePointer) {
