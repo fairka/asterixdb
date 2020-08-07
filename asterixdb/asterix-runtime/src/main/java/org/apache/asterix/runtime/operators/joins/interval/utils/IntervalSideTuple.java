@@ -21,7 +21,6 @@ package org.apache.asterix.runtime.operators.joins.interval.utils;
 
 import org.apache.asterix.dataflow.data.nontagged.serde.AIntervalSerializerDeserializer;
 import org.apache.hyracks.api.exceptions.HyracksDataException;
-import org.apache.hyracks.dataflow.std.buffermanager.ITupleAccessor;
 import org.apache.hyracks.dataflow.std.structures.TuplePointer;
 
 public class IntervalSideTuple {

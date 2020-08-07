@@ -23,9 +23,12 @@ import java.util.Iterator;
 import java.util.LinkedList;
 
 import org.apache.asterix.runtime.operators.joins.interval.utils.IIntervalJoinChecker;
+import org.apache.asterix.runtime.operators.joins.interval.utils.ITupleAccessor;
 import org.apache.asterix.runtime.operators.joins.interval.utils.IntervalSideTuple;
+import org.apache.asterix.runtime.operators.joins.interval.utils.IntervalVariableDeletableTupleMemoryManager;
 import org.apache.asterix.runtime.operators.joins.interval.utils.RunFilePointer;
 import org.apache.asterix.runtime.operators.joins.interval.utils.RunFileStream;
+import org.apache.asterix.runtime.operators.joins.interval.utils.TupleAccessor;
 import org.apache.hyracks.api.comm.IFrame;
 import org.apache.hyracks.api.comm.IFrameTupleAccessor;
 import org.apache.hyracks.api.comm.IFrameWriter;
@@ -38,9 +41,6 @@ import org.apache.hyracks.dataflow.common.comm.util.FrameUtils;
 import org.apache.hyracks.dataflow.std.buffermanager.DeallocatableFramePool;
 import org.apache.hyracks.dataflow.std.buffermanager.IDeallocatableFramePool;
 import org.apache.hyracks.dataflow.std.buffermanager.IDeletableTupleBufferManager;
-import org.apache.hyracks.dataflow.std.buffermanager.ITupleAccessor;
-import org.apache.hyracks.dataflow.std.buffermanager.TupleAccessor;
-import org.apache.hyracks.dataflow.std.buffermanager.VariableDeletableTupleMemoryManager;
 import org.apache.hyracks.dataflow.std.structures.TuplePointer;
 
 /**
@@ -113,8 +113,8 @@ public class IntervalMergeJoiner {
         inputBuffer[PROBE_PARTITION] = new VSizeFrame(ctx);
 
         framePool = new DeallocatableFramePool(ctx, (memorySize) * ctx.getInitialFrameSize());
-        bufferManager = new VariableDeletableTupleMemoryManager(framePool, probeRd);
-        memoryAccessor = bufferManager.createTupleAccessor();
+        bufferManager = new IntervalVariableDeletableTupleMemoryManager(framePool, probeRd);
+        memoryAccessor = ((IntervalVariableDeletableTupleMemoryManager) bufferManager).createTupleAccessor();
 
         // Run File and frame cache (left buffer)
         runFileStream = new RunFileStream(ctx, "ismj-left");

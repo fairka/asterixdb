@@ -22,7 +22,6 @@ import org.apache.asterix.dataflow.data.nontagged.serde.AIntervalSerializerDeser
 import org.apache.asterix.om.pointables.nonvisitor.AIntervalPointable;
 import org.apache.hyracks.api.comm.IFrameTupleAccessor;
 import org.apache.hyracks.data.std.primitive.TaggedValuePointable;
-import org.apache.hyracks.dataflow.std.buffermanager.ITupleAccessor;
 
 public class IntervalJoinUtil {
 

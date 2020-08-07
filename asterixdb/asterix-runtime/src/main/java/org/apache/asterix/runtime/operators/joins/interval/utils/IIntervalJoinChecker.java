@@ -23,7 +23,6 @@ import java.io.Serializable;
 import org.apache.asterix.om.pointables.nonvisitor.AIntervalPointable;
 import org.apache.hyracks.api.comm.IFrameTupleAccessor;
 import org.apache.hyracks.api.exceptions.HyracksDataException;
-import org.apache.hyracks.dataflow.std.buffermanager.ITupleAccessor;
 
 public interface IIntervalJoinChecker extends Serializable {
 

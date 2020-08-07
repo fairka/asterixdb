@@ -19,27 +19,52 @@
 
 package org.apache.asterix.runtime.operators.joins.interval.utils;
 
+import java.nio.ByteBuffer;
+
 import org.apache.hyracks.api.comm.IFrameTupleAccessor;
-import org.apache.hyracks.api.dataflow.value.RecordDescriptor;
-import org.apache.hyracks.dataflow.common.comm.io.FrameTupleAccessor;
-import org.apache.hyracks.dataflow.std.buffermanager.AbstractTuplePointerAccessor;
 import org.apache.hyracks.dataflow.std.structures.TuplePointer;
 
-public class TuplePointerAccessor extends AbstractTuplePointerAccessor {
+// TODO determine correct interface.
+public interface ITupleAccessor extends IFrameTupleAccessor {
+    int getTupleStartOffset();
 
-    FrameTupleAccessor accessor;
+    int getTupleEndOffset();
 
-    public TuplePointerAccessor(RecordDescriptor recordDescriptor) {
-        accessor = new FrameTupleAccessor(recordDescriptor);
-    }
+    int getTupleLength();
+
+    int getAbsFieldStartOffset(int fieldId);
+
+    int getFieldLength(int fieldId);
 
     @Override
-    protected IFrameTupleAccessor getInnerAccessor() {
-        return accessor;
-    }
+    int getFieldCount();
 
     @Override
-    protected void resetInnerAccessor(TuplePointer tuplePointer) {
-    }
+    int getFieldSlotsLength();
 
+    int getFieldEndOffset(int fieldId);
+
+    int getFieldStartOffset(int fieldId);
+
+    void reset(TuplePointer tuplePointer);
+
+    @Override
+    void reset(ByteBuffer buffer);
+
+    int getTupleId();
+
+    void setTupleId(int tupleId);
+
+    void getTuplePointer(TuplePointer tp);
+
+    /**
+     * Only reset the iterator.
+     */
+    void reset();
+
+    boolean hasNext();
+
+    void next();
+
+    boolean exists();
 }

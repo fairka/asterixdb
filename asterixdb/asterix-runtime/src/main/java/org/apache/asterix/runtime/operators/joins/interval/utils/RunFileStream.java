@@ -31,7 +31,6 @@ import org.apache.hyracks.api.io.FileReference;
 import org.apache.hyracks.dataflow.common.comm.io.FrameTupleAppender;
 import org.apache.hyracks.dataflow.common.io.RunFileReader;
 import org.apache.hyracks.dataflow.common.io.RunFileWriter;
-import org.apache.hyracks.dataflow.std.buffermanager.ITupleAccessor;
 
 public class RunFileStream {
 
@@ -141,6 +140,7 @@ public class RunFileStream {
         if (runFileReader.nextFrame(runFileBuffer)) {
             previousReadPointer = tempFrame;
             accessor.reset(runFileBuffer.getBuffer());
+            accessor.next();
             readCount++;
             return true;
         }

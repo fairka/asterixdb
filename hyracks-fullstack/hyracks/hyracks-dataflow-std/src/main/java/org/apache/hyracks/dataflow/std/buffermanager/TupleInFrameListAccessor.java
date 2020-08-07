@@ -41,12 +41,12 @@ public class TupleInFrameListAccessor extends AbstractTuplePointerAccessor {
     }
 
     @Override
-    protected IFrameTupleAccessor getInnerAccessor() {
+    IFrameTupleAccessor getInnerAccessor() {
         return bufferAccessor;
     }
 
     @Override
-    protected void resetInnerAccessor(TuplePointer tuplePointer) {
+    void resetInnerAccessor(TuplePointer tuplePointer) {
         bufferAccessor.reset(bufferFrames.get(tuplePointer.getFrameIndex()));
     }
 }

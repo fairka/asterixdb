@@ -21,7 +21,6 @@ package org.apache.asterix.runtime.operators.joins.interval.utils;
 import org.apache.asterix.om.pointables.nonvisitor.AIntervalPointable;
 import org.apache.hyracks.api.comm.IFrameTupleAccessor;
 import org.apache.hyracks.api.exceptions.HyracksDataException;
-import org.apache.hyracks.dataflow.std.buffermanager.ITupleAccessor;
 
 public class AfterIntervalJoinChecker extends AbstractIntervalJoinChecker {
     private static final long serialVersionUID = 1L;

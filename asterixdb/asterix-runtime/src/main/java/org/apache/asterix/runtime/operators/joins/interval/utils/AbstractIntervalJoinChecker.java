@@ -28,7 +28,6 @@ import org.apache.hyracks.api.exceptions.HyracksDataException;
 import org.apache.hyracks.data.std.api.IPointable;
 import org.apache.hyracks.data.std.primitive.TaggedValuePointable;
 import org.apache.hyracks.data.std.primitive.VoidPointable;
-import org.apache.hyracks.dataflow.std.buffermanager.ITupleAccessor;
 
 public abstract class AbstractIntervalJoinChecker implements IIntervalJoinChecker {
 

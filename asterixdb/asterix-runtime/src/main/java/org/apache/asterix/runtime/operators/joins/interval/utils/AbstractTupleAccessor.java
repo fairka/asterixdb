@@ -17,7 +17,7 @@
  * under the License.
  */
 
-package org.apache.hyracks.dataflow.std.buffermanager;
+package org.apache.asterix.runtime.operators.joins.interval.utils;
 
 import java.nio.ByteBuffer;
 
@@ -32,13 +32,13 @@ public abstract class AbstractTupleAccessor implements ITupleAccessor {
 
     protected int frameId;
 
-    abstract IFrameTupleAccessor getInnerAccessor();
+    protected abstract IFrameTupleAccessor getInnerAccessor();
 
-    abstract void resetInnerAccessor(int frameId);
+    protected abstract void resetInnerAccessor(int frameId);
 
-    abstract void resetInnerAccessor(TuplePointer tp);
+    protected abstract void resetInnerAccessor(TuplePointer tp);
 
-    abstract int getFrameCount();
+    protected abstract int getFrameCount();
 
     @Override
     public int getTupleStartOffset() {
