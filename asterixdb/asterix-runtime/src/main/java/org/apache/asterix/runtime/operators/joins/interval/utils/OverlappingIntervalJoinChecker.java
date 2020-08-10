@@ -75,7 +75,7 @@ public class OverlappingIntervalJoinChecker extends AbstractIntervalJoinChecker 
             IntervalJoinUtil.getIntervalPointable(accessorRight, rightTupleIndex, idRight, ipRight);
         }
         if (ipLeft.getStartValue() < partitionStart && ipRight.getStartValue() < partitionStart) {
-            // Both tuples will match in a different partition.
+            // These tuples match in a different partition
             return false;
         }
         return il.overlapping(ipLeft, ipRight);
