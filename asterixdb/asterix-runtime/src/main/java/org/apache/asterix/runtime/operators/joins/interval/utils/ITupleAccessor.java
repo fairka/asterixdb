@@ -24,7 +24,6 @@ import java.nio.ByteBuffer;
 import org.apache.hyracks.api.comm.IFrameTupleAccessor;
 import org.apache.hyracks.dataflow.std.structures.TuplePointer;
 
-// TODO determine correct interface.
 public interface ITupleAccessor extends IFrameTupleAccessor {
     int getTupleStartOffset();
 

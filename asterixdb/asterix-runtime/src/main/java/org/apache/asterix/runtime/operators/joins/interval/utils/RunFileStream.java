@@ -54,6 +54,8 @@ public class RunFileStream {
 
     /**
      * The RunFileSream uses two frames to buffer read and write operations.
+     * WorkFlow: CreateRunFileWriter, Write information, close it, flush it,
+     * go to the next frame, and repeat.
      *
      * @param ctx
      * @param key

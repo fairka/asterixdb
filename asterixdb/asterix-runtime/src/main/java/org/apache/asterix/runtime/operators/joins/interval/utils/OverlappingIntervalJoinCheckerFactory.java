@@ -26,8 +26,6 @@ import org.apache.hyracks.api.context.IHyracksTaskContext;
 import org.apache.hyracks.api.exceptions.HyracksDataException;
 import org.apache.hyracks.dataflow.common.data.partition.range.RangeMap;
 
-//import org.apache.hyracks.dataflow.std.misc.RangeForwardOperatorDescriptor.RangeForwardTaskState;
-
 public class OverlappingIntervalJoinCheckerFactory implements IIntervalJoinCheckerFactory {
     private static final long serialVersionUID = 1L;
     private final RangeMap rangeMap;
@@ -41,7 +39,14 @@ public class OverlappingIntervalJoinCheckerFactory implements IIntervalJoinCheck
             int nPartitions) throws HyracksDataException {
         int fieldIndex = 0;
         int partition = ctx.getTaskAttemptId().getTaskId().getPartition();
-        int slot = rangeMap.getMinSlotFromPartition(partition, nPartitions);
+        //Calculate Partitions slot
+        int nRanges = rangeMap.getSplitCount() + 1;
+        double rangesPerPart = 1.0;
+        if (nRanges > nPartitions) {
+            rangesPerPart = ((double) nRanges) / nPartitions;
+        }
+        int slot = ((int) Math.ceil(partition * rangesPerPart) % nRanges) - 1;
+        //Find Partitions Start Value based on slot
         long partitionStart = Long.MIN_VALUE;
         if (slot >= 0) {
             switch (ATypeTag.VALUE_TYPE_MAPPING[rangeMap.getTag(fieldIndex, slot)]) {

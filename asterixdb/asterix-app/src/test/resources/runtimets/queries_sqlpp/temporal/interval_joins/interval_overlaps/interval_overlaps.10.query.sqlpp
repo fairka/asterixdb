@@ -19,7 +19,7 @@
 /*
  * Description      :   Check temporal join functionality for interval
  * Expected Result  :   Success
- * Date             :   29th June 2020
+ * Date             :   10th Aug, 2020
  */
 
 use TinyCollege;

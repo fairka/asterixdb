@@ -17,9 +17,11 @@
  * under the License.
  */
 /*
- * Description      :   Check temporal join functionality for interval
+ * Description      :   Check temporal join functionality for interval meets
  * Expected Result  :   Success
- * Date             :   21th Oct, 2019
+ * Date             :   10th Aug, 2019
+ * Note             :   Range hint is not used in meets because it is not implemented.
+ *                      This test will default to Hybrid Hash Join
  */
 
 drop dataverse TinyCollege if exists;

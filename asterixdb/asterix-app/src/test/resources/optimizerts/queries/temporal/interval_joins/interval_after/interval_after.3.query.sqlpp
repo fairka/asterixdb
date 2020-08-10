@@ -17,9 +17,9 @@
  * under the License.
  */
 /*
- * Description      :   Check temporal join functionality for interval
+ * Description      :   Check temporal join functionality for interval after
  * Expected Result  :   Success
- * Date             :   21th Oct, 2019
+ * Date             :   10th Aug, 2019
  */
 
 drop dataverse TinyCollege if exists;

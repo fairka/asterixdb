@@ -38,7 +38,7 @@ public class IntervalJoinUtil {
     }
 
     public static void getIntervalPointable(IFrameTupleAccessor accessor, int tupleId, int fieldId,
-            TaggedValuePointable tvp, AIntervalPointable ip) {
+            AIntervalPointable ip) {
         int start = getIntervalOffset(accessor, tupleId, fieldId);
         int length = accessor.getFieldLength(tupleId, fieldId) - 1;
         ip.set(accessor.getBuffer().array(), start, length);

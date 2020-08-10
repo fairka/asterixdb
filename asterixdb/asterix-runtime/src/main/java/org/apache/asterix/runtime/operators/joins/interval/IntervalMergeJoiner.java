@@ -98,7 +98,7 @@ public class IntervalMergeJoiner {
             int probeKeys, RecordDescriptor buildRd, RecordDescriptor probeRd) throws HyracksDataException {
         this.mjc = mjc;
 
-        // Memory (right buffer)
+        // Memory (probe buffer)
         if (memorySize < 1) {
             throw new HyracksDataException(
                     "MergeJoiner does not have enough memory (needs > 0, got " + memorySize + ").");
@@ -116,7 +116,7 @@ public class IntervalMergeJoiner {
         bufferManager = new IntervalVariableDeletableTupleMemoryManager(framePool, probeRd);
         memoryAccessor = ((IntervalVariableDeletableTupleMemoryManager) bufferManager).createTupleAccessor();
 
-        // Run File and frame cache (left buffer)
+        // Run File and frame cache (build buffer)
         runFileStream = new RunFileStream(ctx, "ismj-left");
         runFilePointer = new RunFilePointer();
         runFileStream.createRunFileWriting();
@@ -165,6 +165,7 @@ public class IntervalMergeJoiner {
 
     public void processProbeClose(IFrameWriter writer) throws HyracksDataException {
         resultAppender.write(writer, true);
+        runFileStream.close();
         runFileStream.removeRunFile();
     }
 

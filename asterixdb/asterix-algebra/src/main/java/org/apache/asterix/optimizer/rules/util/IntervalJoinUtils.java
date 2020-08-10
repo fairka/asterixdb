@@ -28,6 +28,8 @@ import java.util.Map;
 
 import org.apache.asterix.algebra.operators.physical.IntervalMergeJoinPOperator;
 import org.apache.asterix.common.annotations.RangeAnnotation;
+import org.apache.asterix.common.exceptions.CompilationException;
+import org.apache.asterix.common.exceptions.ErrorCode;
 import org.apache.asterix.lang.common.util.FunctionUtil;
 import org.apache.asterix.om.functions.BuiltinFunctions;
 import org.apache.asterix.runtime.operators.joins.interval.utils.AfterIntervalJoinCheckerFactory;
@@ -61,8 +63,6 @@ import org.apache.hyracks.algebricks.core.algebra.properties.IPartitioningProper
 import org.apache.hyracks.algebricks.core.algebra.properties.IntervalColumn;
 import org.apache.hyracks.dataflow.common.data.partition.range.RangeMap;
 
-import jdk.nashorn.internal.codegen.CompilationException;
-
 public class IntervalJoinUtils {
 
     private static final int LEFT = 0;
@@ -78,15 +78,9 @@ public class IntervalJoinUtils {
         INTERVAL_JOIN_CONDITIONS.put(BuiltinFunctions.INTERVAL_BEFORE, BuiltinFunctions.INTERVAL_AFTER);
         INTERVAL_JOIN_CONDITIONS.put(BuiltinFunctions.INTERVAL_COVERED_BY, BuiltinFunctions.INTERVAL_COVERS);
         INTERVAL_JOIN_CONDITIONS.put(BuiltinFunctions.INTERVAL_COVERS, BuiltinFunctions.INTERVAL_COVERED_BY);
-        INTERVAL_JOIN_CONDITIONS.put(BuiltinFunctions.INTERVAL_ENDED_BY, BuiltinFunctions.INTERVAL_ENDS);
-        INTERVAL_JOIN_CONDITIONS.put(BuiltinFunctions.INTERVAL_ENDS, BuiltinFunctions.INTERVAL_ENDED_BY);
-        INTERVAL_JOIN_CONDITIONS.put(BuiltinFunctions.INTERVAL_MEETS, BuiltinFunctions.INTERVAL_MET_BY);
-        INTERVAL_JOIN_CONDITIONS.put(BuiltinFunctions.INTERVAL_MET_BY, BuiltinFunctions.INTERVAL_MEETS);
         INTERVAL_JOIN_CONDITIONS.put(BuiltinFunctions.INTERVAL_OVERLAPPED_BY, BuiltinFunctions.INTERVAL_OVERLAPS);
         INTERVAL_JOIN_CONDITIONS.put(BuiltinFunctions.INTERVAL_OVERLAPPING, BuiltinFunctions.INTERVAL_OVERLAPPING);
         INTERVAL_JOIN_CONDITIONS.put(BuiltinFunctions.INTERVAL_OVERLAPS, BuiltinFunctions.INTERVAL_OVERLAPPED_BY);
-        INTERVAL_JOIN_CONDITIONS.put(BuiltinFunctions.INTERVAL_STARTED_BY, BuiltinFunctions.INTERVAL_STARTS);
-        INTERVAL_JOIN_CONDITIONS.put(BuiltinFunctions.INTERVAL_STARTS, BuiltinFunctions.INTERVAL_STARTED_BY);
     }
 
     protected static RangeAnnotation IntervalJoinRangeMapAnnotation(AbstractFunctionCallExpression fexp) {
@@ -153,6 +147,8 @@ public class IntervalJoinUtils {
             leftPartitioningType = PartitioningType.PARTIAL_BROADCAST_ORDERED_FOLLOWING;
         } else if (fi.equals(BuiltinFunctions.INTERVAL_AFTER)) {
             rightPartitioningType = PartitioningType.PARTIAL_BROADCAST_ORDERED_FOLLOWING;
+        } else {
+            throw new CompilationException(ErrorCode.COMPILATION_ILLEGAL_STATE);
         }
         return new IntervalPartitions(rangeMap, leftIC, rightIC, leftPartitioningType, rightPartitioningType);
     }
@@ -220,8 +216,10 @@ public class IntervalJoinUtils {
             mjcf = new BeforeIntervalJoinCheckerFactory();
         } else if (fi.equals(BuiltinFunctions.INTERVAL_AFTER)) {
             mjcf = new AfterIntervalJoinCheckerFactory();
-        } else {
+        } else if (fi.equals(BuiltinFunctions.INTERVAL_OVERLAPPING)) {
             mjcf = new OverlappingIntervalJoinCheckerFactory(rangeMap);
+        } else {
+            throw new CompilationException(ErrorCode.COMPILATION_ILLEGAL_STATE);
         }
         return mjcf;
     }
