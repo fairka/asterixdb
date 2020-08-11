@@ -19,6 +19,7 @@
 package org.apache.asterix.runtime.operators.joins.interval.utils;
 
 import org.apache.asterix.om.pointables.nonvisitor.AIntervalPointable;
+import org.apache.asterix.runtime.operators.joins.interval.utils.memory.IntervalJoinUtil;
 import org.apache.hyracks.api.comm.IFrameTupleAccessor;
 import org.apache.hyracks.api.exceptions.HyracksDataException;
 
@@ -30,14 +31,11 @@ public class AfterIntervalJoinChecker extends AbstractIntervalJoinChecker {
     }
 
     @Override
-    public boolean checkToSaveInMemory(ITupleAccessor accessorLeft, ITupleAccessor accessorRight)
-            throws HyracksDataException {
-        IntervalJoinUtil.getIntervalPointable(accessorLeft, idLeft, tvp, ipLeft);
-        IntervalJoinUtil.getIntervalPointable(accessorRight, idRight, tvp, ipRight);
-        ipLeft.getStart(startLeft);
-        ipRight.getStart(startRight);
-        return ch.compare(ipLeft.getByteArray(), ipLeft.getStartOffset(), ipLeft.getLength(), ipRight.getByteArray(),
-                ipRight.getStartOffset(), ipRight.getLength()) >= 0;
+    public boolean checkToSaveInMemory(IFrameTupleAccessor accessorLeft, int leftTupleID,
+            IFrameTupleAccessor accessorRight, int rightTupleID) {
+        long start0 = IntervalJoinUtil.getIntervalStart(accessorLeft, leftTupleID, idRight);
+        long start1 = IntervalJoinUtil.getIntervalStart(accessorRight, rightTupleID, idRight);
+        return start0 >= start1;
     }
 
     @Override
@@ -62,11 +60,4 @@ public class AfterIntervalJoinChecker extends AbstractIntervalJoinChecker {
             IFrameTupleAccessor accessorRight, int rightTupleIndex) {
         return true;
     }
-
-    @Override
-    public boolean checkToLoadNextRightTuple(IFrameTupleAccessor accessorLeft, int leftTupleIndex,
-            IFrameTupleAccessor accessorRight, int rightTupleIndex) {
-        return true;
-    }
-
 }

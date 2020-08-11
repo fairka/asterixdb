@@ -22,6 +22,7 @@ import org.apache.asterix.formats.nontagged.BinaryComparatorFactoryProvider;
 import org.apache.asterix.om.pointables.nonvisitor.AIntervalPointable;
 import org.apache.asterix.om.types.BuiltinType;
 import org.apache.asterix.runtime.evaluators.functions.temporal.IntervalLogic;
+import org.apache.asterix.runtime.operators.joins.interval.utils.memory.IntervalJoinUtil;
 import org.apache.hyracks.api.comm.IFrameTupleAccessor;
 import org.apache.hyracks.api.dataflow.value.IBinaryComparator;
 import org.apache.hyracks.api.exceptions.HyracksDataException;
@@ -50,26 +51,6 @@ public abstract class AbstractIntervalJoinChecker implements IIntervalJoinChecke
     public AbstractIntervalJoinChecker(int idLeft, int idRight) {
         this.idLeft = idLeft;
         this.idRight = idRight;
-    }
-
-    @Override
-    public boolean checkToSaveInMemory(ITupleAccessor accessorLeft, ITupleAccessor accessorRight)
-            throws HyracksDataException {
-        return checkToSaveInMemory(accessorLeft, accessorLeft.getTupleId(), accessorRight, accessorRight.getTupleId());
-    }
-
-    @Override
-    public boolean checkToLoadNextRightTuple(ITupleAccessor accessorLeft, ITupleAccessor accessorRight) {
-        return checkToLoadNextRightTuple(accessorLeft, accessorLeft.getTupleId(), accessorRight,
-                accessorRight.getTupleId());
-    }
-
-    @Override
-    public boolean checkToLoadNextRightTuple(IFrameTupleAccessor accessorLeft, int leftTupleIndex,
-            IFrameTupleAccessor accessorRight, int rightTupleIndex) {
-        long start1 = IntervalJoinUtil.getIntervalStart(accessorRight, rightTupleIndex, idRight);
-        long end0 = IntervalJoinUtil.getIntervalEnd(accessorLeft, leftTupleIndex, idLeft);
-        return end0 > start1;
     }
 
     /**

@@ -36,8 +36,6 @@ public interface IIntervalJoinChecker extends Serializable {
      * @return boolean
      * @throws HyracksDataException
      */
-    boolean checkToSaveInMemory(ITupleAccessor accessorLeft, ITupleAccessor accessorRight) throws HyracksDataException;
-
     boolean checkToSaveInMemory(IFrameTupleAccessor accessorLeft, int leftTupleIndex, IFrameTupleAccessor accessorRight,
             int rightTupleIndex) throws HyracksDataException;
 
@@ -55,19 +53,6 @@ public interface IIntervalJoinChecker extends Serializable {
             IFrameTupleAccessor accessorRight, int rightTupleIndex) throws HyracksDataException;
 
     /**
-     * Check to see if the next right tuple should be loaded during the merge join.
-     * The check is true if the left tuple could match with the next right tuple.
-     * Once the left tuple can no long match, the check returns false.
-     *
-     * @param accessorLeft
-     * @param accessorRight
-     * @return boolean
-     * @throws HyracksDataException
-     */
-    boolean checkToLoadNextRightTuple(ITupleAccessor accessorLeft, ITupleAccessor accessorRight)
-            throws HyracksDataException;
-
-    /**
      * Check to see if the left tuple should continue checking for matches.
      * The check is true if the next left tuple is NOT able match with this right tuple.
      *
@@ -83,9 +68,6 @@ public interface IIntervalJoinChecker extends Serializable {
             int rightTupleIndex, boolean reversed) throws HyracksDataException;
 
     boolean compareInterval(AIntervalPointable ipLeft, AIntervalPointable ipRight) throws HyracksDataException;
-
-    boolean checkToLoadNextRightTuple(IFrameTupleAccessor accessorLeft, int leftTupleIndex,
-            IFrameTupleAccessor accessorRight, int rightTupleIndex) throws HyracksDataException;
 
     boolean checkForEarlyExit(IFrameTupleAccessor accessorLeft, int leftTupleIndex, IFrameTupleAccessor accessorRight,
             int rightTupleIndex) throws HyracksDataException;

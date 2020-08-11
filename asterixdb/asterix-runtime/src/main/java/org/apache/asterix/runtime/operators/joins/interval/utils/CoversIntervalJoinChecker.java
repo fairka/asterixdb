@@ -32,5 +32,4 @@ public class CoversIntervalJoinChecker extends AbstractIntervalJoinChecker {
     public boolean compareInterval(AIntervalPointable ipLeft, AIntervalPointable ipRight) throws HyracksDataException {
         return il.covers(ipLeft, ipRight);
     }
-
 }

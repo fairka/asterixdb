@@ -18,6 +18,7 @@
  */
 package org.apache.asterix.runtime.operators.joins.interval.utils;
 
+import org.apache.asterix.runtime.operators.joins.interval.utils.memory.IntervalJoinUtil;
 import org.apache.hyracks.api.comm.IFrameTupleAccessor;
 
 public abstract class AbstractIntervalInverseJoinChecker extends AbstractIntervalJoinChecker {
@@ -37,14 +38,6 @@ public abstract class AbstractIntervalInverseJoinChecker extends AbstractInterva
         long start0 = IntervalJoinUtil.getIntervalStart(accessorLeft, leftTupleIndex, idLeft);
         long end1 = IntervalJoinUtil.getIntervalEnd(accessorRight, rightTupleIndex, idRight);
         return start0 < end1;
-    }
-
-    @Override
-    public boolean checkToLoadNextRightTuple(IFrameTupleAccessor accessorLeft, int leftTupleIndex,
-            IFrameTupleAccessor accessorRight, int rightTupleIndex) {
-        long start1 = IntervalJoinUtil.getIntervalStart(accessorRight, rightTupleIndex, idRight);
-        long start0 = IntervalJoinUtil.getIntervalStart(accessorLeft, leftTupleIndex, idLeft);
-        return start0 >= start1;
     }
 
     /**

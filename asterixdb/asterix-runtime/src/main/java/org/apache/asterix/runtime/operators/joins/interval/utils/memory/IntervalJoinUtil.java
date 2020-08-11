@@ -16,7 +16,7 @@
  * specific language governing permissions and limitations
  * under the License.
  */
-package org.apache.asterix.runtime.operators.joins.interval.utils;
+package org.apache.asterix.runtime.operators.joins.interval.utils.memory;
 
 import org.apache.asterix.dataflow.data.nontagged.serde.AIntervalSerializerDeserializer;
 import org.apache.asterix.om.pointables.nonvisitor.AIntervalPointable;
@@ -79,5 +79,4 @@ public class IntervalJoinUtil {
         long intervalEnd = AIntervalSerializerDeserializer.getIntervalEnd(accessor.getBuffer().array(), start);
         return intervalEnd;
     }
-
 }

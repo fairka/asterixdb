@@ -23,12 +23,12 @@ import java.util.Iterator;
 import java.util.LinkedList;
 
 import org.apache.asterix.runtime.operators.joins.interval.utils.IIntervalJoinChecker;
-import org.apache.asterix.runtime.operators.joins.interval.utils.ITupleAccessor;
-import org.apache.asterix.runtime.operators.joins.interval.utils.IntervalSideTuple;
-import org.apache.asterix.runtime.operators.joins.interval.utils.IntervalVariableDeletableTupleMemoryManager;
-import org.apache.asterix.runtime.operators.joins.interval.utils.RunFilePointer;
-import org.apache.asterix.runtime.operators.joins.interval.utils.RunFileStream;
-import org.apache.asterix.runtime.operators.joins.interval.utils.TupleAccessor;
+import org.apache.asterix.runtime.operators.joins.interval.utils.memory.ITupleAccessor;
+import org.apache.asterix.runtime.operators.joins.interval.utils.memory.IntervalSideTuple;
+import org.apache.asterix.runtime.operators.joins.interval.utils.memory.IntervalVariableDeletableTupleMemoryManager;
+import org.apache.asterix.runtime.operators.joins.interval.utils.memory.RunFilePointer;
+import org.apache.asterix.runtime.operators.joins.interval.utils.memory.RunFileStream;
+import org.apache.asterix.runtime.operators.joins.interval.utils.memory.TupleAccessor;
 import org.apache.hyracks.api.comm.IFrame;
 import org.apache.hyracks.api.comm.IFrameTupleAccessor;
 import org.apache.hyracks.api.comm.IFrameWriter;
@@ -219,7 +219,8 @@ public class IntervalMergeJoiner {
 
     private void processProbeTuple(IFrameWriter writer) throws HyracksDataException {
         // append to memory
-        if (mjc.checkToSaveInMemory(inputAccessor[BUILD_PARTITION], inputAccessor[PROBE_PARTITION])) {
+        if (mjc.checkToSaveInMemory(inputAccessor[BUILD_PARTITION], inputAccessor[BUILD_PARTITION].getTupleId(),
+                inputAccessor[PROBE_PARTITION], inputAccessor[PROBE_PARTITION].getTupleId())) {
             if (!addToMemory(inputAccessor[PROBE_PARTITION])) {
                 unfreezeAndClearMemory(writer, inputAccessor[BUILD_PARTITION]);
                 return;

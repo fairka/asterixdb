@@ -17,9 +17,10 @@
  * under the License.
  */
 
-package org.apache.asterix.runtime.operators.joins.interval.utils;
+package org.apache.asterix.runtime.operators.joins.interval.utils.memory;
 
 import org.apache.asterix.dataflow.data.nontagged.serde.AIntervalSerializerDeserializer;
+import org.apache.asterix.runtime.operators.joins.interval.utils.IIntervalJoinChecker;
 import org.apache.hyracks.api.exceptions.HyracksDataException;
 import org.apache.hyracks.dataflow.std.structures.TuplePointer;
 

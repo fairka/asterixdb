@@ -17,7 +17,7 @@
  * under the License.
  */
 
-package org.apache.asterix.runtime.operators.joins.interval.utils;
+package org.apache.asterix.runtime.operators.joins.interval.utils.memory;
 
 import java.nio.ByteBuffer;
 
