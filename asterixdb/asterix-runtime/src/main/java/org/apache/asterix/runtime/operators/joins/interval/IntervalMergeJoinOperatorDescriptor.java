@@ -21,8 +21,8 @@ package org.apache.asterix.runtime.operators.joins.interval;
 
 import java.nio.ByteBuffer;
 
-import org.apache.asterix.runtime.operators.joins.interval.utils.IIntervalJoinChecker;
-import org.apache.asterix.runtime.operators.joins.interval.utils.IIntervalJoinCheckerFactory;
+import org.apache.asterix.runtime.operators.joins.interval.utils.IIntervalJoinUtil;
+import org.apache.asterix.runtime.operators.joins.interval.utils.IIntervalJoinUtilFactory;
 import org.apache.hyracks.api.context.IHyracksTaskContext;
 import org.apache.hyracks.api.dataflow.ActivityId;
 import org.apache.hyracks.api.dataflow.IActivity;
@@ -49,13 +49,13 @@ public class IntervalMergeJoinOperatorDescriptor extends AbstractOperatorDescrip
     private final int[] leftKeys;
     private final int[] rightKeys;
     private final int memoryForJoin;
-    private final IIntervalJoinCheckerFactory imjcf;
+    private final IIntervalJoinUtilFactory imjcf;
 
     private final int probeKey;
     private final int buildKey;
 
     public IntervalMergeJoinOperatorDescriptor(IOperatorDescriptorRegistry spec, int memoryForJoin, int[] leftKeys,
-            int[] rightKeys, RecordDescriptor recordDescriptor, IIntervalJoinCheckerFactory imjcf) {
+            int[] rightKeys, RecordDescriptor recordDescriptor, IIntervalJoinUtilFactory imjcf) {
         super(spec, 2, 1);
         outRecDescs[0] = recordDescriptor;
         this.buildKey = leftKeys[0];
@@ -115,7 +115,7 @@ public class IntervalMergeJoinOperatorDescriptor extends AbstractOperatorDescrip
                     state = new JoinCacheTaskState(ctx.getJobletContext().getJobId(),
                             new TaskId(getActivityId(), partition));
 
-                    IIntervalJoinChecker imjc =
+                    IIntervalJoinUtil imjc =
                             imjcf.createIntervalMergeJoinChecker(leftKeys, rightKeys, ctx, nPartitions);
 
                     state.joiner = new IntervalMergeJoiner(ctx, memoryForJoin, imjc, buildKey, probeKey, rd0, rd1);

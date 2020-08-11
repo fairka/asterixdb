@@ -18,17 +18,20 @@
  */
 package org.apache.asterix.runtime.operators.joins.interval.utils;
 
-import java.io.Serializable;
-
 import org.apache.hyracks.api.context.IHyracksTaskContext;
-import org.apache.hyracks.api.exceptions.HyracksDataException;
 
-public interface IIntervalJoinCheckerFactory extends Serializable {
+public class OverlappedByIntervalJoinUtilFactory implements IIntervalJoinUtilFactory {
+    private static final long serialVersionUID = 1L;
 
-    IIntervalJoinChecker createIntervalMergeJoinChecker(int[] keys0, int[] keys1, IHyracksTaskContext ctx,
-            int nPartitions) throws HyracksDataException;
+    @Override
+    public IIntervalJoinUtil createIntervalMergeJoinChecker(int[] keys0, int[] keys1, IHyracksTaskContext ctx,
+            int nPartitions) {
+        return new OverlappedByIntervalJoinUtil(keys0, keys1);
+    }
 
-    IIntervalJoinChecker createIntervalInverseMergeJoinChecker(int[] keys0, int[] keys1, IHyracksTaskContext ctx,
-            int nPartitions) throws HyracksDataException;
-
+    @Override
+    public IIntervalJoinUtil createIntervalInverseMergeJoinChecker(int[] keys0, int[] keys1, IHyracksTaskContext ctx,
+            int nPartitions) {
+        return new OverlapsIntervalJoinUtil(keys0, keys1);
+    }
 }

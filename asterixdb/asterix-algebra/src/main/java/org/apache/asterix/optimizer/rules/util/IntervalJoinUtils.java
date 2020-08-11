@@ -32,14 +32,14 @@ import org.apache.asterix.common.exceptions.CompilationException;
 import org.apache.asterix.common.exceptions.ErrorCode;
 import org.apache.asterix.lang.common.util.FunctionUtil;
 import org.apache.asterix.om.functions.BuiltinFunctions;
-import org.apache.asterix.runtime.operators.joins.interval.utils.AfterIntervalJoinCheckerFactory;
-import org.apache.asterix.runtime.operators.joins.interval.utils.BeforeIntervalJoinCheckerFactory;
-import org.apache.asterix.runtime.operators.joins.interval.utils.CoveredByIntervalJoinCheckerFactory;
-import org.apache.asterix.runtime.operators.joins.interval.utils.CoversIntervalJoinCheckerFactory;
-import org.apache.asterix.runtime.operators.joins.interval.utils.IIntervalJoinCheckerFactory;
-import org.apache.asterix.runtime.operators.joins.interval.utils.OverlappedByIntervalJoinCheckerFactory;
-import org.apache.asterix.runtime.operators.joins.interval.utils.OverlappingIntervalJoinCheckerFactory;
-import org.apache.asterix.runtime.operators.joins.interval.utils.OverlapsIntervalJoinCheckerFactory;
+import org.apache.asterix.runtime.operators.joins.interval.utils.AfterIntervalJoinUtilFactory;
+import org.apache.asterix.runtime.operators.joins.interval.utils.BeforeIntervalJoinUtilFactory;
+import org.apache.asterix.runtime.operators.joins.interval.utils.CoveredByIntervalJoinUtilFactory;
+import org.apache.asterix.runtime.operators.joins.interval.utils.CoversIntervalJoinUtilFactory;
+import org.apache.asterix.runtime.operators.joins.interval.utils.IIntervalJoinUtilFactory;
+import org.apache.asterix.runtime.operators.joins.interval.utils.OverlappedByIntervalJoinUtilFactory;
+import org.apache.asterix.runtime.operators.joins.interval.utils.OverlappingIntervalJoinUtilFactory;
+import org.apache.asterix.runtime.operators.joins.interval.utils.OverlapsIntervalJoinUtilFactory;
 import org.apache.commons.lang3.mutable.Mutable;
 import org.apache.commons.lang3.mutable.MutableObject;
 import org.apache.hyracks.algebricks.common.exceptions.AlgebricksException;
@@ -97,7 +97,7 @@ public class IntervalJoinUtils {
     protected static void setSortMergeIntervalJoinOp(AbstractBinaryJoinOperator op, FunctionIdentifier fi,
             List<LogicalVariable> sideLeft, List<LogicalVariable> sideRight, IOptimizationContext context,
             IntervalPartitions intervalPartitions) throws CompilationException {
-        IIntervalJoinCheckerFactory mjcf = getIntervalJoinCheckerFactory(fi, intervalPartitions.getRangeMap());
+        IIntervalJoinUtilFactory mjcf = getIntervalJoinCheckerFactory(fi, intervalPartitions.getRangeMap());
         op.setPhysicalOperator(new IntervalMergeJoinPOperator(op.getJoinKind(),
                 AbstractJoinPOperator.JoinPartitioningType.BROADCAST, sideLeft, sideRight,
                 context.getPhysicalOptimizationConfig().getMaxFramesForJoin(), mjcf, intervalPartitions));
@@ -201,23 +201,23 @@ public class IntervalJoinUtils {
      *
      * @see org.apache.asterix.optimizer.rules.temporal.TranslateIntervalExpressionRule
      */
-    private static IIntervalJoinCheckerFactory getIntervalJoinCheckerFactory(FunctionIdentifier fi, RangeMap rangeMap)
+    private static IIntervalJoinUtilFactory getIntervalJoinCheckerFactory(FunctionIdentifier fi, RangeMap rangeMap)
             throws CompilationException {
-        IIntervalJoinCheckerFactory mjcf;
+        IIntervalJoinUtilFactory mjcf;
         if (fi.equals(BuiltinFunctions.INTERVAL_OVERLAPPED_BY)) {
-            mjcf = new OverlappedByIntervalJoinCheckerFactory();
+            mjcf = new OverlappedByIntervalJoinUtilFactory();
         } else if (fi.equals(BuiltinFunctions.INTERVAL_OVERLAPS)) {
-            mjcf = new OverlapsIntervalJoinCheckerFactory();
+            mjcf = new OverlapsIntervalJoinUtilFactory();
         } else if (fi.equals(BuiltinFunctions.INTERVAL_COVERS)) {
-            mjcf = new CoversIntervalJoinCheckerFactory();
+            mjcf = new CoversIntervalJoinUtilFactory();
         } else if (fi.equals(BuiltinFunctions.INTERVAL_COVERED_BY)) {
-            mjcf = new CoveredByIntervalJoinCheckerFactory();
+            mjcf = new CoveredByIntervalJoinUtilFactory();
         } else if (fi.equals(BuiltinFunctions.INTERVAL_BEFORE)) {
-            mjcf = new BeforeIntervalJoinCheckerFactory();
+            mjcf = new BeforeIntervalJoinUtilFactory();
         } else if (fi.equals(BuiltinFunctions.INTERVAL_AFTER)) {
-            mjcf = new AfterIntervalJoinCheckerFactory();
+            mjcf = new AfterIntervalJoinUtilFactory();
         } else if (fi.equals(BuiltinFunctions.INTERVAL_OVERLAPPING)) {
-            mjcf = new OverlappingIntervalJoinCheckerFactory(rangeMap);
+            mjcf = new OverlappingIntervalJoinUtilFactory(rangeMap);
         } else {
             throw new CompilationException(ErrorCode.COMPILATION_ILLEGAL_STATE);
         }

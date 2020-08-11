@@ -21,11 +21,11 @@ package org.apache.asterix.runtime.operators.joins.interval.utils;
 import org.apache.asterix.runtime.operators.joins.interval.utils.memory.IntervalJoinUtil;
 import org.apache.hyracks.api.comm.IFrameTupleAccessor;
 
-public abstract class AbstractIntervalInverseJoinChecker extends AbstractIntervalJoinChecker {
+public abstract class AbstractIntervalInverseJoinUtil extends AbstractIntervalJoinUtil {
 
     private static final long serialVersionUID = 1L;
 
-    public AbstractIntervalInverseJoinChecker(int idLeft, int idRight) {
+    public AbstractIntervalInverseJoinUtil(int idLeft, int idRight) {
         super(idLeft, idRight);
     }
 

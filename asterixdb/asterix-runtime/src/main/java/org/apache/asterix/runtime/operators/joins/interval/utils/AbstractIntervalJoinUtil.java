@@ -30,7 +30,7 @@ import org.apache.hyracks.data.std.api.IPointable;
 import org.apache.hyracks.data.std.primitive.TaggedValuePointable;
 import org.apache.hyracks.data.std.primitive.VoidPointable;
 
-public abstract class AbstractIntervalJoinChecker implements IIntervalJoinChecker {
+public abstract class AbstractIntervalJoinUtil implements IIntervalJoinUtil {
 
     private static final long serialVersionUID = 1L;
 
@@ -48,7 +48,7 @@ public abstract class AbstractIntervalJoinChecker implements IIntervalJoinChecke
     protected final IPointable startLeft = VoidPointable.FACTORY.createPointable();
     protected final IPointable startRight = VoidPointable.FACTORY.createPointable();
 
-    public AbstractIntervalJoinChecker(int idLeft, int idRight) {
+    public AbstractIntervalJoinUtil(int idLeft, int idRight) {
         this.idLeft = idLeft;
         this.idRight = idRight;
     }

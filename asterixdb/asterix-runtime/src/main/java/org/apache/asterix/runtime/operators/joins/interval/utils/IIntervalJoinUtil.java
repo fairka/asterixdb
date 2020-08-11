@@ -24,7 +24,7 @@ import org.apache.asterix.om.pointables.nonvisitor.AIntervalPointable;
 import org.apache.hyracks.api.comm.IFrameTupleAccessor;
 import org.apache.hyracks.api.exceptions.HyracksDataException;
 
-public interface IIntervalJoinChecker extends Serializable {
+public interface IIntervalJoinUtil extends Serializable {
 
     /**
      * Check to see if the right tuple should be added to memory during the merge join.

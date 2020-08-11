@@ -21,16 +21,16 @@ package org.apache.asterix.runtime.operators.joins.interval.utils;
 import org.apache.asterix.om.pointables.nonvisitor.AIntervalPointable;
 import org.apache.hyracks.api.exceptions.HyracksDataException;
 
-public class OverlapsIntervalJoinChecker extends AbstractIntervalJoinChecker {
+public class OverlappedByIntervalJoinUtil extends AbstractIntervalInverseJoinUtil {
     private static final long serialVersionUID = 1L;
 
-    public OverlapsIntervalJoinChecker(int[] keysLeft, int[] keysRight) {
+    public OverlappedByIntervalJoinUtil(int[] keysLeft, int[] keysRight) {
         super(keysLeft[0], keysRight[0]);
     }
 
     @Override
     public boolean compareInterval(AIntervalPointable ipLeft, AIntervalPointable ipRight) throws HyracksDataException {
-        return il.overlaps(ipLeft, ipRight);
+        return il.overlappedBy(ipLeft, ipRight);
     }
 
 }

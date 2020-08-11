@@ -22,7 +22,7 @@ import java.nio.ByteBuffer;
 import java.util.Iterator;
 import java.util.LinkedList;
 
-import org.apache.asterix.runtime.operators.joins.interval.utils.IIntervalJoinChecker;
+import org.apache.asterix.runtime.operators.joins.interval.utils.IIntervalJoinUtil;
 import org.apache.asterix.runtime.operators.joins.interval.utils.memory.ITupleAccessor;
 import org.apache.asterix.runtime.operators.joins.interval.utils.memory.IntervalSideTuple;
 import org.apache.asterix.runtime.operators.joins.interval.utils.memory.IntervalVariableDeletableTupleMemoryManager;
@@ -81,7 +81,7 @@ public class IntervalMergeJoiner {
     private IntervalSideTuple memoryTuple;
     private IntervalSideTuple[] inputTuple;
 
-    private final IIntervalJoinChecker mjc;
+    private final IIntervalJoinUtil mjc;
 
     protected static final int JOIN_PARTITIONS = 2;
     protected static final int BUILD_PARTITION = 0;
@@ -94,7 +94,7 @@ public class IntervalMergeJoiner {
     protected long[] frameCounts = { 0, 0 };
     protected long[] tupleCounts = { 0, 0 };
 
-    public IntervalMergeJoiner(IHyracksTaskContext ctx, int memorySize, IIntervalJoinChecker mjc, int buildKeys,
+    public IntervalMergeJoiner(IHyracksTaskContext ctx, int memorySize, IIntervalJoinUtil mjc, int buildKeys,
             int probeKeys, RecordDescriptor buildRd, RecordDescriptor probeRd) throws HyracksDataException {
         this.mjc = mjc;
 

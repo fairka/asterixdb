@@ -23,10 +23,10 @@ import org.apache.asterix.runtime.operators.joins.interval.utils.memory.Interval
 import org.apache.hyracks.api.comm.IFrameTupleAccessor;
 import org.apache.hyracks.api.exceptions.HyracksDataException;
 
-public class AfterIntervalJoinChecker extends AbstractIntervalJoinChecker {
+public class AfterIntervalJoinUtil extends AbstractIntervalJoinUtil {
     private static final long serialVersionUID = 1L;
 
-    public AfterIntervalJoinChecker(int[] keysLeft, int[] keysRight) {
+    public AfterIntervalJoinUtil(int[] keysLeft, int[] keysRight) {
         super(keysLeft[0], keysRight[0]);
     }
 

@@ -20,7 +20,7 @@
 package org.apache.asterix.runtime.operators.joins.interval.utils.memory;
 
 import org.apache.asterix.dataflow.data.nontagged.serde.AIntervalSerializerDeserializer;
-import org.apache.asterix.runtime.operators.joins.interval.utils.IIntervalJoinChecker;
+import org.apache.asterix.runtime.operators.joins.interval.utils.IIntervalJoinUtil;
 import org.apache.hyracks.api.exceptions.HyracksDataException;
 import org.apache.hyracks.dataflow.std.structures.TuplePointer;
 
@@ -35,9 +35,9 @@ public class IntervalSideTuple {
     long end;
 
     // Join details
-    final IIntervalJoinChecker imjc;
+    final IIntervalJoinUtil imjc;
 
-    public IntervalSideTuple(IIntervalJoinChecker imjc, ITupleAccessor accessor, int fieldId) {
+    public IntervalSideTuple(IIntervalJoinUtil imjc, ITupleAccessor accessor, int fieldId) {
         this.imjc = imjc;
         this.accessor = accessor;
         this.fieldId = fieldId;

@@ -23,11 +23,11 @@ import org.apache.asterix.runtime.operators.joins.interval.utils.memory.Interval
 import org.apache.hyracks.api.comm.IFrameTupleAccessor;
 import org.apache.hyracks.api.exceptions.HyracksDataException;
 
-public class OverlappingIntervalJoinChecker extends AbstractIntervalJoinChecker {
+public class OverlappingIntervalJoinUtil extends AbstractIntervalJoinUtil {
     private static final long serialVersionUID = 1L;
     private final long partitionStart;
 
-    public OverlappingIntervalJoinChecker(int[] keysLeft, int[] keysRight, long partitionStart) {
+    public OverlappingIntervalJoinUtil(int[] keysLeft, int[] keysRight, long partitionStart) {
         super(keysLeft[0], keysRight[0]);
         this.partitionStart = partitionStart;
     }

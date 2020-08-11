@@ -23,7 +23,7 @@ import java.util.List;
 
 import org.apache.asterix.optimizer.rules.util.IntervalPartitions;
 import org.apache.asterix.runtime.operators.joins.interval.IntervalMergeJoinOperatorDescriptor;
-import org.apache.asterix.runtime.operators.joins.interval.utils.IIntervalJoinCheckerFactory;
+import org.apache.asterix.runtime.operators.joins.interval.utils.IIntervalJoinUtilFactory;
 import org.apache.hyracks.algebricks.common.exceptions.AlgebricksException;
 import org.apache.hyracks.algebricks.core.algebra.base.IHyracksJobBuilder;
 import org.apache.hyracks.algebricks.core.algebra.base.ILogicalOperator;
@@ -57,14 +57,14 @@ public class IntervalMergeJoinPOperator extends AbstractJoinPOperator {
 
     private final List<LogicalVariable> keysLeftBranch;
     private final List<LogicalVariable> keysRightBranch;
-    protected final IIntervalJoinCheckerFactory mjcf;
+    protected final IIntervalJoinUtilFactory mjcf;
     protected final IntervalPartitions intervalPartitions;
 
     private final int memSizeInFrames;
 
     public IntervalMergeJoinPOperator(JoinKind kind, JoinPartitioningType partitioningType,
             List<LogicalVariable> sideLeftOfEqualities, List<LogicalVariable> sideRightOfEqualities,
-            int memSizeInFrames, IIntervalJoinCheckerFactory mjcf, IntervalPartitions intervalPartitions) {
+            int memSizeInFrames, IIntervalJoinUtilFactory mjcf, IntervalPartitions intervalPartitions) {
         super(kind, partitioningType);
         this.keysLeftBranch = sideLeftOfEqualities;
         this.keysRightBranch = sideRightOfEqualities;
@@ -73,7 +73,7 @@ public class IntervalMergeJoinPOperator extends AbstractJoinPOperator {
         this.memSizeInFrames = memSizeInFrames;
     }
 
-    public IIntervalJoinCheckerFactory getIntervalMergeJoinCheckerFactory() {
+    public IIntervalJoinUtilFactory getIntervalMergeJoinCheckerFactory() {
         return mjcf;
     }
 
@@ -192,7 +192,7 @@ public class IntervalMergeJoinPOperator extends AbstractJoinPOperator {
     }
 
     IOperatorDescriptor getIntervalOperatorDescriptor(int[] keysLeft, int[] keysRight, IOperatorDescriptorRegistry spec,
-            RecordDescriptor recordDescriptor, IIntervalJoinCheckerFactory mjcf) {
+            RecordDescriptor recordDescriptor, IIntervalJoinUtilFactory mjcf) {
         return new IntervalMergeJoinOperatorDescriptor(spec, memSizeInFrames, keysLeft, keysRight, recordDescriptor,
                 mjcf);
     }

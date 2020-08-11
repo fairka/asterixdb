@@ -26,16 +26,16 @@ import org.apache.hyracks.api.context.IHyracksTaskContext;
 import org.apache.hyracks.api.exceptions.HyracksDataException;
 import org.apache.hyracks.dataflow.common.data.partition.range.RangeMap;
 
-public class OverlappingIntervalJoinCheckerFactory implements IIntervalJoinCheckerFactory {
+public class OverlappingIntervalJoinUtilFactory implements IIntervalJoinUtilFactory {
     private static final long serialVersionUID = 1L;
     private final RangeMap rangeMap;
 
-    public OverlappingIntervalJoinCheckerFactory(RangeMap rangeMap) {
+    public OverlappingIntervalJoinUtilFactory(RangeMap rangeMap) {
         this.rangeMap = rangeMap;
     }
 
     @Override
-    public IIntervalJoinChecker createIntervalMergeJoinChecker(int[] keys0, int[] keys1, IHyracksTaskContext ctx,
+    public IIntervalJoinUtil createIntervalMergeJoinChecker(int[] keys0, int[] keys1, IHyracksTaskContext ctx,
             int nPartitions) throws HyracksDataException {
         int fieldIndex = 0;
         int partition = ctx.getTaskAttemptId().getTaskId().getPartition();
@@ -66,11 +66,11 @@ public class OverlappingIntervalJoinCheckerFactory implements IIntervalJoinCheck
                     throw new HyracksDataException("RangeMap type is not supported");
             }
         }
-        return new OverlappingIntervalJoinChecker(keys0, keys1, partitionStart);
+        return new OverlappingIntervalJoinUtil(keys0, keys1, partitionStart);
     }
 
     @Override
-    public IIntervalJoinChecker createIntervalInverseMergeJoinChecker(int[] keys0, int[] keys1, IHyracksTaskContext ctx,
+    public IIntervalJoinUtil createIntervalInverseMergeJoinChecker(int[] keys0, int[] keys1, IHyracksTaskContext ctx,
             int nPartitions) throws HyracksDataException {
         return createIntervalMergeJoinChecker(keys0, keys1, ctx, nPartitions);
     }
