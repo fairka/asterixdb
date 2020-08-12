@@ -22,7 +22,6 @@ import org.apache.asterix.om.pointables.nonvisitor.AIntervalPointable;
 import org.apache.hyracks.api.exceptions.HyracksDataException;
 
 public class CoversIntervalJoinUtil extends AbstractIntervalJoinUtil {
-    private static final long serialVersionUID = 1L;
 
     public CoversIntervalJoinUtil(int[] keysLeft, int[] keysRight) {
         super(keysLeft[0], keysRight[0]);

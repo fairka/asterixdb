@@ -22,8 +22,6 @@ import java.util.ArrayList;
 import java.util.List;
 
 import org.apache.asterix.common.annotations.RangeAnnotation;
-import org.apache.asterix.common.exceptions.CompilationException;
-import org.apache.asterix.common.exceptions.ErrorCode;
 import org.apache.asterix.om.types.ATypeTag;
 import org.apache.hyracks.algebricks.common.exceptions.AlgebricksException;
 import org.apache.hyracks.algebricks.core.algebra.base.ILogicalExpression;
@@ -33,6 +31,9 @@ import org.apache.hyracks.algebricks.core.algebra.base.LogicalVariable;
 import org.apache.hyracks.algebricks.core.algebra.expressions.AbstractFunctionCallExpression;
 import org.apache.hyracks.algebricks.core.algebra.functions.FunctionIdentifier;
 import org.apache.hyracks.algebricks.core.algebra.operators.logical.AbstractBinaryJoinOperator;
+import org.apache.hyracks.api.exceptions.ErrorCode;
+import org.apache.hyracks.api.exceptions.IWarningCollector;
+import org.apache.hyracks.api.exceptions.Warning;
 import org.apache.hyracks.dataflow.common.data.partition.range.RangeMap;
 
 public class AsterixJoinUtils {
@@ -46,7 +47,7 @@ public class AsterixJoinUtils {
     public static void setJoinAlgorithmAndExchangeAlgo(AbstractBinaryJoinOperator op, Boolean topLevelOp,
             IOptimizationContext context) throws AlgebricksException {
         if (!topLevelOp) {
-            throw new IllegalStateException("Micro operator not implemented for: " + op.getOperatorTag());
+            return;
         }
         ILogicalExpression conditionLE = op.getCondition().getValue();
         if (conditionLE.getExpressionTag() != LogicalExpressionTag.FUNCTION_CALL) {
@@ -58,11 +59,11 @@ public class AsterixJoinUtils {
         List<LogicalVariable> varsRight = op.getInputs().get(RIGHT).getValue().getSchema();
         AbstractFunctionCallExpression fexp = (AbstractFunctionCallExpression) conditionLE;
         FunctionIdentifier fi =
-                IntervalJoinUtils.isIntervalJoinCondition(fexp, varsLeft, varsRight, sideLeft, sideRight);
+                IntervalJoinUtils.isIntervalJoinCondition(fexp, varsLeft, varsRight, sideLeft, sideRight, LEFT, RIGHT);
         if (fi == null) {
             return;
         }
-        RangeAnnotation rangeAnnotation = IntervalJoinUtils.IntervalJoinRangeMapAnnotation(fexp);
+        RangeAnnotation rangeAnnotation = IntervalJoinUtils.findRangeAnnotation(fexp);
         if (rangeAnnotation == null) {
             return;
         }
@@ -70,12 +71,13 @@ public class AsterixJoinUtils {
         RangeMap rangeMap = (RangeMap) rangeAnnotation.getObject();
         if (rangeMap.getTag(0, 0) != ATypeTag.DATETIME.serialize() && rangeMap.getTag(0, 0) != ATypeTag.DATE.serialize()
                 && rangeMap.getTag(0, 0) != ATypeTag.TIME.serialize()) {
-            throw new CompilationException(ErrorCode.COMPILATION_ERROR, op.getSourceLocation(),
-                    "Only DATE, TIME, and DATETIME type rangemaps have been "
-                            + "implemented for this interval operation.");
+            IWarningCollector warningCollector = context.getWarningCollector();
+            warningCollector.warn(Warning.forHyracks(op.getSourceLocation(), ErrorCode.INAPPLICABLE_HINT,
+                    "Date, DateTime, and Time are only range hints types supported for interval joins"));
+            return;
         }
         IntervalPartitions intervalPartitions =
-                IntervalJoinUtils.getIntervalPartitions(op, fi, sideLeft, sideRight, rangeMap, context);
+                IntervalJoinUtils.createIntervalPartitions(op, fi, sideLeft, sideRight, rangeMap, context, LEFT, RIGHT);
         IntervalJoinUtils.setSortMergeIntervalJoinOp(op, fi, sideLeft, sideRight, context, intervalPartitions);
     }
 }

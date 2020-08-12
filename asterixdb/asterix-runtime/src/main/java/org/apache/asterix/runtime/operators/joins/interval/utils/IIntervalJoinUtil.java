@@ -24,7 +24,7 @@ import org.apache.asterix.om.pointables.nonvisitor.AIntervalPointable;
 import org.apache.hyracks.api.comm.IFrameTupleAccessor;
 import org.apache.hyracks.api.exceptions.HyracksDataException;
 
-public interface IIntervalJoinUtil extends Serializable {
+public interface IIntervalJoinUtil {
 
     /**
      * Check to see if the right tuple should be added to memory during the merge join.
@@ -64,11 +64,40 @@ public interface IIntervalJoinUtil extends Serializable {
     boolean checkIfMoreMatches(IFrameTupleAccessor accessorLeft, int leftTupleIndex, IFrameTupleAccessor accessorRight,
             int rightTupleIndex) throws HyracksDataException;
 
+    /**
+     * Check to see if tuples match join condition
+     * The check is true if they match.
+     *
+     * @param accessorLeft
+     * @param leftTupleIndex
+     * @param accessorRight
+     * @param rightTupleIndex
+     * @return boolean
+     * @throws HyracksDataException
+     */
     boolean checkToSaveInResult(IFrameTupleAccessor accessorLeft, int leftTupleIndex, IFrameTupleAccessor accessorRight,
             int rightTupleIndex, boolean reversed) throws HyracksDataException;
 
+    /**
+     * Check to see if the interval matches the join condition.
+     * The check is true if it matches.
+     *
+     * @param ipLeft
+     * @param ipRight
+     * @return boolean
+     * @throws HyracksDataException
+     */
     boolean compareInterval(AIntervalPointable ipLeft, AIntervalPointable ipRight) throws HyracksDataException;
 
+    /**
+     * Check to see if the left tuple should stop checking for matches.
+     * The check is true if there can be no more matches
+     *
+     * @param accessorLeft
+     * @param accessorRight
+     * @return boolean
+     * @throws HyracksDataException
+     */
     boolean checkForEarlyExit(IFrameTupleAccessor accessorLeft, int leftTupleIndex, IFrameTupleAccessor accessorRight,
             int rightTupleIndex) throws HyracksDataException;
 

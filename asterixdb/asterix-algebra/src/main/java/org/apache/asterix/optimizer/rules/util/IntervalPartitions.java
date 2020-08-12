@@ -30,11 +30,11 @@ import org.apache.hyracks.dataflow.common.data.partition.range.RangeMap;
 
 public class IntervalPartitions {
 
-    RangeMap rangeMap;
-    List<IntervalColumn> leftIntervalColumn;
-    List<IntervalColumn> rightIntervalColumn;
-    PartitioningType leftPartitioningType;
-    PartitioningType rightPartitioningType;
+    private final RangeMap rangeMap;
+    private final List<IntervalColumn> leftIntervalColumn;
+    private final List<IntervalColumn> rightIntervalColumn;
+    private final PartitioningType leftPartitioningType;
+    private final PartitioningType rightPartitioningType;
 
     IntervalPartitions(RangeMap rangeMap, List<IntervalColumn> leftIntervalColumn,
             List<IntervalColumn> rightIntervalColumn, PartitioningType leftPartitioningType,

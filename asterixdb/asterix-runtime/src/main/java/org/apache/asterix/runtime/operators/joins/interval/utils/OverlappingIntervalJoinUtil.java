@@ -24,7 +24,6 @@ import org.apache.hyracks.api.comm.IFrameTupleAccessor;
 import org.apache.hyracks.api.exceptions.HyracksDataException;
 
 public class OverlappingIntervalJoinUtil extends AbstractIntervalJoinUtil {
-    private static final long serialVersionUID = 1L;
     private final long partitionStart;
 
     public OverlappingIntervalJoinUtil(int[] keysLeft, int[] keysRight, long partitionStart) {

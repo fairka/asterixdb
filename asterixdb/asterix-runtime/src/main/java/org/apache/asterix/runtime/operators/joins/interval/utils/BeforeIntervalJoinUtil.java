@@ -24,7 +24,6 @@ import org.apache.hyracks.api.comm.IFrameTupleAccessor;
 import org.apache.hyracks.api.exceptions.HyracksDataException;
 
 public class BeforeIntervalJoinUtil extends AbstractIntervalJoinUtil {
-    private static final long serialVersionUID = 1L;
 
     public BeforeIntervalJoinUtil(int[] keysLeft, int[] keysRight) {
         super(keysLeft[0], keysRight[0]);

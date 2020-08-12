@@ -22,7 +22,6 @@ import org.apache.asterix.om.pointables.nonvisitor.AIntervalPointable;
 import org.apache.hyracks.api.exceptions.HyracksDataException;
 
 public class OverlapsIntervalJoinUtil extends AbstractIntervalJoinUtil {
-    private static final long serialVersionUID = 1L;
 
     public OverlapsIntervalJoinUtil(int[] keysLeft, int[] keysRight) {
         super(keysLeft[0], keysRight[0]);

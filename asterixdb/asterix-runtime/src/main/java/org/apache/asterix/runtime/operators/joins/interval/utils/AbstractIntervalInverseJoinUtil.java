@@ -23,8 +23,6 @@ import org.apache.hyracks.api.comm.IFrameTupleAccessor;
 
 public abstract class AbstractIntervalInverseJoinUtil extends AbstractIntervalJoinUtil {
 
-    private static final long serialVersionUID = 1L;
-
     public AbstractIntervalInverseJoinUtil(int idLeft, int idRight) {
         super(idLeft, idRight);
     }

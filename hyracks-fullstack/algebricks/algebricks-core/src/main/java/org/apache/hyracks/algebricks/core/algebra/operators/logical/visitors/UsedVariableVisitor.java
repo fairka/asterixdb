@@ -18,8 +18,6 @@
  */
 package org.apache.hyracks.algebricks.core.algebra.operators.logical.visitors;
 
-import static org.apache.hyracks.algebricks.core.algebra.base.PhysicalOperatorTag.PARTIAL_BROADCAST_RANGE_INTERSECT_EXCHANGE;
-
 import java.util.Collection;
 import java.util.HashSet;
 import java.util.List;

@@ -32,8 +32,6 @@ import org.apache.hyracks.data.std.primitive.VoidPointable;
 
 public abstract class AbstractIntervalJoinUtil implements IIntervalJoinUtil {
 
-    private static final long serialVersionUID = 1L;
-
     protected final int idLeft;
     protected final int idRight;
 
