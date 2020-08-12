@@ -19,81 +19,68 @@
 
 Adding a range hint to an interval join will allow an optimized interval join algorithm to be picked:
 
+    
+This system allows for the 13 types of interval-join relations. The default, when using these joins, is either Nested 
+Loop, or Hybrid Hash Join. If you want to use interval merge join you must include a range hint. The 
+range hint allows for the system to pick interval merge join, and partition the data according to the given split 
+points.
+
+## <a id="Using_interval_joins">Using Interval Joins</a>
+An interval join can be executed using one of the 13 conditions. The 13 conditions are before, after, covers, 
+covered_by, ends, ended_by, meets, met_by, overlaps, overlapping, overlapped_by, starts, and started_by.
+
+##### How to use an interval join
+
+    select element { "staff" : f.name, "student" : d.name }
+    from Staff as f, Students as d
+    where interval_after(f.employment, d.attendance)
+    order by f.name, d.name;
+    
+In this scenario, "interval_after" can be replaced with any of the 13 join conditions eg: interval_before, 
+interval_covers, etc...
+
+## <a id="Range_hint">Using a Range Hint</a>
+
+Interval joins currently work for intervals of date, datetime, or time. Adding  a range hint 
+will allow the system to pick interval merge join for 7 out of the 13 Allen's relations: After, 
+Before, Covers, Covered_By, Overlaps, Overlapping, Overlapped_By. The other six relations have
+not been implemented; in those cases the range hint will not be picked, and the system will default
+to the normal join.
+
+Here are examples of how interval joins work with a range hint for all the supported points.
+The data will be partitioned using the split points provided in the hint. 
+
+##### Range Hint Example
+
+    /*+ range [<Expression>, ..., ] */
+
+
+##### Range Hint Example with Date
+
+    select element { "staff" : f.name, "student" : d.name }
+    from Staff as f, Students as d
+    where
     /*+ range [date("2003-06-30"), date("2005-12-31"), date("2008-06-30")] */
+    interval_after(f.employment, d.attendance)
+    order by f.name, d.name;
 
-Adding  a range hint will allow the system to pick an optimized interval join for the 7 out 13 Allen's relations: After, 
-Before, Covers, Covered_By, Overlaps, Overlapping, Overlapped_By. Ends, Ended_By, Meets, Met_By, Starts, and Started_By 
-have not been implemented, the range hint will not be picked, and they will default to Hybrid hash join. The relations 
-that get picked will use the range hint to sort the data using interval merge join.
-do
+##### Range Hint Example with DateTime
 
-## <a id="Join_paremeter">Join Parameters</a>
-The system can execute each request using multiple cores on multiple machines (a.k.a., partitioned parallelism)
-in a cluster. A user can manually specify the maximum execution parallelism for a request to scale it up and down
-using the following parameter:
+    select element { "staff" : f.name, "student" : d.name }
+    from Students as d, Staff as f
+    where
+    /*+ range [datetime("2003-06-30T00:00:00.0"), datetime("2005-12-31T00:00:00.0"), datetime("2008-06-30T00:00:00.0")] */
+    interval_after(d.break, f.vacation)
+    order by f.name, d.name;
 
-*  **compiler.parallelism**: the maximum number of CPU cores can be used to process a query.
-There are three cases of the value *p* for compiler.parallelism:
+##### Range Hint Example with Time
 
-     - *p* \< 0 or *p* \> the total number of cores in a cluster:  the system will use all available cores in the
-       cluster;
-
-     - *p* = 0 (the default):  the system will use the storage parallelism (the number of partitions of stored datasets)
-       as the maximum parallelism for query processing;
-
-     - all other cases:  the system will use the user-specified number as the maximum number of CPU cores to use for
-       executing the query.
-
-##### Example
-
-    SET `compiler.parallelism` "16";
-
-    SELECT u.name AS uname, m.message AS message
-    FROM GleambookUsers u JOIN GleambookMessages m ON m.authorId = u.id;
-
-## <a id="Memory_parameters">Memory Parameters</a>
-In the system, each blocking runtime operator such as join, group-by and order-by
-works within a fixed memory budget, and can gracefully spill to disks if
-the memory budget is smaller than the amount of data they have to hold.
-A user can manually configure the memory budget of those operators within a query.
-The supported configurable memory parameters are:
-
-*  **compiler.groupmemory**: the memory budget that each parallel group-by operator instance can use;
-   32MB is the default budget.
-
-*  **compiler.sortmemory**: the memory budget that each parallel sort operator instance can use;
-   32MB is the default budget.
-
-*  **compiler.joinmemory**: the memory budget that each parallel hash join operator instance can use;
-   32MB is the default budget.
-
-*  **compiler.windowmemory**: the memory budget that each parallel window aggregate operator instance can use;
-   32MB is the default budget.
-
-For each memory budget value, you can use a 64-bit integer value
-with a 1024-based binary unit suffix (for example, B, KB, MB, GB).
-If there is no user-provided suffix, "B" is the default suffix. See the following examples.
-
-##### Example
-
-    SET `compiler.groupmemory` "64MB";
-
-    SELECT msg.authorId, COUNT(*)
-    FROM GleambookMessages msg
-    GROUP BY msg.authorId;
-
-##### Example
-
-    SET `compiler.sortmemory` "67108864";
-
-    SELECT VALUE user
-    FROM GleambookUsers AS user
-    ORDER BY ARRAY_LENGTH(user.friendIds) DESC;
-
-##### Example
-
-    SET `compiler.joinmemory` "132000KB";
-
-    SELECT u.name AS uname, m.message AS message
-    FROM GleambookUsers u JOIN GleambookMessages m ON m.authorId = u.id;
+    use TinyCollege;
+    
+    select element { "staff" : f.name, "student" : d.name }
+    from Staff as f, Students as d
+    where
+    /*+ range [time("03:30:00.0+00:00"), time("05:59:00.0+00:00"), time("08:30:00.0+00:00")] */
+    interval_after(f.office_hours, d.work_hours)
+    order by f.name, d.name;
 
