@@ -17,14 +17,14 @@
  * under the License.
  */
 /*
- * Description      :   Check temporal join functionality for interval
+ * Description      :   Check temporal join spilling functionality for interval after
  * Expected Result  :   Success
- * Date             :   10th Aug, 2020
+ * Date             :   13th Aug, 2020
  */
 
 use IntervalTest;
 
- select count({ "ds1" : ds1, "ds2" : ds2 }) as resultCount
+select count({ "ds1" : ds1, "ds2" : ds2 }) as resultCount
 from DataSet1 as ds1, DataSet2 as ds2
 where
 /*+ range [datetime("1970-01-01T00:00:05.000Z"), datetime("1970-01-01T00:00:10.000Z"), datetime("1970-01-01T00:00:15.000Z")] */
