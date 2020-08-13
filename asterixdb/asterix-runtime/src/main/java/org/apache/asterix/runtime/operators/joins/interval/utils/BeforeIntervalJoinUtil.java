@@ -44,11 +44,6 @@ public class BeforeIntervalJoinUtil extends AbstractIntervalJoinUtil {
     }
 
     @Override
-    public boolean compareInterval(AIntervalPointable ipLeft, AIntervalPointable ipRight) throws HyracksDataException {
-        return il.before(ipLeft, ipRight);
-    }
-
-    @Override
     public boolean checkForEarlyExit(IFrameTupleAccessor accessorLeft, int leftTupleIndex,
             IFrameTupleAccessor accessorRight, int rightTupleIndex) {
         return false;
@@ -58,5 +53,10 @@ public class BeforeIntervalJoinUtil extends AbstractIntervalJoinUtil {
     public boolean checkIfMoreMatches(IFrameTupleAccessor accessorLeft, int leftTupleIndex,
             IFrameTupleAccessor accessorRight, int rightTupleIndex) {
         return true;
+    }
+
+    @Override
+    public boolean compareInterval(AIntervalPointable ipLeft, AIntervalPointable ipRight) throws HyracksDataException {
+        return il.before(ipLeft, ipRight);
     }
 }

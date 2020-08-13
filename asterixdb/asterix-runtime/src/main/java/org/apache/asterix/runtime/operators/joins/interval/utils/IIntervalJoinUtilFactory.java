@@ -27,8 +27,4 @@ public interface IIntervalJoinUtilFactory extends Serializable {
 
     IIntervalJoinUtil createIntervalMergeJoinChecker(int[] keys0, int[] keys1, IHyracksTaskContext ctx, int nPartitions)
             throws HyracksDataException;
-
-    IIntervalJoinUtil createIntervalInverseMergeJoinChecker(int[] keys0, int[] keys1, IHyracksTaskContext ctx,
-            int nPartitions) throws HyracksDataException;
-
 }

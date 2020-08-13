@@ -53,7 +53,6 @@ import org.apache.hyracks.dataflow.std.structures.TuplePointer;
 public class IntervalMergeJoiner {
 
     public enum TupleStatus {
-        UNKNOWN,
         LOADED,
         EMPTY;
 
@@ -63,10 +62,6 @@ public class IntervalMergeJoiner {
 
         public boolean isEmpty() {
             return this.equals(EMPTY);
-        }
-
-        public boolean isKnown() {
-            return !this.equals(UNKNOWN);
         }
     }
 

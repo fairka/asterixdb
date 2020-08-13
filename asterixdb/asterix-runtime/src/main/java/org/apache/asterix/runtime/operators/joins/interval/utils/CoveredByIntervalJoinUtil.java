@@ -29,11 +29,6 @@ public class CoveredByIntervalJoinUtil extends AbstractIntervalInverseJoinUtil {
         super(keysLeft[0], keysRight[0]);
     }
 
-    @Override
-    public boolean compareInterval(AIntervalPointable ipLeft, AIntervalPointable ipRight) throws HyracksDataException {
-        return il.coveredBy(ipLeft, ipRight);
-    }
-
     /**
      * Right (second argument) interval starts before left (first argument) interval ends.
      */
@@ -57,4 +52,8 @@ public class CoveredByIntervalJoinUtil extends AbstractIntervalInverseJoinUtil {
 
     }
 
+    @Override
+    public boolean compareInterval(AIntervalPointable ipLeft, AIntervalPointable ipRight) throws HyracksDataException {
+        return il.coveredBy(ipLeft, ipRight);
+    }
 }

@@ -18,8 +18,6 @@
  */
 package org.apache.asterix.runtime.operators.joins.interval.utils;
 
-import java.io.Serializable;
-
 import org.apache.asterix.om.pointables.nonvisitor.AIntervalPointable;
 import org.apache.hyracks.api.comm.IFrameTupleAccessor;
 import org.apache.hyracks.api.exceptions.HyracksDataException;

@@ -78,7 +78,7 @@ public class OverlappingIntervalJoinUtil extends AbstractIntervalJoinUtil {
             // These tuples match in a different partition
             return false;
         }
-        return il.overlapping(ipLeft, ipRight);
+        return compareInterval(ipLeft, ipRight);
     }
 
     @Override

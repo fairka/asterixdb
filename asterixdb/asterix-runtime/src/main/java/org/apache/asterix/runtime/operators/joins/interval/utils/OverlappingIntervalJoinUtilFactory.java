@@ -68,10 +68,4 @@ public class OverlappingIntervalJoinUtilFactory implements IIntervalJoinUtilFact
         }
         return new OverlappingIntervalJoinUtil(keys0, keys1, partitionStart);
     }
-
-    @Override
-    public IIntervalJoinUtil createIntervalInverseMergeJoinChecker(int[] keys0, int[] keys1, IHyracksTaskContext ctx,
-            int nPartitions) throws HyracksDataException {
-        return createIntervalMergeJoinChecker(keys0, keys1, ctx, nPartitions);
-    }
 }

@@ -28,10 +28,4 @@ public class CoversIntervalJoinUtilFactory implements IIntervalJoinUtilFactory {
             int nPartitions) {
         return new CoversIntervalJoinUtil(keys0, keys1);
     }
-
-    @Override
-    public IIntervalJoinUtil createIntervalInverseMergeJoinChecker(int[] keys0, int[] keys1, IHyracksTaskContext ctx,
-            int nPartitions) {
-        return new CoveredByIntervalJoinUtil(keys0, keys1);
-    }
 }

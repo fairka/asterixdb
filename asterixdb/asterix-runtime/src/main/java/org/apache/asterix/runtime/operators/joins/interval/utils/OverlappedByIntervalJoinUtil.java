@@ -31,5 +31,4 @@ public class OverlappedByIntervalJoinUtil extends AbstractIntervalInverseJoinUti
     public boolean compareInterval(AIntervalPointable ipLeft, AIntervalPointable ipRight) throws HyracksDataException {
         return il.overlappedBy(ipLeft, ipRight);
     }
-
 }

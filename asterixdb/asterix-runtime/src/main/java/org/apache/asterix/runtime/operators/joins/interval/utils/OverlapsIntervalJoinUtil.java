@@ -31,5 +31,4 @@ public class OverlapsIntervalJoinUtil extends AbstractIntervalJoinUtil {
     public boolean compareInterval(AIntervalPointable ipLeft, AIntervalPointable ipRight) throws HyracksDataException {
         return il.overlaps(ipLeft, ipRight);
     }
-
 }
