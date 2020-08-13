@@ -16,16 +16,14 @@
  ! specific language governing permissions and limitations
  ! under the License.
  !-->
+ 
+This system allows for the 13 types of Allen's interval-join relations. The default, when using these joins, is either 
+Nested Loop, or Hybrid Hash Join. The optimal algorithm will be automatically selected based on the query; Hybrid 
+Hash Joins will be selected in the case of an equijoin. If you want to use interval merge join you must include a 
+range hint. The range hint allows for the system to pick interval merge join, and the data will be partitioned 
+according to the given split points.
 
-Adding a range hint to an interval join will allow an optimized interval join algorithm to be picked:
-
-    
-This system allows for the 13 types of interval-join relations. The default, when using these joins, is either Nested 
-Loop, or Hybrid Hash Join. If you want to use interval merge join you must include a range hint. The 
-range hint allows for the system to pick interval merge join, and partition the data according to the given split 
-points.
-
-## <a id="Using_interval_joins">Using Interval Joins</a>
+## <a id="Interval_joins">Interval Joins</a>
 An interval join can be executed using one of the 13 conditions. The 13 conditions are before, after, covers, 
 covered_by, ends, ended_by, meets, met_by, overlaps, overlapping, overlapped_by, starts, and started_by.
 
@@ -34,21 +32,23 @@ covered_by, ends, ended_by, meets, met_by, overlaps, overlapping, overlapped_by,
     select element { "staff" : f.name, "student" : d.name }
     from Staff as f, Students as d
     where interval_after(f.employment, d.attendance)
-    order by f.name, d.name;
     
 In this scenario, "interval_after" can be replaced with any of the 13 join conditions eg: interval_before, 
 interval_covers, etc...
 
 ## <a id="Range_hint">Using a Range Hint</a>
 
-Interval joins currently work for intervals of date, datetime, or time. Adding  a range hint 
-will allow the system to pick interval merge join for 7 out of the 13 Allen's relations: After, 
+Interval joins with a range hint currently work for intervals of date, datetime, or time. Adding  a 
+range hint will allow the system to pick interval merge join for 7 out of the 13 Allen's relations: After, 
 Before, Covers, Covered_By, Overlaps, Overlapping, Overlapped_By. The other six relations have
 not been implemented; in those cases the range hint will not be picked, and the system will default
 to the normal join.
 
 Here are examples of how interval joins work with a range hint for all the supported points.
-The data will be partitioned using the split points provided in the hint. 
+Suppose that we have two sets of data, a data set of staff members with an interval for length of 
+employment, for breaks from employment, for office hours, and an id. The other data set represents students,
+which may include an interval for years attended, vacation periods, and work hours. The split points in the 
+range hint must be strategically set so that the data divides evenly among partitions.   
 
 ##### Range Hint Example
 
@@ -75,8 +75,6 @@ The data will be partitioned using the split points provided in the hint.
 
 ##### Range Hint Example with Time
 
-    use TinyCollege;
-    
     select element { "staff" : f.name, "student" : d.name }
     from Staff as f, Students as d
     where
