@@ -88,7 +88,7 @@ public final class SetAsterixPhysicalOperatorsRule extends SetAlgebricksPhysical
             if (op.getPhysicalOperator() != null) {
                 return op.getPhysicalOperator();
             }
-            return super.visitAbstractBinaryJoinOperator(op, topLevelOp);
+            return super.visitInnerJoinOperator(op, topLevelOp);
         }
 
         @Override
@@ -98,7 +98,7 @@ public final class SetAsterixPhysicalOperatorsRule extends SetAlgebricksPhysical
             if (op.getPhysicalOperator() != null) {
                 return op.getPhysicalOperator();
             }
-            return super.visitAbstractBinaryJoinOperator(op, topLevelOp);
+            return super.visitLeftOuterJoinOperator(op, topLevelOp);
         }
 
         @Override

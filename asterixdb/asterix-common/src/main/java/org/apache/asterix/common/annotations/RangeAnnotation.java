@@ -23,8 +23,6 @@ import org.apache.hyracks.dataflow.common.data.partition.range.RangeMap;
 
 public class RangeAnnotation implements IExpressionAnnotation {
 
-    public static final RangeAnnotation INSTANCE = new RangeAnnotation();
-
     private RangeMap map;
 
     @Override
