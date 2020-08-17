@@ -19,9 +19,9 @@
  
 This system allows for the 13 types of Allen's interval-join relations. The default, when using these joins, is either 
 Nested Loop, or Hybrid Hash Join. The optimal algorithm will be automatically selected based on the query; Hybrid 
-Hash Joins will be selected in the case of an equijoin. If you want to use interval merge join you must include a 
-range hint. The range hint allows for the system to pick interval merge join, and the data will be partitioned 
-according to the given split points.
+Hash Joins will be selected in the case of an equijoin, otherwise it will default to nested loop. If you want to use 
+interval merge join you must include a range hint. The range hint allows for the system to pick interval merge join, 
+and the data will be partitioned according to the given split points.
 
 ## <a id="Interval_joins">Interval Joins</a>
 An interval join can be executed using one of the 13 conditions. The 13 conditions are before, after, covers, 
@@ -39,12 +39,12 @@ interval_covers, etc...
 ## <a id="Range_hint">Using a Range Hint</a>
 
 Interval joins with a range hint currently work for intervals of date, datetime, or time. Adding  a 
-range hint will allow the system to pick interval merge join for 7 out of the 13 Allen's relations: After, 
-Before, Covers, Covered_By, Overlaps, Overlapping, Overlapped_By. The other six relations have
-not been implemented; in those cases the range hint will not be picked, and the system will default
-to the normal join.
+range hint directly before the join will allow the system to pick interval merge join for 7 out of 
+the 13 Allen's relations: After, Before, Covers, Covered_By, Overlaps, Overlapping, Overlapped_By. 
+The other six relations have not been implemented; in those cases the range hint will not be picked, 
+and the system will default to the normal join.
 
-Here are examples of how interval joins work with a range hint for all the supported points.
+Here are examples of how interval joins work with a range hint for all the supported data types.
 Suppose that we have two sets of data, a data set of staff members with an interval for length of 
 employment, for breaks from employment, for office hours, and an id. The other data set represents students,
 which may include an interval for years attended, vacation periods, and work hours. The split points in the 
