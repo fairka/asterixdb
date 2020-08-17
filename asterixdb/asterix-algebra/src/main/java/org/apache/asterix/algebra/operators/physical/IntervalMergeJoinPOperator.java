@@ -79,12 +79,12 @@ public class IntervalMergeJoinPOperator extends AbstractJoinPOperator {
 
     @Override
     public PhysicalOperatorTag getOperatorTag() {
-        return PhysicalOperatorTag.DELEGATE_OPERATOR;
+        return PhysicalOperatorTag.INTERVAL_MERGE_JOIN;
     }
 
     @Override
     public String toString() {
-        return getIntervalJoin() + " " + keysLeftBranch + " " + keysRightBranch;
+        return "INTERVAL_MERGE_JOIN" + " " + keysLeftBranch + " " + keysRightBranch;
     }
 
     @Override
@@ -185,10 +185,6 @@ public class IntervalMergeJoinPOperator extends AbstractJoinPOperator {
         builder.contributeGraphEdge(src1, 0, op, 0);
         ILogicalOperator src2 = op.getInputs().get(1).getValue();
         builder.contributeGraphEdge(src2, 0, op, 1);
-    }
-
-    public String getIntervalJoin() {
-        return "INTERVAL_MERGE_JOIN";
     }
 
     IOperatorDescriptor getIntervalOperatorDescriptor(int[] keysLeft, int[] keysRight, IOperatorDescriptorRegistry spec,
