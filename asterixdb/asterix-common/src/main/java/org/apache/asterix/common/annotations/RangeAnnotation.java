@@ -22,7 +22,7 @@ import org.apache.hyracks.algebricks.core.algebra.expressions.IExpressionAnnotat
 import org.apache.hyracks.dataflow.common.data.partition.range.RangeMap;
 
 public class RangeAnnotation implements IExpressionAnnotation {
-    
+
     private RangeMap map;
 
     @Override
