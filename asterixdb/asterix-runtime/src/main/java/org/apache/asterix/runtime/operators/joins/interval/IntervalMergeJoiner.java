@@ -89,9 +89,23 @@ public class IntervalMergeJoiner {
     protected long[] frameCounts = { 0, 0 };
     protected long[] tupleCounts = { 0, 0 };
 
+    //added
+    private long joinComparisonCount = 0;
+    private long joinResultCount = 0;
+    private long spillFileCount = 0;
+    private long spillWriteCount = 0;
+    private long spillReadCount = 0;
+    private long spillCount = 0;
+    private final int partition;
+    private final int memorySize;
+
     public IntervalMergeJoiner(IHyracksTaskContext ctx, int memorySize, IIntervalJoinUtil mjc, int buildKeys,
-            int probeKeys, RecordDescriptor buildRd, RecordDescriptor probeRd) throws HyracksDataException {
+            int probeKeys, RecordDescriptor buildRd, RecordDescriptor probeRd, int partition)
+            throws HyracksDataException {
         this.mjc = mjc;
+
+        this.partition = partition;
+        this.memorySize = memorySize;
 
         // Memory (probe buffer)
         if (memorySize < 1) {
@@ -155,12 +169,18 @@ public class IntervalMergeJoiner {
                 processBuildTuple(writer);
                 buildTs = loadBuildTuple();
             }
+            joinComparisonCount++;
         }
     }
 
     public void processProbeClose(IFrameWriter writer) throws HyracksDataException {
         resultAppender.write(writer, true);
         runFileStream.close();
+        long ioCost = runFileStream.getWriteCount() + runFileStream.getReadCount();
+        System.out.println("MergeJoiner Statistics Log –– partition: " + partition + ", memory: " + memorySize
+                + ", results: " + joinResultCount + ", Comparisons: " + joinComparisonCount + ", IO: " + ioCost
+                + ", spills: " + spillCount + ", frames_written: " + runFileStream.getWriteCount() + ", frames_read: "
+                + runFileStream.getReadCount() + ".");
         runFileStream.removeRunFile();
     }
 
@@ -218,6 +238,7 @@ public class IntervalMergeJoiner {
                 inputAccessor[PROBE_PARTITION], inputAccessor[PROBE_PARTITION].getTupleId())) {
             if (!addToMemory(inputAccessor[PROBE_PARTITION])) {
                 unfreezeAndClearMemory(writer, inputAccessor[BUILD_PARTITION]);
+                spillCount++;
                 return;
             }
         }
@@ -231,6 +252,18 @@ public class IntervalMergeJoiner {
             // Left side from stream
             processBuildTuple(writer);
             buildTs = loadBuildTuple();
+        }
+        if (true) {
+            String string = "snapshot –– right: " + frameCounts[BUILD_PARTITION] + ", left: "
+                    + frameCounts[PROBE_PARTITION] + ", comparisons: " + joinComparisonCount + ", results: "
+                    + joinResultCount + ", [tuples memory: " + bufferManager.getNumTuples() + ", spills: " + spillCount
+                    + ", files: " + (runFileStream.getFileCount() - spillFileCount) + ", written: "
+                    + (runFileStream.getWriteCount() - spillWriteCount) + ", read: "
+                    + (runFileStream.getReadCount() - spillReadCount) + " ].";
+            System.out.println(string);
+            spillFileCount = runFileStream.getFileCount();
+            spillReadCount = runFileStream.getReadCount();
+            spillWriteCount = runFileStream.getWriteCount();
         }
         // Finish writing
         runFileStream.flushRunFile();
@@ -256,6 +289,7 @@ public class IntervalMergeJoiner {
             int rightTupleIndex, IFrameWriter writer) throws HyracksDataException {
         FrameUtils.appendConcatToWriter(writer, resultAppender, accessorLeft, leftTupleIndex, accessorRight,
                 rightTupleIndex);
+        joinResultCount++;
     }
 
     private boolean memoryHasTuples() {

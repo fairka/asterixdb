@@ -19,9 +19,9 @@
  !-->
 <test-suite xmlns="urn:xml.testframework.asterix.apache.org" ResultOffsetPath="results" QueryOffsetPath="queries">  <test-group name="failed">
     <test-case FilePath="temporal/interval_joins_spilling">
-      <compilation-unit name="interval_after">
-        <output-dir compare="Text">interval_after</output-dir>
-      </compilation-unit>
+        <compilation-unit name="interval_overlapping">
+            <output-dir compare="Text">interval_overlapping</output-dir>
+        </compilation-unit>
     </test-case>
   </test-group>
 </test-suite>
