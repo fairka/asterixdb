@@ -77,13 +77,8 @@ public class IntervalSideTuple {
         return end;
     }
 
-    //remove
-    public boolean hasMoreMatches(IntervalSideTuple ist) {
-        return imjc.checkIfMoreMatches(accessor, tupleIndex, ist.accessor, ist.tupleIndex);
-    }
-
     public boolean compareJoin(IntervalSideTuple ist) throws HyracksDataException {
-        return imjc.checkToSaveInResult(accessor, tupleIndex, ist.accessor, ist.tupleIndex, false);
+        return imjc.checkToSaveInResult(accessor, tupleIndex, ist.accessor, ist.tupleIndex);
     }
 
     public boolean removeFromMemory(IntervalSideTuple ist) {
@@ -92,9 +87,5 @@ public class IntervalSideTuple {
 
     public boolean checkForEarlyExit(IntervalSideTuple ist) {
         return imjc.checkForEarlyExit(accessor, tupleIndex, ist.accessor, ist.tupleIndex);
-    }
-
-    public boolean startsBefore(IntervalSideTuple ist) {
-        return start <= ist.start;
     }
 }

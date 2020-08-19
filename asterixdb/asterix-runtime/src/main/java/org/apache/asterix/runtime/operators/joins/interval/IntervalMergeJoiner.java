@@ -92,8 +92,7 @@ public class IntervalMergeJoiner {
     private final int memorySize;
 
     public IntervalMergeJoiner(IHyracksTaskContext ctx, int memorySize, IIntervalJoinUtil mjc, int buildKeys,
-            int probeKeys, RecordDescriptor buildRd, RecordDescriptor probeRd)
-            throws HyracksDataException {
+            int probeKeys, RecordDescriptor buildRd, RecordDescriptor probeRd) throws HyracksDataException {
         this.mjc = mjc;
 
         //Two frames are used for the runfile stream, and one frame for each input (2 outputs).
@@ -207,7 +206,6 @@ public class IntervalMergeJoiner {
         if (memoryHasTuples()) {
             inputTuple[BUILD_PARTITION].loadTuple();
             Iterator<TuplePointer> memoryIterator = memoryBuffer.iterator();
-            System.out.println("Memory Buffer Size, " + memoryBuffer.size());
             while (memoryIterator.hasNext()) {
                 TuplePointer tp = memoryIterator.next();
                 memoryTuple.setTuple(tp);
