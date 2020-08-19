@@ -49,4 +49,12 @@ public abstract class AbstractIntervalInverseJoinUtil extends AbstractIntervalJo
         return start0 >= end1;
     }
 
+    @Override
+    public boolean checkToLoadNextProbeTuple(IFrameTupleAccessor accessorLeft, int leftTupleIndex,
+            IFrameTupleAccessor accessorRight, int rightTupleIndex) {
+        long start1 = IntervalJoinUtil.getIntervalStart(accessorRight, rightTupleIndex, idRight);
+        long start0 = IntervalJoinUtil.getIntervalStart(accessorLeft, leftTupleIndex, idLeft);
+        return start0 >= start1;
+    }
+
 }

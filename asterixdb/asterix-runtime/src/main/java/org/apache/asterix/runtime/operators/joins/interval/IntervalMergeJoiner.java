@@ -89,28 +89,20 @@ public class IntervalMergeJoiner {
     protected long[] frameCounts = { 0, 0 };
     protected long[] tupleCounts = { 0, 0 };
 
-    //added
-    private long joinComparisonCount = 0;
-    private long joinResultCount = 0;
-    private long spillFileCount = 0;
-    private long spillWriteCount = 0;
-    private long spillReadCount = 0;
-    private long spillCount = 0;
-    private final int partition;
     private final int memorySize;
 
     public IntervalMergeJoiner(IHyracksTaskContext ctx, int memorySize, IIntervalJoinUtil mjc, int buildKeys,
-            int probeKeys, RecordDescriptor buildRd, RecordDescriptor probeRd, int partition)
+            int probeKeys, RecordDescriptor buildRd, RecordDescriptor probeRd)
             throws HyracksDataException {
         this.mjc = mjc;
 
-        this.partition = partition;
-        this.memorySize = memorySize;
+        //Two frames are used for the runfile stream, and one frame for each input (2 outputs).
+        this.memorySize = memorySize - 4;
 
         // Memory (probe buffer)
-        if (memorySize < 1) {
+        if (this.memorySize < 1) {
             throw new HyracksDataException(
-                    "MergeJoiner does not have enough memory (needs > 0, got " + memorySize + ").");
+                    "MergeJoiner does not have enough memory (needs > 0, got " + this.memorySize + ").");
         }
 
         inputAccessor = new TupleAccessor[JOIN_PARTITIONS];
@@ -121,7 +113,7 @@ public class IntervalMergeJoiner {
         inputBuffer[BUILD_PARTITION] = new VSizeFrame(ctx);
         inputBuffer[PROBE_PARTITION] = new VSizeFrame(ctx);
 
-        framePool = new DeallocatableFramePool(ctx, (memorySize) * ctx.getInitialFrameSize());
+        framePool = new DeallocatableFramePool(ctx, (this.memorySize) * ctx.getInitialFrameSize());
         bufferManager = new IntervalVariableDeletableTupleMemoryManager(framePool, probeRd);
         memoryAccessor = ((IntervalVariableDeletableTupleMemoryManager) bufferManager).createTupleAccessor();
 
@@ -159,8 +151,10 @@ public class IntervalMergeJoiner {
 
         TupleStatus buildTs = loadBuildTuple();
         TupleStatus probeTs = loadProbeTuple();
-        while (buildTs.isLoaded() && (probeTs.isLoaded() || memoryHasTuples())) {
-            if (probeTs.isLoaded()) {
+        while (buildTs.isLoaded() && probeTs.isLoaded()) {
+            if (probeTs.isLoaded() && mjc.checkToLoadNextProbeTuple(inputAccessor[BUILD_PARTITION],
+                    inputAccessor[BUILD_PARTITION].getTupleId(), inputAccessor[PROBE_PARTITION],
+                    inputAccessor[PROBE_PARTITION].getTupleId())) {
                 // Right side from stream
                 processProbeTuple(writer);
                 probeTs = loadProbeTuple();
@@ -169,18 +163,20 @@ public class IntervalMergeJoiner {
                 processBuildTuple(writer);
                 buildTs = loadBuildTuple();
             }
-            joinComparisonCount++;
         }
     }
 
     public void processProbeClose(IFrameWriter writer) throws HyracksDataException {
+
+        TupleStatus buildTs = loadBuildTuple();
+        while (buildTs.isLoaded() && memoryHasTuples()) {
+            // Left side from stream
+            processBuildTuple(writer);
+            buildTs = loadBuildTuple();
+        }
+
         resultAppender.write(writer, true);
         runFileStream.close();
-        long ioCost = runFileStream.getWriteCount() + runFileStream.getReadCount();
-        System.out.println("MergeJoiner Statistics Log –– partition: " + partition + ", memory: " + memorySize
-                + ", results: " + joinResultCount + ", Comparisons: " + joinComparisonCount + ", IO: " + ioCost
-                + ", spills: " + spillCount + ", frames_written: " + runFileStream.getWriteCount() + ", frames_read: "
-                + runFileStream.getReadCount() + ".");
         runFileStream.removeRunFile();
     }
 
@@ -211,6 +207,7 @@ public class IntervalMergeJoiner {
         if (memoryHasTuples()) {
             inputTuple[BUILD_PARTITION].loadTuple();
             Iterator<TuplePointer> memoryIterator = memoryBuffer.iterator();
+            System.out.println("Memory Buffer Size, " + memoryBuffer.size());
             while (memoryIterator.hasNext()) {
                 TuplePointer tp = memoryIterator.next();
                 memoryTuple.setTuple(tp);
@@ -238,7 +235,6 @@ public class IntervalMergeJoiner {
                 inputAccessor[PROBE_PARTITION], inputAccessor[PROBE_PARTITION].getTupleId())) {
             if (!addToMemory(inputAccessor[PROBE_PARTITION])) {
                 unfreezeAndClearMemory(writer, inputAccessor[BUILD_PARTITION]);
-                spillCount++;
                 return;
             }
         }
@@ -252,18 +248,6 @@ public class IntervalMergeJoiner {
             // Left side from stream
             processBuildTuple(writer);
             buildTs = loadBuildTuple();
-        }
-        if (true) {
-            String string = "snapshot –– right: " + frameCounts[BUILD_PARTITION] + ", left: "
-                    + frameCounts[PROBE_PARTITION] + ", comparisons: " + joinComparisonCount + ", results: "
-                    + joinResultCount + ", [tuples memory: " + bufferManager.getNumTuples() + ", spills: " + spillCount
-                    + ", files: " + (runFileStream.getFileCount() - spillFileCount) + ", written: "
-                    + (runFileStream.getWriteCount() - spillWriteCount) + ", read: "
-                    + (runFileStream.getReadCount() - spillReadCount) + " ].";
-            System.out.println(string);
-            spillFileCount = runFileStream.getFileCount();
-            spillReadCount = runFileStream.getReadCount();
-            spillWriteCount = runFileStream.getWriteCount();
         }
         // Finish writing
         runFileStream.flushRunFile();
@@ -289,7 +273,6 @@ public class IntervalMergeJoiner {
             int rightTupleIndex, IFrameWriter writer) throws HyracksDataException {
         FrameUtils.appendConcatToWriter(writer, resultAppender, accessorLeft, leftTupleIndex, accessorRight,
                 rightTupleIndex);
-        joinResultCount++;
     }
 
     private boolean memoryHasTuples() {

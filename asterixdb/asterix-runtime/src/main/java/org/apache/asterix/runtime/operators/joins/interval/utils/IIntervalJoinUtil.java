@@ -35,7 +35,7 @@ public interface IIntervalJoinUtil {
      * @throws HyracksDataException
      */
     boolean checkToSaveInMemory(IFrameTupleAccessor accessorLeft, int leftTupleIndex, IFrameTupleAccessor accessorRight,
-            int rightTupleIndex) throws HyracksDataException;
+            int rightTupleIndex);
 
     /**
      * Check to see if the right tuple should be removed from memory during the merge join.
@@ -48,7 +48,7 @@ public interface IIntervalJoinUtil {
      * @throws HyracksDataException
      */
     boolean checkToRemoveInMemory(IFrameTupleAccessor accessorLeft, int leftTupleIndex,
-            IFrameTupleAccessor accessorRight, int rightTupleIndex) throws HyracksDataException;
+            IFrameTupleAccessor accessorRight, int rightTupleIndex);
 
     /**
      * Check to see if the left tuple should continue checking for matches.
@@ -60,7 +60,7 @@ public interface IIntervalJoinUtil {
      * @throws HyracksDataException
      */
     boolean checkIfMoreMatches(IFrameTupleAccessor accessorLeft, int leftTupleIndex, IFrameTupleAccessor accessorRight,
-            int rightTupleIndex) throws HyracksDataException;
+            int rightTupleIndex);
 
     /**
      * Check to see if tuples match join condition
@@ -97,6 +97,18 @@ public interface IIntervalJoinUtil {
      * @throws HyracksDataException
      */
     boolean checkForEarlyExit(IFrameTupleAccessor accessorLeft, int leftTupleIndex, IFrameTupleAccessor accessorRight,
-            int rightTupleIndex) throws HyracksDataException;
+            int rightTupleIndex);
+
+    /**
+     * Check if next tuple should be loaded into memory.
+     * The check is true if there are more tuples
+     *
+     * @param accessorLeft
+     * @param accessorRight
+     * @return boolean
+     * @throws HyracksDataException
+     */
+    boolean checkToLoadNextProbeTuple(IFrameTupleAccessor accessorLeft, int leftTupleIndex,
+            IFrameTupleAccessor accessorRight, int rightTupleIndex);
 
 }

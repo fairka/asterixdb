@@ -24,8 +24,9 @@
 
 use IntervalTest;
 
-select count({ "ds1" : ds1, "ds2" : ds2 }) as resultCount
+select element { "id1" : ds1.id, "id2" : ds2.id, "spill" : length(ds1.filler || ds2.filler)}
 from DataSet1 as ds1, DataSet2 as ds2
 where
 /*+ range [datetime("1970-01-01T00:00:05.000Z"), datetime("1970-01-01T00:00:10.000Z"), datetime("1970-01-01T00:00:15.000Z")] */
-interval_after(ds1.interval, ds2.interval);
+interval_after(ds1.interval, ds2.interval)
+order by ds1.id, ds2.id;

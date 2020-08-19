@@ -119,7 +119,7 @@ public class IntervalMergeJoinOperatorDescriptor extends AbstractOperatorDescrip
                             imjcf.createIntervalMergeJoinChecker(leftKeys, rightKeys, ctx, nPartitions);
 
                     state.joiner =
-                            new IntervalMergeJoiner(ctx, memoryForJoin, imjc, buildKey, probeKey, rd0, rd1, partition);
+                            new IntervalMergeJoiner(ctx, memoryForJoin, imjc, buildKey, probeKey, rd0, rd1);
                 }
 
                 @Override

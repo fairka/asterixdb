@@ -22,6 +22,16 @@
  * Date             :   13th Aug, 2020
  */
 
+drop dataverse IntervalTest if exists;
+create dataverse IntervalTest;
+use dataverse IntervalTest;
+
+create type IntervalType as open {
+id: int64,
+interval: interval,
+filler: string
+};
+
 use dataverse IntervalTest;
 
 create dataset DataSet1(IntervalType) primary key id;

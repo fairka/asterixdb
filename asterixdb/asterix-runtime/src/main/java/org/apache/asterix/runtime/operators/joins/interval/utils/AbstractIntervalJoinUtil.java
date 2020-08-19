@@ -87,13 +87,9 @@ public abstract class AbstractIntervalJoinUtil implements IIntervalJoinUtil {
     @Override
     public boolean checkToSaveInResult(IFrameTupleAccessor accessorLeft, int leftTupleIndex,
             IFrameTupleAccessor accessorRight, int rightTupleIndex, boolean reversed) throws HyracksDataException {
-        if (reversed) {
-            IntervalJoinUtil.getIntervalPointable(accessorLeft, leftTupleIndex, idLeft, ipRight);
-            IntervalJoinUtil.getIntervalPointable(accessorRight, rightTupleIndex, idRight, ipLeft);
-        } else {
-            IntervalJoinUtil.getIntervalPointable(accessorLeft, leftTupleIndex, idLeft, ipLeft);
-            IntervalJoinUtil.getIntervalPointable(accessorRight, rightTupleIndex, idRight, ipRight);
-        }
+        //Needs to be removed
+        IntervalJoinUtil.getIntervalPointable(accessorLeft, leftTupleIndex, idLeft, ipLeft);
+        IntervalJoinUtil.getIntervalPointable(accessorRight, rightTupleIndex, idRight, ipRight);
         return compareInterval(ipLeft, ipRight);
     }
 
@@ -111,5 +107,13 @@ public abstract class AbstractIntervalJoinUtil implements IIntervalJoinUtil {
     @Override
     public abstract boolean compareInterval(AIntervalPointable ipLeft, AIntervalPointable ipRight)
             throws HyracksDataException;
+
+    @Override
+    public boolean checkToLoadNextProbeTuple(IFrameTupleAccessor accessorLeft, int leftTupleIndex,
+            IFrameTupleAccessor accessorRight, int rightTupleIndex) {
+        long start1 = IntervalJoinUtil.getIntervalStart(accessorRight, rightTupleIndex, idRight);
+        long end0 = IntervalJoinUtil.getIntervalEnd(accessorLeft, leftTupleIndex, idLeft);
+        return end0 > start1;
+    }
 
 }

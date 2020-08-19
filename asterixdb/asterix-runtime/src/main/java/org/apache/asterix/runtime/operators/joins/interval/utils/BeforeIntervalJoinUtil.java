@@ -34,13 +34,13 @@ public class BeforeIntervalJoinUtil extends AbstractIntervalJoinUtil {
             IFrameTupleAccessor accessorRight, int rightTupleID) {
         long start0 = IntervalJoinUtil.getIntervalStart(accessorLeft, leftTupleID, idRight);
         long start1 = IntervalJoinUtil.getIntervalStart(accessorRight, rightTupleID, idRight);
-        return start0 <= start1;
+        return start0 < start1;
     }
 
     @Override
     public boolean checkToRemoveInMemory(IFrameTupleAccessor accessorLeft, int leftTupleIndex,
             IFrameTupleAccessor accessorRight, int rightTupleIndex) {
-        return false;
+        return !checkToSaveInMemory(accessorLeft, leftTupleIndex, accessorRight, rightTupleIndex);
     }
 
     @Override
@@ -50,13 +50,13 @@ public class BeforeIntervalJoinUtil extends AbstractIntervalJoinUtil {
     }
 
     @Override
-    public boolean checkIfMoreMatches(IFrameTupleAccessor accessorLeft, int leftTupleIndex,
-            IFrameTupleAccessor accessorRight, int rightTupleIndex) {
-        return true;
+    public boolean compareInterval(AIntervalPointable ipLeft, AIntervalPointable ipRight) throws HyracksDataException {
+        return il.before(ipLeft, ipRight);
     }
 
     @Override
-    public boolean compareInterval(AIntervalPointable ipLeft, AIntervalPointable ipRight) throws HyracksDataException {
-        return il.before(ipLeft, ipRight);
+    public boolean checkToLoadNextProbeTuple(IFrameTupleAccessor accessorLeft, int leftTupleIndex,
+            IFrameTupleAccessor accessorRight, int rightTupleIndex) {
+        return true;
     }
 }
