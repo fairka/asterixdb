@@ -110,7 +110,7 @@ public class IntervalMergeJoinOperatorDescriptor extends AbstractOperatorDescrip
                     state = new JoinCacheTaskState(ctx.getJobletContext().getJobId(),
                             new TaskId(getActivityId(), partition));
 
-                    IIntervalJoinUtil imjc = imjcf.createIntervalMergeJoinChecker(buildKey, probeKey, ctx, nPartitions);
+                    IIntervalJoinUtil imjc = imjcf.createIntervalMergeJoinUtil(buildKey, probeKey, ctx, nPartitions);
 
                     state.joiner = new IntervalMergeJoiner(ctx, memoryForJoin, imjc, buildKey, probeKey, rd0, rd1);
                 }
