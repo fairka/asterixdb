@@ -31,4 +31,3 @@ id: int64,
 interval: interval,
 filler: string
 };
-
