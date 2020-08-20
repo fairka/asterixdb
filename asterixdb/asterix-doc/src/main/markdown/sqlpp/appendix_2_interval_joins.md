@@ -34,7 +34,7 @@ The 13 interval functions are `interval_after()`, `interval_before()`, `interval
 
 ##### How to use an interval join
 
-    select element { "staff" : f.name, "student" : d.name }
+    select f.name as staff, d.name as student
     from Staff as f, Students as d
     where interval_after(f.employment, d.attendance)
 
