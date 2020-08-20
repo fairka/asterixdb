@@ -35,7 +35,7 @@ public class OverlappingIntervalJoinUtilFactory implements IIntervalJoinUtilFact
     }
 
     @Override
-    public IIntervalJoinUtil createIntervalMergeJoinChecker(int buildKey, int probeKey, IHyracksTaskContext ctx,
+    public IIntervalJoinUtil createIntervalMergeJoinUtil(int buildKey, int probeKey, IHyracksTaskContext ctx,
             int nPartitions) throws HyracksDataException {
         int fieldIndex = 0;
         int partition = ctx.getTaskAttemptId().getTaskId().getPartition();

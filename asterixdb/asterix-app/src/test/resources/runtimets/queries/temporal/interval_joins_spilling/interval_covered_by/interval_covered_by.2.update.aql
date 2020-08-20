@@ -22,10 +22,10 @@
  * Date             :   13th Aug, 2020
  */
 
- use dataverse IntervalTest;
+use dataverse IntervalTest;
 
- create dataset DataSet1(IntervalType) primary key id;
- create dataset DataSet2(IntervalType) primary key id;
+create dataset DataSet1(IntervalType) primary key id;
+create dataset DataSet2(IntervalType) primary key id;
 
 insert into dataset DataSet1
 let $filler := repeat("i", 10000)
