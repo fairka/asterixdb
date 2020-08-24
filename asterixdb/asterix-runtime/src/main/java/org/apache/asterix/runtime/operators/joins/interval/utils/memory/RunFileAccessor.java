@@ -16,15 +16,35 @@
  * specific language governing permissions and limitations
  * under the License.
  */
-package org.apache.asterix.runtime.operators.joins.interval.utils;
+package org.apache.asterix.runtime.operators.joins.interval.utils.memory;
 
-import java.io.Serializable;
-
-import org.apache.hyracks.api.context.IHyracksTaskContext;
+import org.apache.hyracks.api.comm.IFrameTupleAccessor;
 import org.apache.hyracks.api.exceptions.HyracksDataException;
 
-public interface IIntervalJoinUtilFactory extends Serializable {
+import java.nio.ByteBuffer;
 
-    IIntervalJoinUtil createIntervalMergeJoinUtil(int buildKey, int probeKey, IHyracksTaskContext ctx, int nPartitions)
-            throws HyracksDataException;
+public class RunFileAccessor implements ITupleCursor {
+
+    @Override
+    public boolean exists() {
+        return false;
+    }
+
+    @Override
+    public void next() throws HyracksDataException {
+
+    }
+
+    @Override public int getTupleId() {
+        return 0;
+    }
+
+    @Override public void reset(ByteBuffer byteBuffer) {
+
+    }
+
+    @Override
+    public IFrameTupleAccessor getAccessor() {
+        return null;
+    }
 }
