@@ -29,7 +29,7 @@ from range(1, 100) s at srow,
      range(1, 1) l at lrow
 let filler = repeat("i", 10000),
     lambda = 1, d = 20,
-    id = (srow-1) * lambda + lrow + 0
+    id = (srow-1) * lambda + lrow
 select value {
 "id": id,
 "interval": interval(datetime_from_unix_time_in_secs(s), datetime_from_unix_time_in_secs(s + d)),
@@ -41,7 +41,7 @@ from range(1, 100) s at srow,
      range(1, 1) l at lrow
 let filler = repeat("i", 10000),
     lambda = 1, d = 20,
-    id = (srow-1) * lambda + lrow + 0
+    id = (srow-1) * lambda + lrow
 select value {
 "id": id,
 "interval": interval(datetime_from_unix_time_in_secs(s), datetime_from_unix_time_in_secs(s + d)),
