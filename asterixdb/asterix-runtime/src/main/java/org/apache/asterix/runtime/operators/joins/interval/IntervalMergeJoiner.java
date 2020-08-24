@@ -233,6 +233,7 @@ public class IntervalMergeJoiner {
                 inputAccessor[PROBE_PARTITION], inputAccessor[PROBE_PARTITION].getTupleId())) {
             if (!addToMemory(inputAccessor[PROBE_PARTITION])) {
                 unfreezeAndClearMemory(writer, inputAccessor[BUILD_PARTITION]);
+                System.out.println("Spills");
                 return;
             }
         }

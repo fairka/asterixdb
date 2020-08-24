@@ -24,9 +24,10 @@
 
 use IntervalTest;
 
-select ds1.id as id1, ds2.id as id2, length(ds1.filler || ds2.filler) as spill
+select count(*)
+from (select ds1.id as id1, ds2.id as id2, length(ds1.filler || ds2.filler) as spill
 from DataSet1 as ds1, DataSet2 as ds2
 where
 /*+ range [datetime("1970-01-01T00:00:05.000Z"), datetime("1970-01-01T00:00:10.000Z"), datetime("1970-01-01T00:00:15.000Z")] */
-interval_after(ds1.interval, ds2.interval)
-order by ds1.id, ds2.id;
+interval_after(ds1.interval, ds2.interval)) as results0
+where results0.id1 >= 2 or results0.filler = 1;
