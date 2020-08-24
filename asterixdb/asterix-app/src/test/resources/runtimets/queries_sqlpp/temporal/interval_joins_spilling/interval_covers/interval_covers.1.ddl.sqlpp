@@ -24,7 +24,7 @@
 
 drop dataverse IntervalTest if exists;
 create dataverse IntervalTest;
-use dataverse IntervalTest;
+use IntervalTest;
 
 create type IntervalType as open {
 id: int64,

@@ -38,7 +38,9 @@ public class AfterIntervalJoinUtil extends AbstractIntervalJoinUtil {
     @Override
     public boolean checkToRemoveInMemory(IFrameTupleAccessor buildAccessor, int buildTupleIndex,
             IFrameTupleAccessor probeAccessor, int probeTupleIndex) {
-        return false;
+        long buildStart = IntervalJoinUtil.getIntervalStart(buildAccessor, buildTupleIndex, idBuild);
+        long probeStart = IntervalJoinUtil.getIntervalStart(probeAccessor, probeTupleIndex, idProbe);
+        return buildStart < probeStart;
     }
 
     @Override

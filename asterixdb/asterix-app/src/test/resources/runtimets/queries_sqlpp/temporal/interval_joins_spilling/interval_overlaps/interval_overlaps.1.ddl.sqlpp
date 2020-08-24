@@ -17,14 +17,14 @@
  * under the License.
  */
 /*
- * Description      :   Check temporal join spilling functionality for interval before
+ * Description      :   Check temporal join spilling functionality for interval overlaps
  * Expected Result  :   Success
  * Date             :   13th Aug, 2020
  */
 
 drop dataverse IntervalTest if exists;
 create dataverse IntervalTest;
-use dataverse IntervalTest;
+use IntervalTest;
 
 create type IntervalType as open {
 id: int64,

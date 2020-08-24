@@ -25,6 +25,6 @@ import org.apache.hyracks.api.exceptions.HyracksDataException;
 
 public interface IIntervalJoinUtilFactory extends Serializable {
 
-    IIntervalJoinUtil createIntervalMergeJoinUtil(int buildKey, int probeKey, IHyracksTaskContext ctx,
-            int nPartitions) throws HyracksDataException;
+    IIntervalJoinUtil createIntervalMergeJoinUtil(int buildKey, int probeKey, IHyracksTaskContext ctx, int nPartitions)
+            throws HyracksDataException;
 }
