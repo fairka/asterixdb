@@ -16,28 +16,26 @@
  * specific language governing permissions and limitations
  * under the License.
  */
-/*
- * Description  : This test case is to verify composite key search with low and high ranges
- * Expected Res : Success
- * Date         : 22 Dec 2017
- */
+package org.apache.asterix.common.storage;
 
-drop dataverse test if exists;
-create dataverse test;
+public class StorageIOStats {
 
-use test;
+    private int pendingFlushes;
+    private int pendingMerges;
 
-create type PointType as closed {
-x:int,
-y:int
-};
+    public void addPendingFlushes(int pending) {
+        pendingFlushes += pending;
+    }
 
+    public void addPendingMerges(int pending) {
+        pendingMerges += pending;
+    }
 
-drop nodegroup group_test if exists;
-create  nodegroup group_test on
-    asterix_nc1
-;
+    public int getPendingFlushes() {
+        return pendingFlushes;
+    }
 
-create dataset Points(PointType)
-primary key x, y
-WITH {"node-group":{"name":"group_test"}};;
+    public int getPendingMerges() {
+        return pendingMerges;
+    }
+}
