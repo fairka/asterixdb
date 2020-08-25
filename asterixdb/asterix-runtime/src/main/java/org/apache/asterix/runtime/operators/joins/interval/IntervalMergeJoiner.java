@@ -90,9 +90,6 @@ public class IntervalMergeJoiner {
             int probeKeys, RecordDescriptor buildRd, RecordDescriptor probeRd) throws HyracksDataException {
         this.mjc = mjc;
 
-        //Two frames are used for the runfile stream, and one frame for each input (2 outputs).
-        memorySize = memorySize - 4;
-
         // Memory (probe buffer)
         if (memorySize < 5) {
             throw new HyracksDataException(
