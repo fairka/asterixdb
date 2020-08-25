@@ -30,7 +30,6 @@ import org.apache.asterix.runtime.operators.joins.interval.utils.memory.Interval
 import org.apache.asterix.runtime.operators.joins.interval.utils.memory.RunFilePointer;
 import org.apache.asterix.runtime.operators.joins.interval.utils.memory.RunFileStream;
 import org.apache.hyracks.api.comm.IFrame;
-import org.apache.hyracks.api.comm.IFrameTupleAccessor;
 import org.apache.hyracks.api.comm.IFrameWriter;
 import org.apache.hyracks.api.comm.VSizeFrame;
 import org.apache.hyracks.api.context.IHyracksTaskContext;
@@ -212,8 +211,7 @@ public class IntervalMergeJoiner {
                     break;
                 } else if (inputTuple[BUILD_PARTITION].compareJoin(memoryTuple)) {
                     // add to result
-                    addToResult(inputCursor[BUILD_PARTITION].getAccessor(), inputCursor[BUILD_PARTITION].getTupleId(),
-                            memoryCursor.getAccessor(), tp.getTupleIndex(), writer);
+                    addToResult(inputCursor[BUILD_PARTITION], memoryCursor, writer);
                 }
             }
         }
@@ -225,7 +223,7 @@ public class IntervalMergeJoiner {
         if (mjc.checkToSaveInMemory(inputCursor[BUILD_PARTITION].getAccessor(),
                 inputCursor[BUILD_PARTITION].getTupleId(), inputCursor[PROBE_PARTITION].getAccessor(),
                 inputCursor[PROBE_PARTITION].getTupleId())) {
-            if (!addToMemory(inputCursor[PROBE_PARTITION].getAccessor(), inputCursor[PROBE_PARTITION].getTupleId())) {
+            if (!addToMemory(inputCursor[PROBE_PARTITION])) {
                 unfreezeAndClearMemory(writer, inputCursor[BUILD_PARTITION]);
                 return;
             }
@@ -252,19 +250,19 @@ public class IntervalMergeJoiner {
         runFilePointer.reset(-1, -1);
     }
 
-    private boolean addToMemory(IFrameTupleAccessor accessor, int tupleId) throws HyracksDataException {
+    private boolean addToMemory(ITupleCursor cursor) throws HyracksDataException {
         TuplePointer tp = new TuplePointer();
-        if (bufferManager.insertTuple(accessor, tupleId, tp)) {
+        if (bufferManager.insertTuple(cursor.getAccessor(), cursor.getTupleId(), tp)) {
             memoryBuffer.add(tp);
             return true;
         }
         return false;
     }
 
-    private void addToResult(IFrameTupleAccessor accessorLeft, int leftTupleIndex, IFrameTupleAccessor accessorRight,
-            int rightTupleIndex, IFrameWriter writer) throws HyracksDataException {
-        FrameUtils.appendConcatToWriter(writer, resultAppender, accessorLeft, leftTupleIndex, accessorRight,
-                rightTupleIndex);
+    private void addToResult(ITupleCursor buildCursor, ITupleCursor probeCursor, IFrameWriter writer)
+            throws HyracksDataException {
+        FrameUtils.appendConcatToWriter(writer, resultAppender, buildCursor.getAccessor(), buildCursor.getTupleId(),
+                probeCursor.getAccessor(), probeCursor.getTupleId());
     }
 
     private boolean memoryHasTuples() {
