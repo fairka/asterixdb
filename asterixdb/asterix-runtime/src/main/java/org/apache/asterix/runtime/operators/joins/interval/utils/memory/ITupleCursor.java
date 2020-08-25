@@ -35,10 +35,10 @@
  */
 package org.apache.asterix.runtime.operators.joins.interval.utils.memory;
 
+import java.nio.ByteBuffer;
+
 import org.apache.hyracks.api.comm.IFrameTupleAccessor;
 import org.apache.hyracks.api.exceptions.HyracksDataException;
-
-import java.nio.ByteBuffer;
 
 public interface ITupleCursor {
     /**

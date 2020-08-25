@@ -18,10 +18,10 @@
  */
 package org.apache.asterix.runtime.operators.joins.interval.utils.memory;
 
+import java.nio.ByteBuffer;
+
 import org.apache.hyracks.api.comm.IFrameTupleAccessor;
 import org.apache.hyracks.api.exceptions.HyracksDataException;
-
-import java.nio.ByteBuffer;
 
 public class RunFileAccessor implements ITupleCursor {
 
@@ -35,11 +35,13 @@ public class RunFileAccessor implements ITupleCursor {
 
     }
 
-    @Override public int getTupleId() {
+    @Override
+    public int getTupleId() {
         return 0;
     }
 
-    @Override public void reset(ByteBuffer byteBuffer) {
+    @Override
+    public void reset(ByteBuffer byteBuffer) {
 
     }
 

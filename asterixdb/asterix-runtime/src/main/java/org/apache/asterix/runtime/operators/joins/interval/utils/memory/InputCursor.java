@@ -18,16 +18,16 @@
  */
 package org.apache.asterix.runtime.operators.joins.interval.utils.memory;
 
+import java.nio.ByteBuffer;
+
 import org.apache.hyracks.api.comm.IFrameTupleAccessor;
 import org.apache.hyracks.api.dataflow.value.RecordDescriptor;
 import org.apache.hyracks.api.exceptions.HyracksDataException;
 import org.apache.hyracks.dataflow.common.comm.io.FrameTupleAccessor;
 
-import java.nio.ByteBuffer;
-
 public class InputCursor implements ITupleCursor {
 
-    public static final int UNSET  = -2;
+    public static final int UNSET = -2;
     public static final int INITIALIZED = -1;
     public int tupleId = UNSET;
     private IFrameTupleAccessor accessor;
@@ -46,11 +46,13 @@ public class InputCursor implements ITupleCursor {
         ++tupleId;
     }
 
-    @Override public int getTupleId() {
+    @Override
+    public int getTupleId() {
         return tupleId;
     }
 
-    @Override public void reset(ByteBuffer byteBuffer) {
+    @Override
+    public void reset(ByteBuffer byteBuffer) {
         accessor.reset(byteBuffer);
         tupleId = INITIALIZED;
     }
