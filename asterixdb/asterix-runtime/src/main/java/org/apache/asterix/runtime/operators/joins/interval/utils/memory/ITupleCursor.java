@@ -38,30 +38,21 @@ package org.apache.asterix.runtime.operators.joins.interval.utils.memory;
 import java.nio.ByteBuffer;
 
 import org.apache.hyracks.api.comm.IFrameTupleAccessor;
-import org.apache.hyracks.api.exceptions.HyracksDataException;
+import org.apache.hyracks.dataflow.std.structures.TuplePointer;
 
 public interface ITupleCursor {
-    /**
-     * True if the cursor has a next value
-     *
-     * @return
-     * @throws HyracksDataException
-     */
-    boolean exists() throws HyracksDataException;
 
-    /**
-     * Moves the cursor to the next value
-     *
-     * @throws HyracksDataException
-     */
-    void next() throws HyracksDataException;
+    boolean exists();
+
+    void next();
 
     int getTupleId();
 
+    void setTupleId(int tupleId);
+
     void reset(ByteBuffer byteBuffer);
 
-    /**
-     * @return the tuple pointed to by the cursor
-     */
+    void reset(TuplePointer tp);
+
     IFrameTupleAccessor getAccessor();
 }

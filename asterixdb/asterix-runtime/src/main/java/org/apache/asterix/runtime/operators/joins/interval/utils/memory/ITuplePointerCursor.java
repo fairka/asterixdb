@@ -21,32 +21,52 @@ package org.apache.asterix.runtime.operators.joins.interval.utils.memory;
 import java.nio.ByteBuffer;
 
 import org.apache.hyracks.api.comm.IFrameTupleAccessor;
-import org.apache.hyracks.api.exceptions.HyracksDataException;
+import org.apache.hyracks.dataflow.std.buffermanager.ITuplePointerAccessor;
+import org.apache.hyracks.dataflow.std.structures.TuplePointer;
 
-public class MemoryAccessor implements ITupleCursor {
+public class ITuplePointerCursor implements ITupleCursor {
 
-    @Override
-    public boolean exists() {
-        return false;
+    public static final int UNSET = -2;
+    public static final int INITIALIZED = -1;
+    public int tupleId = UNSET;
+    ITuplePointerAccessor accessor;
+
+    public ITuplePointerCursor(ITuplePointerAccessor accessor) {
+        this.accessor = accessor;
     }
 
     @Override
-    public void next() throws HyracksDataException {
+    public boolean exists() {
+        return INITIALIZED < tupleId && tupleId < accessor.getTupleCount();
+    }
 
+    @Override
+    public void next() {
+        ++tupleId;
     }
 
     @Override
     public int getTupleId() {
-        return 0;
+        return tupleId;
+    }
+
+    @Override
+    public void setTupleId(int tupleId) {
+        this.tupleId = tupleId;
     }
 
     @Override
     public void reset(ByteBuffer byteBuffer) {
+        throw new RuntimeException("This reset should never be called in ITuplePointerCursor.");
+    }
 
+    @Override
+    public void reset(TuplePointer tp) {
+        accessor.reset(tp);
     }
 
     @Override
     public IFrameTupleAccessor getAccessor() {
-        return null;
+        return accessor;
     }
 }

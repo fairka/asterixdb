@@ -105,11 +105,6 @@ public class RunFileStream {
         runFileBuffer.reset();
     }
 
-    public void addToRunFile(ITupleAccessor accessor) throws HyracksDataException {
-        int idx = accessor.getTupleId();
-        addToRunFile(accessor, idx);
-    }
-
     public void addToRunFile(IFrameTupleAccessor accessor, int idx) throws HyracksDataException {
         if (!runFileAppender.append(accessor, idx)) {
             runFileAppender.write(runFileWriter, true);
@@ -119,11 +114,11 @@ public class RunFileStream {
         totalTupleCount++;
     }
 
-    public void startReadingRunFile(ITupleAccessor accessor) throws HyracksDataException {
+    public void startReadingRunFile(ITupleCursor accessor) throws HyracksDataException {
         startReadingRunFile(accessor, 0);
     }
 
-    public void startReadingRunFile(ITupleAccessor accessor, long startOffset) throws HyracksDataException {
+    public void startReadingRunFile(ITupleCursor accessor, long startOffset) throws HyracksDataException {
         if (runFileReader != null) {
             runFileReader.close();
         }
@@ -137,7 +132,7 @@ public class RunFileStream {
         loadNextBuffer(accessor);
     }
 
-    public boolean loadNextBuffer(ITupleAccessor accessor) throws HyracksDataException {
+    public boolean loadNextBuffer(ITupleCursor accessor) throws HyracksDataException {
         final long tempFrame = runFileReader.position();
         if (runFileReader.nextFrame(runFileBuffer)) {
             previousReadPointer = tempFrame;
