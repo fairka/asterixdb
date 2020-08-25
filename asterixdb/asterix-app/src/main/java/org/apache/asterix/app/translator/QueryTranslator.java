@@ -639,8 +639,7 @@ public class QueryTranslator extends AbstractLangTranslator implements IStatemen
             metaItemTypeAnonymous = true; // doesn't matter
         }
 
-        Identifier ngNameId = dd.getNodegroupName();
-        String nodegroupName = ngNameId == null ? null : ngNameId.getValue();
+        String nodegroupName = dd.getNodegroupName();
         String compactionPolicy = dd.getCompactionPolicy();
         boolean defaultCompactionPolicy = compactionPolicy == null;
 
@@ -665,7 +664,7 @@ public class QueryTranslator extends AbstractLangTranslator implements IStatemen
         MutableObject<ProgressState> progress = new MutableObject<>(ProgressState.NO_PROGRESS);
         SourceLocation sourceLoc = dd.getSourceLocation();
         DatasetType dsType = dd.getDatasetType();
-        Identifier ngNameId = dd.getNodegroupName();
+        String ngNameId = dd.getNodegroupName();
         String compactionPolicy = dd.getCompactionPolicy();
         Map<String, String> compactionPolicyProperties = dd.getCompactionPolicyProperties();
         String compressionScheme = metadataProvider.getCompressionManager()
@@ -714,7 +713,7 @@ public class QueryTranslator extends AbstractLangTranslator implements IStatemen
                     throw new CompilationException(ErrorCode.COMPILATION_ILLEGAL_STATE, sourceLoc,
                             String.valueOf(itemTypeExpr.getTypeKind()));
             }
-            String ngName = ngNameId != null ? ngNameId.getValue()
+            String ngName = ngNameId != null ? ngNameId
                     : configureNodegroupForDataset(appCtx, dd.getHints(), dataverseName, datasetName, metadataProvider,
                             sourceLoc);
 
@@ -1986,7 +1985,7 @@ public class QueryTranslator extends AbstractLangTranslator implements IStatemen
         declaredFunctions.add(fds);
     }
 
-    protected void handleCreateFunctionStatement(MetadataProvider metadataProvider, Statement stmt,
+    public void handleCreateFunctionStatement(MetadataProvider metadataProvider, Statement stmt,
             IStatementRewriter stmtRewriter) throws Exception {
         CreateFunctionStatement cfs = (CreateFunctionStatement) stmt;
         FunctionSignature signature = cfs.getFunctionSignature();
@@ -2985,7 +2984,7 @@ public class QueryTranslator extends AbstractLangTranslator implements IStatemen
         }
     }
 
-    private void handleStartFeedStatement(MetadataProvider metadataProvider, Statement stmt,
+    protected void handleStartFeedStatement(MetadataProvider metadataProvider, Statement stmt,
             IHyracksClientConnection hcc) throws Exception {
         StartFeedStatement sfs = (StartFeedStatement) stmt;
         SourceLocation sourceLoc = sfs.getSourceLocation();
@@ -3024,7 +3023,7 @@ public class QueryTranslator extends AbstractLangTranslator implements IStatemen
                 }
                 listener = new FeedEventsListener(this, metadataProvider.getApplicationContext(), hcc, entityId,
                         datasets, null, FeedIntakeOperatorNodePushable.class.getSimpleName(),
-                        NoRetryPolicyFactory.INSTANCE, feed, feedConnections);
+                        NoRetryPolicyFactory.INSTANCE, feed, feedConnections, compilationProvider.getLanguage());
             }
             MetadataManager.INSTANCE.commitTransaction(mdTxnCtx);
             committed = true;
@@ -3039,7 +3038,7 @@ public class QueryTranslator extends AbstractLangTranslator implements IStatemen
         }
     }
 
-    private void handleStopFeedStatement(MetadataProvider metadataProvider, Statement stmt) throws Exception {
+    protected void handleStopFeedStatement(MetadataProvider metadataProvider, Statement stmt) throws Exception {
         StopFeedStatement sfst = (StopFeedStatement) stmt;
         SourceLocation sourceLoc = sfst.getSourceLocation();
         DataverseName dataverseName = getActiveDataverseName(sfst.getDataverseName());
