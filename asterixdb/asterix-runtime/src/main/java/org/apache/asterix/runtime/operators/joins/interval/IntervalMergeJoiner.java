@@ -86,9 +86,6 @@ public class IntervalMergeJoiner {
     protected final FrameTupleAppender resultAppender;
     protected final ITupleAccessor[] inputAccessor;
 
-    protected long[] frameCounts = { 0, 0 };
-    protected long[] tupleCounts = { 0, 0 };
-
     public IntervalMergeJoiner(IHyracksTaskContext ctx, int memorySize, IIntervalJoinUtil mjc, int buildKeys,
             int probeKeys, RecordDescriptor buildRd, RecordDescriptor probeRd) throws HyracksDataException {
         this.mjc = mjc;
