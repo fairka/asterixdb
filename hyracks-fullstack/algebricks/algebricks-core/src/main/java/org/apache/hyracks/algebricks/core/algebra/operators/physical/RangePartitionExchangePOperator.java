@@ -74,12 +74,13 @@ public final class RangePartitionExchangePOperator extends AbstractRangeExchange
         return emptyUnaryRequirements();
     }
 
+    //Replicate for following
     @Override
     public Pair<IConnectorDescriptor, TargetConstraint> createConnectorDescriptor(IConnectorDescriptorRegistry spec,
             ILogicalOperator op, IOperatorSchema opSchema, JobGenContext context) throws AlgebricksException {
         Pair<int[], IBinaryComparatorFactory[]> pOrderColumns = createOrderColumnsAndComparators(op, opSchema, context);
         FieldRangePartitionComputerFactory partitionerFactory = new FieldRangePartitionComputerFactory(
-                pOrderColumns.first, pOrderColumns.second, crateRangeMapSupplier(), op.getSourceLocation());
+                pOrderColumns.first, pOrderColumns.second, createRangeMapSupplier(), op.getSourceLocation());
         IConnectorDescriptor conn = new MToNPartitioningConnectorDescriptor(spec, partitionerFactory);
         return new Pair<>(conn, null);
     }

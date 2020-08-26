@@ -25,7 +25,23 @@ import org.apache.hyracks.api.dataflow.value.RecordDescriptor;
 import org.apache.hyracks.dataflow.common.comm.io.FrameTupleAccessor;
 import org.apache.hyracks.dataflow.std.structures.TuplePointer;
 
-public class FrameTupleCursor extends AbstractTupleCursor {
+public class FrameTupleCursor {
+
+    public static final int UNSET = -2;
+    public static final int INITIALIZED = -1;
+    public int tupleId = UNSET;
+
+    public void next() {
+        ++tupleId;
+    }
+
+    public int getTupleId() {
+        return tupleId;
+    }
+
+    public void resetCursor(int tupleId) {
+        this.tupleId = tupleId;
+    }
 
     private IFrameTupleAccessor accessor;
 
@@ -33,23 +49,19 @@ public class FrameTupleCursor extends AbstractTupleCursor {
         accessor = new FrameTupleAccessor(recordDescriptor);
     }
 
-    @Override
-    public boolean exists() {
-        return INITIALIZED < tupleId && tupleId < accessor.getTupleCount();
+    public boolean hasNext() {
+        return INITIALIZED < (tupleId) && (tupleId) < accessor.getTupleCount();
     }
 
-    @Override
     public void reset(ByteBuffer byteBuffer) {
         accessor.reset(byteBuffer);
         tupleId = INITIALIZED;
     }
 
-    @Override
     public void reset(TuplePointer tp) {
         throw new RuntimeException("This reset should never be called in FrameTupleCursor.");
     }
 
-    @Override
     public IFrameTupleAccessor getAccessor() {
         return accessor;
     }

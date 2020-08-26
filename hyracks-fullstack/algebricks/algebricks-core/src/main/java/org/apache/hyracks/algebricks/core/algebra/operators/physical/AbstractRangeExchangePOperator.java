@@ -86,7 +86,7 @@ abstract class AbstractRangeExchangePOperator extends AbstractExchangePOperator 
                 + (rangeMap != null ? " RANGE_MAP:" + rangeMap : "");
     }
 
-    protected final RangeMapSupplier crateRangeMapSupplier() {
+    protected final RangeMapSupplier createRangeMapSupplier() {
         return rangeMapIsComputedAtRunTime ? new DynamicRangeMapSupplier(rangeMapKeyInContext)
                 : new StaticRangeMapSupplier(rangeMap);
     }

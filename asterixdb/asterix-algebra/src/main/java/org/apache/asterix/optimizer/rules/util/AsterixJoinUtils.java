@@ -64,19 +64,20 @@ public class AsterixJoinUtils {
             return;
         }
         RangeAnnotation rangeAnnotation = IntervalJoinUtils.findRangeAnnotation(fexp);
-        if (rangeAnnotation == null) {
-            return;
-        }
-        //Check RangeMap type
-        RangeMap rangeMap = (RangeMap) rangeAnnotation.getObject();
-        if (rangeMap.getTag(0, 0) != ATypeTag.DATETIME.serialize() && rangeMap.getTag(0, 0) != ATypeTag.DATE.serialize()
-                && rangeMap.getTag(0, 0) != ATypeTag.TIME.serialize()) {
-            IWarningCollector warningCollector = context.getWarningCollector();
-            if (warningCollector.shouldWarn()) {
-                warningCollector.warn(Warning.forHyracks(op.getSourceLocation(), ErrorCode.INAPPLICABLE_HINT,
-                        "Date, DateTime, and Time are only range hints types supported for interval joins"));
+        RangeMap rangeMap = null;
+        if (rangeAnnotation != null) {
+            //Check RangeMap type
+            rangeMap = (RangeMap) rangeAnnotation.getObject();
+            if (rangeMap.getTag(0, 0) != ATypeTag.DATETIME.serialize()
+                    && rangeMap.getTag(0, 0) != ATypeTag.DATE.serialize()
+                    && rangeMap.getTag(0, 0) != ATypeTag.TIME.serialize()) {
+                IWarningCollector warningCollector = context.getWarningCollector();
+                if (warningCollector.shouldWarn()) {
+                    warningCollector.warn(Warning.forHyracks(op.getSourceLocation(), ErrorCode.INAPPLICABLE_HINT,
+                            "Date, DateTime, and Time are only range hints types supported for interval joins"));
+                }
+                return;
             }
-            return;
         }
         IntervalPartitions intervalPartitions =
                 IntervalJoinUtils.createIntervalPartitions(op, fi, sideLeft, sideRight, rangeMap, context, LEFT, RIGHT);

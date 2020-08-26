@@ -80,7 +80,7 @@ public final class PartialBroadcastRangeFollowingExchangePOperator extends Abstr
             throws AlgebricksException {
         Pair<int[], IBinaryComparatorFactory[]> pOrderColumns = createOrderColumnsAndComparators(op, opSchema, context);
         ITupleMultiPartitionComputerFactory tpcf = new FieldRangeFollowingPartitionComputerFactory(pOrderColumns.first,
-                pOrderColumns.second, crateRangeMapSupplier(), op.getSourceLocation());
+                pOrderColumns.second, createRangeMapSupplier(), op.getSourceLocation());
         IConnectorDescriptor conn = new MToNPartialBroadcastConnectorDescriptor(spec, tpcf);
         return new Pair<>(conn, null);
     }
