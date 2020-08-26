@@ -26,7 +26,7 @@ import org.apache.hyracks.dataflow.std.structures.TuplePointer;
 
 public class TuplePointerCursor extends AbstractTupleCursor {
 
-    ITuplePointerAccessor accessor;
+    IFrameTupleAccessor accessor;
 
     public TuplePointerCursor(ITuplePointerAccessor accessor) {
         this.accessor = accessor;
@@ -44,7 +44,7 @@ public class TuplePointerCursor extends AbstractTupleCursor {
 
     @Override
     public void reset(TuplePointer tp) {
-        accessor.reset(tp);
+        ((ITuplePointerAccessor) accessor).reset(tp);
     }
 
     @Override
