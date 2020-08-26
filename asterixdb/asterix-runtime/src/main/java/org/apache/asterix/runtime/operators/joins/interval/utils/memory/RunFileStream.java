@@ -104,11 +104,12 @@ public class RunFileStream {
         runFileBuffer.reset();
     }
 
-    public void addToRunFile(ITupleCursor cursor, int idx) throws HyracksDataException {
-        if (!runFileAppender.append(cursor.getAccessor(), idx))
+    public void addToRunFile(ITupleCursor cursor, int tupleId) throws HyracksDataException {
+        if (!runFileAppender.append(cursor.getAccessor(), tupleId)) {
             runFileAppender.write(runFileWriter, true);
-        writeCount++;
-        runFileAppender.append(cursor.getAccessor(), idx);
+            writeCount++;
+            runFileAppender.append(cursor.getAccessor(), tupleId);
+        }
         totalTupleCount++;
     }
 
@@ -121,11 +122,11 @@ public class RunFileStream {
         totalTupleCount++;
     }
 
-    public void startReadingRunFile(ITupleCursor accessor) throws HyracksDataException {
-        startReadingRunFile(accessor, 0);
+    public void startReadingRunFile(ITupleCursor cursor) throws HyracksDataException {
+        startReadingRunFile(cursor, 0);
     }
 
-    public void startReadingRunFile(ITupleCursor accessor, long startOffset) throws HyracksDataException {
+    public void startReadingRunFile(ITupleCursor cursor, long startOffset) throws HyracksDataException {
         if (runFileReader != null) {
             runFileReader.close();
         }
@@ -136,15 +137,15 @@ public class RunFileStream {
         runFileReader.seek(startOffset);
         previousReadPointer = 0;
         // Load first frame
-        loadNextBuffer(accessor);
+        loadNextBuffer(cursor);
     }
 
-    public boolean loadNextBuffer(ITupleCursor accessor) throws HyracksDataException {
+    public boolean loadNextBuffer(ITupleCursor cursor) throws HyracksDataException {
         final long tempFrame = runFileReader.position();
         if (runFileReader.nextFrame(runFileBuffer)) {
             previousReadPointer = tempFrame;
-            accessor.reset(runFileBuffer.getBuffer());
-            accessor.next();
+            cursor.reset(runFileBuffer.getBuffer());
+            cursor.next();
             readCount++;
             return true;
         }
