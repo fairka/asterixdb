@@ -105,11 +105,11 @@ public class RunFileStream {
         runFileBuffer.reset();
     }
 
-    public void addToRunFile(IFrameTupleAccessor accessor, int idx) throws HyracksDataException {
-        if (!runFileAppender.append(accessor, idx)) {
+    public void addToRunFile(ITupleCursor cursor) throws HyracksDataException {
+        if (!runFileAppender.append(cursor.getAccessor(), cursor.getTupleId())) {
             runFileAppender.write(runFileWriter, true);
             writeCount++;
-            runFileAppender.append(accessor, idx);
+            runFileAppender.append(cursor.getAccessor(), cursor.getTupleId());
         }
         totalTupleCount++;
     }

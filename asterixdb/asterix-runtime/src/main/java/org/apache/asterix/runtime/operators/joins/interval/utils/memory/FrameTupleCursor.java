@@ -25,14 +25,14 @@ import org.apache.hyracks.api.dataflow.value.RecordDescriptor;
 import org.apache.hyracks.dataflow.common.comm.io.FrameTupleAccessor;
 import org.apache.hyracks.dataflow.std.structures.TuplePointer;
 
-public class IFrameTupleCursor implements ITupleCursor {
+public class FrameTupleCursor implements ITupleCursor {
 
     public static final int UNSET = -2;
     public static final int INITIALIZED = -1;
     public int tupleId = UNSET;
     private IFrameTupleAccessor accessor;
 
-    public IFrameTupleCursor(RecordDescriptor recordDescriptor) {
+    public FrameTupleCursor(RecordDescriptor recordDescriptor) {
         accessor = new FrameTupleAccessor(recordDescriptor);
     }
 

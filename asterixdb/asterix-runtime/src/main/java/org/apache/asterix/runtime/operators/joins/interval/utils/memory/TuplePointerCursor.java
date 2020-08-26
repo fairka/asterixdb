@@ -24,14 +24,14 @@ import org.apache.hyracks.api.comm.IFrameTupleAccessor;
 import org.apache.hyracks.dataflow.std.buffermanager.ITuplePointerAccessor;
 import org.apache.hyracks.dataflow.std.structures.TuplePointer;
 
-public class ITuplePointerCursor implements ITupleCursor {
+public class TuplePointerCursor implements ITupleCursor {
 
     public static final int UNSET = -2;
     public static final int INITIALIZED = -1;
     public int tupleId = UNSET;
     ITuplePointerAccessor accessor;
 
-    public ITuplePointerCursor(ITuplePointerAccessor accessor) {
+    public TuplePointerCursor(ITuplePointerAccessor accessor) {
         this.accessor = accessor;
     }
 

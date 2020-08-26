@@ -23,9 +23,9 @@ import java.util.Iterator;
 import java.util.LinkedList;
 
 import org.apache.asterix.runtime.operators.joins.interval.utils.IIntervalJoinUtil;
-import org.apache.asterix.runtime.operators.joins.interval.utils.memory.IFrameTupleCursor;
+import org.apache.asterix.runtime.operators.joins.interval.utils.memory.FrameTupleCursor;
 import org.apache.asterix.runtime.operators.joins.interval.utils.memory.ITupleCursor;
-import org.apache.asterix.runtime.operators.joins.interval.utils.memory.ITuplePointerCursor;
+import org.apache.asterix.runtime.operators.joins.interval.utils.memory.TuplePointerCursor;
 import org.apache.asterix.runtime.operators.joins.interval.utils.memory.IntervalSideTuple;
 import org.apache.asterix.runtime.operators.joins.interval.utils.memory.RunFilePointer;
 import org.apache.asterix.runtime.operators.joins.interval.utils.memory.RunFileStream;
@@ -95,9 +95,9 @@ public class IntervalMergeJoiner {
             throw new RuntimeException("MergeJoiner does not have enough memory (needs > 4, got " + memorySize + ").");
         }
 
-        inputCursor = new IFrameTupleCursor[JOIN_PARTITIONS];
-        inputCursor[BUILD_PARTITION] = new IFrameTupleCursor(buildRd);
-        inputCursor[PROBE_PARTITION] = new IFrameTupleCursor(probeRd);
+        inputCursor = new FrameTupleCursor[JOIN_PARTITIONS];
+        inputCursor[BUILD_PARTITION] = new FrameTupleCursor(buildRd);
+        inputCursor[PROBE_PARTITION] = new FrameTupleCursor(probeRd);
 
         inputBuffer = new IFrame[JOIN_PARTITIONS];
         inputBuffer[BUILD_PARTITION] = new VSizeFrame(ctx);
@@ -106,7 +106,7 @@ public class IntervalMergeJoiner {
         //Two frames are used for the runfile stream, and one frame for each input (2 outputs).
         framePool = new DeallocatableFramePool(ctx, (memorySize - 4) * ctx.getInitialFrameSize());
         bufferManager = new VariableDeletableTupleMemoryManager(framePool, probeRd);
-        memoryCursor = new ITuplePointerCursor(bufferManager.createTuplePointerAccessor());
+        memoryCursor = new TuplePointerCursor(bufferManager.createTuplePointerAccessor());
 
         // Run File and frame cache (build buffer)
         runFileStream = new RunFileStream(ctx, "ismj-left");
