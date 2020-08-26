@@ -21,7 +21,6 @@ package org.apache.asterix.runtime.operators.joins.interval.utils.memory;
 
 import org.apache.asterix.dataflow.data.nontagged.serde.AIntervalSerializerDeserializer;
 import org.apache.asterix.runtime.operators.joins.interval.utils.IIntervalJoinUtil;
-import org.apache.hyracks.api.comm.IFrameTupleAccessor;
 import org.apache.hyracks.api.exceptions.HyracksDataException;
 import org.apache.hyracks.dataflow.std.structures.TuplePointer;
 
@@ -36,9 +35,9 @@ public class IntervalSideTuple {
     // Join details
     final IIntervalJoinUtil imjc;
 
-    public IntervalSideTuple(IIntervalJoinUtil imjc, ITupleCursor accessor, int fieldId) {
+    public IntervalSideTuple(IIntervalJoinUtil imjc, ITupleCursor cursor, int fieldId) {
         this.imjc = imjc;
-        this.cursor = accessor;
+        this.cursor = cursor;
         this.fieldId = fieldId;
     }
 
@@ -60,8 +59,8 @@ public class IntervalSideTuple {
         return cursor.getTupleId();
     }
 
-    public IFrameTupleAccessor getAccessor() {
-        return cursor.getAccessor();
+    public ITupleCursor getCursor() {
+        return cursor;
     }
 
     public long getStart() {

@@ -24,11 +24,8 @@ import org.apache.hyracks.api.comm.IFrameTupleAccessor;
 import org.apache.hyracks.dataflow.std.buffermanager.ITuplePointerAccessor;
 import org.apache.hyracks.dataflow.std.structures.TuplePointer;
 
-public class TuplePointerCursor implements ITupleCursor {
+public class TuplePointerCursor extends AbstractTupleCursor {
 
-    public static final int UNSET = -2;
-    public static final int INITIALIZED = -1;
-    public int tupleId = UNSET;
     ITuplePointerAccessor accessor;
 
     public TuplePointerCursor(ITuplePointerAccessor accessor) {
@@ -41,23 +38,8 @@ public class TuplePointerCursor implements ITupleCursor {
     }
 
     @Override
-    public void next() {
-        ++tupleId;
-    }
-
-    @Override
-    public int getTupleId() {
-        return tupleId;
-    }
-
-    @Override
-    public void setTupleId(int tupleId) {
-        this.tupleId = tupleId;
-    }
-
-    @Override
     public void reset(ByteBuffer byteBuffer) {
-        throw new RuntimeException("This reset should never be called in ITuplePointerCursor.");
+        throw new RuntimeException("This reset should never be called in TuplePointerCursor.");
     }
 
     @Override

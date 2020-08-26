@@ -127,7 +127,7 @@ public class IntervalMergeJoiner {
     public void processBuildFrame(ByteBuffer buffer) throws HyracksDataException {
         inputCursor[BUILD_PARTITION].reset(buffer);
         for (int x = 0; x < inputCursor[BUILD_PARTITION].getAccessor().getTupleCount(); x++) {
-            runFileStream.addToRunFile(inputCursor[BUILD_PARTITION], x);
+            runFileStream.addToRunFile(inputCursor[BUILD_PARTITION].getAccessor(), x);
         }
     }
 

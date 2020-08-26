@@ -40,19 +40,69 @@ import java.nio.ByteBuffer;
 import org.apache.hyracks.api.comm.IFrameTupleAccessor;
 import org.apache.hyracks.dataflow.std.structures.TuplePointer;
 
+/**
+ * Represents an index cursor. The expected use
+ * cursor = new cursor();
+ * while(predicate){
+ * -cursor.reset()
+ * -cursor.next()
+ * -while (cursor.exists()){
+ * --cursor.next()
+ * -}
+ * }
+ *
+ * next() is used instead of hasNext() because there
+ * is a case when a cursor.hasNext() may need to look
+ * at the next frame to determine if the tuple exists.
+ * cursor.exists() ensures we don't need to load the
+ * next frame when checking.
+ */
 public interface ITupleCursor {
 
+    /**
+     * Checks if the Current Tuple Index Exists
+     *
+     * @return
+     */
     boolean exists();
 
+    /**
+     * Increments the Tuple Index
+     *
+     */
     void next();
 
+    /**
+     * Get the Current Tuple Index
+     *
+     * @return
+     */
     int getTupleId();
 
+    /**
+     * Set the Tuple Index
+     * @param tupleId
+     */
     void setTupleId(int tupleId);
 
+    /**
+     * Used in FrameTupleCursor to reset the accessor to the buffer
+     *
+     * @param byteBuffer
+     */
     void reset(ByteBuffer byteBuffer);
 
+    /**
+     * Used in TuplePointerCursor to reset the accessor to the Tuple Pointer Position
+     *
+     * @param tp
+     */
     void reset(TuplePointer tp);
 
+    /**
+     * Return the accessor
+     *
+     * @return
+     */
     IFrameTupleAccessor getAccessor();
 }
