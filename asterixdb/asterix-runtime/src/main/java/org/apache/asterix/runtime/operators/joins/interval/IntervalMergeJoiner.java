@@ -25,10 +25,10 @@ import java.util.LinkedList;
 import org.apache.asterix.runtime.operators.joins.interval.utils.IIntervalJoinUtil;
 import org.apache.asterix.runtime.operators.joins.interval.utils.memory.FrameTupleCursor;
 import org.apache.asterix.runtime.operators.joins.interval.utils.memory.ITupleCursor;
-import org.apache.asterix.runtime.operators.joins.interval.utils.memory.TuplePointerCursor;
 import org.apache.asterix.runtime.operators.joins.interval.utils.memory.IntervalSideTuple;
 import org.apache.asterix.runtime.operators.joins.interval.utils.memory.RunFilePointer;
 import org.apache.asterix.runtime.operators.joins.interval.utils.memory.RunFileStream;
+import org.apache.asterix.runtime.operators.joins.interval.utils.memory.TuplePointerCursor;
 import org.apache.hyracks.api.comm.IFrame;
 import org.apache.hyracks.api.comm.IFrameWriter;
 import org.apache.hyracks.api.comm.VSizeFrame;
@@ -127,7 +127,7 @@ public class IntervalMergeJoiner {
     public void processBuildFrame(ByteBuffer buffer) throws HyracksDataException {
         inputCursor[BUILD_PARTITION].reset(buffer);
         for (int x = 0; x < inputCursor[BUILD_PARTITION].getAccessor().getTupleCount(); x++) {
-            runFileStream.addToRunFile(inputCursor[BUILD_PARTITION].getAccessor(), x);
+            runFileStream.addToRunFile(inputCursor[BUILD_PARTITION], x);
         }
     }
 
