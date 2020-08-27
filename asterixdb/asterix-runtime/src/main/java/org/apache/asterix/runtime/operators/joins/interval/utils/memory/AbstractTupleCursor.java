@@ -33,17 +33,17 @@ public abstract class AbstractTupleCursor<T> implements ITupleCursor<T> {
     }
 
     @Override
+    public IFrameTupleAccessor getAccessor() {
+        return accessor;
+    }
+
+    @Override
     public int getTupleId() {
         return tupleId;
     }
 
     @Override
-    public void setTupleId(int tupleId) {
-        this.tupleId = tupleId;
-    }
-
-    @Override
-    public IFrameTupleAccessor getAccessor() {
-        return accessor;
+    public boolean hasNextProbe() {
+        return INITIALIZED < (tupleId + 1) && (tupleId + 1) < accessor.getTupleCount();
     }
 }

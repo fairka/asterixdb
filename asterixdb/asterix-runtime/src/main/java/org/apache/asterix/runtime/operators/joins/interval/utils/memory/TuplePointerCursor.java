@@ -18,7 +18,6 @@
  */
 package org.apache.asterix.runtime.operators.joins.interval.utils.memory;
 
-import java.nio.ByteBuffer;
 import java.util.Iterator;
 
 import org.apache.hyracks.dataflow.std.buffermanager.ITuplePointerAccessor;
@@ -34,15 +33,15 @@ public class TuplePointerCursor extends AbstractTupleCursor<Iterator<TuplePointe
     }
 
     @Override
-    public boolean exists() {
+    public boolean hasNext() {
         return iterator.hasNext();
     }
 
     @Override
     public void next() {
         TuplePointer tp = iterator.next();
-        tupleId = tp.getTupleIndex();
         this.tp = tp;
+        tupleId = tp.getTupleIndex();
         ((ITuplePointerAccessor) accessor).reset(tp);
     }
 
@@ -58,5 +57,9 @@ public class TuplePointerCursor extends AbstractTupleCursor<Iterator<TuplePointe
 
     public TuplePointer getTuplePointer() {
         return tp;
+    }
+
+    public void setTupleId(int tupleId) {
+        this.tupleId = tupleId;
     }
 }

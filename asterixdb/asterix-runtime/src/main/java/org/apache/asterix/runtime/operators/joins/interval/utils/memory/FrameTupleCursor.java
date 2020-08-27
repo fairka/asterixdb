@@ -20,7 +20,6 @@ package org.apache.asterix.runtime.operators.joins.interval.utils.memory;
 
 import java.nio.ByteBuffer;
 
-import org.apache.hyracks.api.comm.IFrameTupleAccessor;
 import org.apache.hyracks.api.dataflow.value.RecordDescriptor;
 import org.apache.hyracks.dataflow.common.comm.io.FrameTupleAccessor;
 
@@ -31,8 +30,8 @@ public class FrameTupleCursor extends AbstractTupleCursor<ByteBuffer> {
     }
 
     @Override
-    public boolean exists() {
-        return INITIALIZED < tupleId && tupleId < accessor.getTupleCount();
+    public boolean hasNext() {
+        return INITIALIZED < (tupleId) && (tupleId) < accessor.getTupleCount();
     }
 
     @Override
@@ -41,8 +40,7 @@ public class FrameTupleCursor extends AbstractTupleCursor<ByteBuffer> {
         tupleId = INITIALIZED;
     }
 
-    @Override
-    public IFrameTupleAccessor getAccessor() {
-        return accessor;
+    public void setTupleId(int tupleId) {
+        this.tupleId = tupleId;
     }
 }

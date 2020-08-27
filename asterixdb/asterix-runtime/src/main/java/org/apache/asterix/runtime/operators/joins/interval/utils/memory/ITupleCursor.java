@@ -35,8 +35,6 @@
  */
 package org.apache.asterix.runtime.operators.joins.interval.utils.memory;
 
-import java.nio.ByteBuffer;
-
 import org.apache.hyracks.api.comm.IFrameTupleAccessor;
 
 /**
@@ -44,17 +42,10 @@ import org.apache.hyracks.api.comm.IFrameTupleAccessor;
  * cursor = new cursor();
  * while(predicate){
  * -cursor.reset()
- * -cursor.next()
- * -while (cursor.exists()){
+ * -while (cursor.hasNext()){
  * --cursor.next()
  * -}
  * }
- *
- * next() is used instead of hasNext() because there
- * is a case when a cursor.hasNext() may need to look
- * at the next frame to determine if the tuple exists.
- * cursor.exists() ensures we don't need to load the
- * next frame when checking.
  */
 public interface ITupleCursor<T> {
 
@@ -63,26 +54,13 @@ public interface ITupleCursor<T> {
      *
      * @return
      */
-    boolean exists();
+    boolean hasNext();
 
     /**
      * Increments the Tuple Index
      *
      */
     void next();
-
-    /**
-     * Get the Current Tuple Index
-     *
-     * @return
-     */
-    int getTupleId();
-
-    /**
-     * Set the Tuple Index
-     * @param tupleId
-     */
-    void setTupleId(int tupleId);
 
     /**
      * Used in FrameTupleCursor to reset the accessor to the buffer
@@ -97,4 +75,13 @@ public interface ITupleCursor<T> {
      * @return
      */
     IFrameTupleAccessor getAccessor();
+
+    /**
+     * Return the tuple id.
+     *
+     * @return
+     */
+    int getTupleId();
+
+    boolean hasNextProbe();
 }
