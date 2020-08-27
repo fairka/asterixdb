@@ -18,11 +18,14 @@
  */
 package org.apache.asterix.runtime.operators.joins.interval.utils.memory;
 
+import org.apache.hyracks.api.comm.IFrameTupleAccessor;
+
 public abstract class AbstractTupleCursor implements ITupleCursor {
 
     public static final int UNSET = -2;
     public static final int INITIALIZED = -1;
     public int tupleId = UNSET;
+    protected IFrameTupleAccessor accessor;
 
     @Override
     public void next() {
@@ -37,5 +40,10 @@ public abstract class AbstractTupleCursor implements ITupleCursor {
     @Override
     public void setTupleId(int tupleId) {
         this.tupleId = tupleId;
+    }
+
+    @Override
+    public IFrameTupleAccessor getAccessor() {
+        return accessor;
     }
 }

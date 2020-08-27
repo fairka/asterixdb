@@ -23,11 +23,8 @@ import java.nio.ByteBuffer;
 import org.apache.hyracks.api.comm.IFrameTupleAccessor;
 import org.apache.hyracks.api.dataflow.value.RecordDescriptor;
 import org.apache.hyracks.dataflow.common.comm.io.FrameTupleAccessor;
-import org.apache.hyracks.dataflow.std.structures.TuplePointer;
 
 public class FrameTupleCursor extends AbstractTupleCursor {
-
-    private IFrameTupleAccessor accessor;
 
     public FrameTupleCursor(RecordDescriptor recordDescriptor) {
         accessor = new FrameTupleAccessor(recordDescriptor);
@@ -42,11 +39,6 @@ public class FrameTupleCursor extends AbstractTupleCursor {
     public void reset(ByteBuffer byteBuffer) {
         accessor.reset(byteBuffer);
         tupleId = INITIALIZED;
-    }
-
-    @Override
-    public void reset(TuplePointer tp) {
-        throw new RuntimeException("This reset should never be called in FrameTupleCursor.");
     }
 
     @Override

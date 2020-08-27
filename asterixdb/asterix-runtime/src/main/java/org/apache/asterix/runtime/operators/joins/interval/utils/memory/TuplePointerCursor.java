@@ -19,14 +19,15 @@
 package org.apache.asterix.runtime.operators.joins.interval.utils.memory;
 
 import java.nio.ByteBuffer;
+import java.util.Iterator;
 
-import org.apache.hyracks.api.comm.IFrameTupleAccessor;
 import org.apache.hyracks.dataflow.std.buffermanager.ITuplePointerAccessor;
 import org.apache.hyracks.dataflow.std.structures.TuplePointer;
 
 public class TuplePointerCursor extends AbstractTupleCursor {
 
-    IFrameTupleAccessor accessor;
+    Iterator<TuplePointer> iterator;
+    TuplePointer tp;
 
     public TuplePointerCursor(ITuplePointerAccessor accessor) {
         this.accessor = accessor;
@@ -34,7 +35,7 @@ public class TuplePointerCursor extends AbstractTupleCursor {
 
     @Override
     public boolean exists() {
-        return INITIALIZED < tupleId && tupleId < accessor.getTupleCount();
+        return iterator.hasNext();
     }
 
     @Override
@@ -43,12 +44,23 @@ public class TuplePointerCursor extends AbstractTupleCursor {
     }
 
     @Override
-    public void reset(TuplePointer tp) {
+    public void next() {
+        TuplePointer tp = iterator.next();
+        tupleId = tp.getTupleIndex();
+        this.tp = tp;
         ((ITuplePointerAccessor) accessor).reset(tp);
     }
 
-    @Override
-    public IFrameTupleAccessor getAccessor() {
-        return accessor;
+    public void reset(Iterator<TuplePointer> iterator) {
+        this.iterator = iterator;
+        tupleId = INITIALIZED;
+    }
+
+    public void remove() {
+        iterator.remove();
+    }
+
+    public TuplePointer getTuplePointer() {
+        return tp;
     }
 }

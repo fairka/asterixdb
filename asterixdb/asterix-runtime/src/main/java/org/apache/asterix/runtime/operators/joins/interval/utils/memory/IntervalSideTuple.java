@@ -22,7 +22,6 @@ package org.apache.asterix.runtime.operators.joins.interval.utils.memory;
 import org.apache.asterix.dataflow.data.nontagged.serde.AIntervalSerializerDeserializer;
 import org.apache.asterix.runtime.operators.joins.interval.utils.IIntervalJoinUtil;
 import org.apache.hyracks.api.exceptions.HyracksDataException;
-import org.apache.hyracks.dataflow.std.structures.TuplePointer;
 
 public class IntervalSideTuple {
     // Tuple access
@@ -39,14 +38,6 @@ public class IntervalSideTuple {
         this.imjc = imjc;
         this.cursor = cursor;
         this.fieldId = fieldId;
-    }
-
-    public void setTuple(TuplePointer tp) {
-        cursor.reset(tp);
-        cursor.setTupleId(tp.getTupleIndex());
-        int offset = IntervalJoinUtil.getIntervalOffset(cursor.getAccessor(), cursor.getTupleId(), fieldId);
-        start = AIntervalSerializerDeserializer.getIntervalStart(cursor.getAccessor().getBuffer().array(), offset);
-        end = AIntervalSerializerDeserializer.getIntervalEnd(cursor.getAccessor().getBuffer().array(), offset);
     }
 
     public void loadTuple() {

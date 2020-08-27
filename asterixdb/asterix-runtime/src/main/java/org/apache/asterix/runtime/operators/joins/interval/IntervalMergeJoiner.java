@@ -19,7 +19,6 @@
 package org.apache.asterix.runtime.operators.joins.interval;
 
 import java.nio.ByteBuffer;
-import java.util.Iterator;
 import java.util.LinkedList;
 
 import org.apache.asterix.runtime.operators.joins.interval.utils.IIntervalJoinUtil;
@@ -67,7 +66,7 @@ public class IntervalMergeJoiner {
 
     private final IDeallocatableFramePool framePool;
     private final IDeletableTupleBufferManager bufferManager;
-    private final ITupleCursor memoryCursor;
+    private final TuplePointerCursor memoryCursor;
     private final LinkedList<TuplePointer> memoryBuffer = new LinkedList<>();
 
     private final RunFileStream runFileStream;
@@ -197,14 +196,14 @@ public class IntervalMergeJoiner {
         // Check against memory
         if (memoryHasTuples()) {
             inputTuple[BUILD_PARTITION].loadTuple();
-            Iterator<TuplePointer> memoryIterator = memoryBuffer.iterator();
-            while (memoryIterator.hasNext()) {
-                TuplePointer tp = memoryIterator.next();
-                memoryTuple.setTuple(tp);
+            memoryCursor.reset(memoryBuffer.iterator());
+            while (memoryCursor.exists()) {
+                memoryCursor.next();
+                memoryTuple.loadTuple();
                 if (inputTuple[BUILD_PARTITION].removeFromMemory(memoryTuple)) {
                     // remove from memory
-                    bufferManager.deleteTuple(tp);
-                    memoryIterator.remove();
+                    bufferManager.deleteTuple(memoryCursor.getTuplePointer());
+                    memoryCursor.remove();
                     continue;
                 } else if (inputTuple[BUILD_PARTITION].checkForEarlyExit(memoryTuple)) {
                     // No more possible comparisons
@@ -246,7 +245,7 @@ public class IntervalMergeJoiner {
         bufferManager.reset();
         // Start reading
         runFileStream.startReadingRunFile(cursor, runFilePointer.getFileOffset());
-        cursor.setTupleId(runFilePointer.getTupleIndex());
+        //cursor.setTupleId(runFilePointer.getTupleIndex());
         runFilePointer.reset(-1, -1);
     }
 

@@ -38,7 +38,6 @@ package org.apache.asterix.runtime.operators.joins.interval.utils.memory;
 import java.nio.ByteBuffer;
 
 import org.apache.hyracks.api.comm.IFrameTupleAccessor;
-import org.apache.hyracks.dataflow.std.structures.TuplePointer;
 
 /**
  * Represents an index cursor. The expected use
@@ -91,13 +90,6 @@ public interface ITupleCursor {
      * @param byteBuffer
      */
     void reset(ByteBuffer byteBuffer);
-
-    /**
-     * Used in TuplePointerCursor to reset the accessor to the Tuple Pointer Position
-     *
-     * @param tp
-     */
-    void reset(TuplePointer tp);
 
     /**
      * Return the accessor
