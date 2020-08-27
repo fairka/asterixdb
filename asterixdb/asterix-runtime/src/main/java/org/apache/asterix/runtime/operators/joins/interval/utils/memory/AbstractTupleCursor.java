@@ -20,7 +20,7 @@ package org.apache.asterix.runtime.operators.joins.interval.utils.memory;
 
 import org.apache.hyracks.api.comm.IFrameTupleAccessor;
 
-public abstract class AbstractTupleCursor implements ITupleCursor {
+public abstract class AbstractTupleCursor<T> implements ITupleCursor<T> {
 
     public static final int UNSET = -2;
     public static final int INITIALIZED = -1;

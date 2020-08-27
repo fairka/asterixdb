@@ -56,7 +56,7 @@ import org.apache.hyracks.api.comm.IFrameTupleAccessor;
  * cursor.exists() ensures we don't need to load the
  * next frame when checking.
  */
-public interface ITupleCursor {
+public interface ITupleCursor<T> {
 
     /**
      * Checks if the Current Tuple Index Exists
@@ -87,9 +87,9 @@ public interface ITupleCursor {
     /**
      * Used in FrameTupleCursor to reset the accessor to the buffer
      *
-     * @param byteBuffer
+     * @param param
      */
-    void reset(ByteBuffer byteBuffer);
+    void reset(T param);
 
     /**
      * Return the accessor

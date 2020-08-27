@@ -24,7 +24,7 @@ import java.util.Iterator;
 import org.apache.hyracks.dataflow.std.buffermanager.ITuplePointerAccessor;
 import org.apache.hyracks.dataflow.std.structures.TuplePointer;
 
-public class TuplePointerCursor extends AbstractTupleCursor {
+public class TuplePointerCursor extends AbstractTupleCursor<Iterator<TuplePointer>> {
 
     Iterator<TuplePointer> iterator;
     TuplePointer tp;
@@ -39,11 +39,6 @@ public class TuplePointerCursor extends AbstractTupleCursor {
     }
 
     @Override
-    public void reset(ByteBuffer byteBuffer) {
-        throw new RuntimeException("This reset should never be called in TuplePointerCursor.");
-    }
-
-    @Override
     public void next() {
         TuplePointer tp = iterator.next();
         tupleId = tp.getTupleIndex();
@@ -51,6 +46,7 @@ public class TuplePointerCursor extends AbstractTupleCursor {
         ((ITuplePointerAccessor) accessor).reset(tp);
     }
 
+    @Override
     public void reset(Iterator<TuplePointer> iterator) {
         this.iterator = iterator;
         tupleId = INITIALIZED;

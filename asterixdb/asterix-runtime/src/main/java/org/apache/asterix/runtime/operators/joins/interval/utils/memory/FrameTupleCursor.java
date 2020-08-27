@@ -24,7 +24,7 @@ import org.apache.hyracks.api.comm.IFrameTupleAccessor;
 import org.apache.hyracks.api.dataflow.value.RecordDescriptor;
 import org.apache.hyracks.dataflow.common.comm.io.FrameTupleAccessor;
 
-public class FrameTupleCursor extends AbstractTupleCursor {
+public class FrameTupleCursor extends AbstractTupleCursor<ByteBuffer> {
 
     public FrameTupleCursor(RecordDescriptor recordDescriptor) {
         accessor = new FrameTupleAccessor(recordDescriptor);
