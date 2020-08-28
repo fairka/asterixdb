@@ -41,9 +41,4 @@ public abstract class AbstractTupleCursor<T> implements ITupleCursor<T> {
     public int getTupleId() {
         return tupleId;
     }
-
-    @Override
-    public boolean hasNextProbe() {
-        return INITIALIZED < (tupleId + 1) && (tupleId + 1) < accessor.getTupleCount();
-    }
 }

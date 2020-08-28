@@ -31,16 +31,12 @@ public class FrameTupleCursor extends AbstractTupleCursor<ByteBuffer> {
 
     @Override
     public boolean hasNext() {
-        return INITIALIZED < (tupleId) && (tupleId) < accessor.getTupleCount();
+        return INITIALIZED < (tupleId + 1) && (tupleId + 1) < accessor.getTupleCount();
     }
 
     @Override
     public void reset(ByteBuffer byteBuffer) {
         accessor.reset(byteBuffer);
         tupleId = INITIALIZED;
-    }
-
-    public void setTupleId(int tupleId) {
-        this.tupleId = tupleId;
     }
 }

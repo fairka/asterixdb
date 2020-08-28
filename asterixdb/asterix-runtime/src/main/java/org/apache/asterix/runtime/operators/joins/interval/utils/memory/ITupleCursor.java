@@ -82,6 +82,4 @@ public interface ITupleCursor<T> {
      * @return
      */
     int getTupleId();
-
-    boolean hasNextProbe();
 }

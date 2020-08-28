@@ -58,8 +58,4 @@ public class TuplePointerCursor extends AbstractTupleCursor<Iterator<TuplePointe
     public TuplePointer getTuplePointer() {
         return tp;
     }
-
-    public void setTupleId(int tupleId) {
-        this.tupleId = tupleId;
-    }
 }
