@@ -140,7 +140,7 @@ public class IntervalMergeJoiner {
 
     public void processProbeFrame(ByteBuffer buffer, IFrameWriter writer) throws HyracksDataException {
         inputCursor[PROBE_PARTITION].reset(buffer);
-        TupleStatus buildTs = tupleStatus();
+        TupleStatus buildTs = buildTupleStatus();
         TupleStatus probeTs = loadProbeTuple(true);
         while (buildTs.isLoaded() && probeTs.isLoaded()) {
             if (probeTs.isLoaded() && mjc.checkToLoadNextProbeTuple(inputCursor[BUILD_PARTITION].getAccessor(),
@@ -158,7 +158,7 @@ public class IntervalMergeJoiner {
     }
 
     public void processProbeClose(IFrameWriter writer) throws HyracksDataException {
-        TupleStatus buildTs = tupleStatus();
+        TupleStatus buildTs = buildTupleStatus();
         while (buildTs.isLoaded() && memoryHasTuples()) {
             // Left side from stream
             processBuildTuple(writer);
@@ -200,7 +200,7 @@ public class IntervalMergeJoiner {
         }
     }
 
-    private TupleStatus tupleStatus() {
+    private TupleStatus buildTupleStatus() {
         if (-1 < inputCursor[BUILD_PARTITION].getTupleId() && inputCursor[BUILD_PARTITION]
                 .getTupleId() < inputCursor[BUILD_PARTITION].getAccessor().getTupleCount()) {
             return TupleStatus.LOADED;
