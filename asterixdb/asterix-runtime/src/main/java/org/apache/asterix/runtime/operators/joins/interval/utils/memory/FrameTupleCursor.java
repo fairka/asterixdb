@@ -39,4 +39,8 @@ public class FrameTupleCursor extends AbstractTupleCursor<ByteBuffer> {
         accessor.reset(byteBuffer);
         tupleId = INITIALIZED;
     }
+
+    public void resetPosition(int tupleId) {
+        this.tupleId = tupleId;
+    }
 }

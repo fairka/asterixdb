@@ -125,12 +125,10 @@ public class IntervalMergeJoiner {
 
     public void processProbeFrame(ByteBuffer buffer, IFrameWriter writer) throws HyracksDataException {
         inputCursor[PROBE_PARTITION].reset(buffer);
-        while (inputCursor[BUILD_PARTITION].hasNext() && inputCursor[PROBE_PARTITION].hasNext()) {
-            if (inputCursor[PROBE_PARTITION].hasNext() &&
-            // TODO figure out how this works!!!
-                    mjc.checkToLoadNextProbeTuple(inputCursor[BUILD_PARTITION].getAccessor(),
-                            inputCursor[BUILD_PARTITION].getTupleId() + 1, inputCursor[PROBE_PARTITION].getAccessor(),
-                            inputCursor[PROBE_PARTITION].getTupleId() + 1)) {
+        while (buildHasNext() && inputCursor[PROBE_PARTITION].hasNext()) {
+            if (inputCursor[PROBE_PARTITION].hasNext() && mjc.checkToLoadNextProbeTuple(
+                    inputCursor[BUILD_PARTITION].getAccessor(), inputCursor[BUILD_PARTITION].getTupleId() + 1,
+                    inputCursor[PROBE_PARTITION].getAccessor(), inputCursor[PROBE_PARTITION].getTupleId() + 1)) {
                 // Process probe side from stream
                 inputCursor[PROBE_PARTITION].next();
                 processProbeTuple(writer);
@@ -187,17 +185,20 @@ public class IntervalMergeJoiner {
         }
     }
 
-    private boolean processProbeTuple(IFrameWriter writer) throws HyracksDataException {
+    private void processProbeTuple(IFrameWriter writer) throws HyracksDataException {
         // append to memory
+        // BUILD Cursor is guaranteed to have next
         if (mjc.checkToSaveInMemory(inputCursor[BUILD_PARTITION].getAccessor(),
-                inputCursor[BUILD_PARTITION].getTupleId(), inputCursor[PROBE_PARTITION].getAccessor(),
+                inputCursor[BUILD_PARTITION].getTupleId() + 1, inputCursor[PROBE_PARTITION].getAccessor(),
                 inputCursor[PROBE_PARTITION].getTupleId())) {
             if (!addToMemory(inputCursor[PROBE_PARTITION].getAccessor(), inputCursor[PROBE_PARTITION].getTupleId())) {
                 unfreezeAndClearMemory(writer);
-                return false;
+                if (!addToMemory(inputCursor[PROBE_PARTITION].getAccessor(),
+                        inputCursor[PROBE_PARTITION].getTupleId())) {
+                    throw new RuntimeException("Should Never get called.");
+                }
             }
         }
-        return true;
     }
 
     private void unfreezeAndClearMemory(IFrameWriter writer) throws HyracksDataException {
@@ -207,16 +208,12 @@ public class IntervalMergeJoiner {
             inputCursor[BUILD_PARTITION].next();
             processBuildTuple(writer);
         }
-        // Finish writing
-        runFileStream.flushRunFile();
         // Clear memory
         memoryBuffer.clear();
         bufferManager.reset();
         // Start reading
-        if (runFileStream.startReadingRunFile(inputCursor[BUILD_PARTITION], runFilePointer.getFileOffset())) {
-            inputCursor[BUILD_PARTITION].next();
-        }
-        runFilePointer.reset(-1, -1);
+        runFileStream.startReadingRunFile(inputCursor[BUILD_PARTITION], runFilePointer.getFileOffset());
+        inputCursor[BUILD_PARTITION].resetPosition(runFilePointer.getTupleIndex());
     }
 
     private boolean addToMemory(IFrameTupleAccessor accessor, int tupleId) throws HyracksDataException {

@@ -123,11 +123,11 @@ public class RunFileStream {
         totalTupleCount++;
     }
 
-    public boolean startReadingRunFile(FrameTupleCursor cursor) throws HyracksDataException {
-        return startReadingRunFile(cursor, 0);
+    public void startReadingRunFile(FrameTupleCursor cursor) throws HyracksDataException {
+        startReadingRunFile(cursor, 0);
     }
 
-    public boolean startReadingRunFile(FrameTupleCursor cursor, long startOffset) throws HyracksDataException {
+    public void startReadingRunFile(FrameTupleCursor cursor, long startOffset) throws HyracksDataException {
         if (runFileReader != null) {
             runFileReader.close();
         }
@@ -138,7 +138,7 @@ public class RunFileStream {
         runFileReader.seek(startOffset);
         previousReadPointer = 0;
         // Load first frame
-        return loadNextBuffer(cursor);
+        loadNextBuffer(cursor);
     }
 
     public boolean loadNextBuffer(FrameTupleCursor cursor) throws HyracksDataException {
