@@ -23,7 +23,6 @@ import java.util.LinkedList;
 
 import org.apache.asterix.runtime.operators.joins.interval.utils.IIntervalJoinUtil;
 import org.apache.asterix.runtime.operators.joins.interval.utils.memory.FrameTupleCursor;
-import org.apache.asterix.runtime.operators.joins.interval.utils.memory.ITupleCursor;
 import org.apache.asterix.runtime.operators.joins.interval.utils.memory.IntervalSideTuple;
 import org.apache.asterix.runtime.operators.joins.interval.utils.memory.RunFilePointer;
 import org.apache.asterix.runtime.operators.joins.interval.utils.memory.RunFileStream;
@@ -52,19 +51,6 @@ import org.apache.hyracks.dataflow.std.structures.TuplePointer;
  */
 public class IntervalMergeJoiner {
 
-    public enum TupleStatus {
-        LOADED,
-        EMPTY;
-
-        public boolean isLoaded() {
-            return this.equals(LOADED);
-        }
-
-        public boolean isEmpty() {
-            return this.equals(EMPTY);
-        }
-    }
-
     private final IDeallocatableFramePool framePool;
     private final IDeletableTupleBufferManager bufferManager;
     private final TuplePointerCursor memoryCursor;
@@ -84,7 +70,7 @@ public class IntervalMergeJoiner {
 
     protected final IFrame[] inputBuffer;
     protected final FrameTupleAppender resultAppender;
-    protected final ITupleCursor[] inputCursor;
+    protected final FrameTupleCursor[] inputCursor;
 
     public IntervalMergeJoiner(IHyracksTaskContext ctx, int memorySize, IIntervalJoinUtil mjc, int buildKeys,
             int probeKeys, RecordDescriptor buildRd, RecordDescriptor probeRd) throws HyracksDataException {
@@ -92,7 +78,8 @@ public class IntervalMergeJoiner {
 
         // Memory (probe buffer)
         if (memorySize < 5) {
-            throw new RuntimeException("MergeJoiner does not have enough memory (needs > 4, got " + memorySize + ").");
+            throw new RuntimeException(
+                    "IntervalMergeJoiner does not have enough memory (needs > 4, got " + memorySize + ").");
         }
 
         inputCursor = new FrameTupleCursor[JOIN_PARTITIONS];
@@ -109,7 +96,7 @@ public class IntervalMergeJoiner {
         memoryCursor = new TuplePointerCursor(bufferManager.createTuplePointerAccessor());
 
         // Run File and frame cache (build buffer)
-        runFileStream = new RunFileStream(ctx, "ismj-left");
+        runFileStream = new RunFileStream(ctx, "imj-build");
         runFilePointer = new RunFilePointer();
         runFileStream.createRunFileWriting();
         runFileStream.startRunFileWriting();
@@ -133,79 +120,46 @@ public class IntervalMergeJoiner {
 
     public void processBuildClose() throws HyracksDataException {
         runFileStream.flushRunFile();
-        if (runFileStream.startReadingRunFile(inputCursor[BUILD_PARTITION])) {
-            inputCursor[BUILD_PARTITION].next();
-        }
+        runFileStream.startReadingRunFile(inputCursor[BUILD_PARTITION]);
     }
 
     public void processProbeFrame(ByteBuffer buffer, IFrameWriter writer) throws HyracksDataException {
         inputCursor[PROBE_PARTITION].reset(buffer);
-        TupleStatus buildTs = buildTupleStatus();
-        TupleStatus probeTs = loadProbeTuple(true);
-        while (buildTs.isLoaded() && probeTs.isLoaded()) {
-            if (probeTs.isLoaded() && mjc.checkToLoadNextProbeTuple(inputCursor[BUILD_PARTITION].getAccessor(),
-                    inputCursor[BUILD_PARTITION].getTupleId(), inputCursor[PROBE_PARTITION].getAccessor(),
-                    inputCursor[PROBE_PARTITION].getTupleId())) {
-                // Right side from stream
-                boolean loadNextTuple = processProbeTuple(writer);
-                probeTs = loadProbeTuple(loadNextTuple);
+        while (inputCursor[BUILD_PARTITION].hasNext() && inputCursor[PROBE_PARTITION].hasNext()) {
+            if (inputCursor[PROBE_PARTITION].hasNext() &&
+            // TODO figure out how this works!!!
+                    mjc.checkToLoadNextProbeTuple(inputCursor[BUILD_PARTITION].getAccessor(),
+                            inputCursor[BUILD_PARTITION].getTupleId() + 1, inputCursor[PROBE_PARTITION].getAccessor(),
+                            inputCursor[PROBE_PARTITION].getTupleId() + 1)) {
+                // Process probe side from stream
+                inputCursor[PROBE_PARTITION].next();
+                processProbeTuple(writer);
             } else {
-                // Left side from stream
+                // Process build side from runfile
+                inputCursor[BUILD_PARTITION].next();
                 processBuildTuple(writer);
-                buildTs = loadBuildTuple();
             }
         }
     }
 
     public void processProbeClose(IFrameWriter writer) throws HyracksDataException {
-        TupleStatus buildTs = buildTupleStatus();
-        while (buildTs.isLoaded() && memoryHasTuples()) {
-            // Left side from stream
+        while (buildHasNext() && memoryHasTuples()) {
+            // Process build side from runfile
+            inputCursor[BUILD_PARTITION].next();
             processBuildTuple(writer);
-            buildTs = loadBuildTuple();
         }
         resultAppender.write(writer, true);
         runFileStream.close();
         runFileStream.removeRunFile();
     }
 
-    private TupleStatus loadProbeTuple(boolean loadNextTuple) {
-        TupleStatus loaded;
-        if (inputCursor[PROBE_PARTITION] != null && inputCursor[PROBE_PARTITION].hasNext()) {
-            // Still processing frame.
-            if (loadNextTuple) {
-                inputCursor[PROBE_PARTITION].next();
-            }
-            loaded = TupleStatus.LOADED;
-        } else {
-            // No more frames or tuples to process.
-            loaded = TupleStatus.EMPTY;
-        }
-        return loaded;
-    }
-
-    private TupleStatus loadBuildTuple() throws HyracksDataException {
+    private boolean buildHasNext() throws HyracksDataException {
         if (!inputCursor[BUILD_PARTITION].hasNext()) {
-            // Must keep condition in a separate if due to actions applied in loadNextBuffer.
-            if (!runFileStream.loadNextBuffer(inputCursor[BUILD_PARTITION])) {
-                inputCursor[BUILD_PARTITION].next();
-                return TupleStatus.EMPTY;
-            } else {
-                inputCursor[BUILD_PARTITION].next();
-                return TupleStatus.LOADED;
-            }
+            // Must keep condition in a separate `if` due to actions applied in loadNextBuffer.
+            return runFileStream.loadNextBuffer(inputCursor[BUILD_PARTITION]);
         } else {
-            inputCursor[BUILD_PARTITION].next();
-            return TupleStatus.LOADED;
+            return true;
         }
-    }
-
-    private TupleStatus buildTupleStatus() {
-        if (-1 < inputCursor[BUILD_PARTITION].getTupleId() && inputCursor[BUILD_PARTITION]
-                .getTupleId() < inputCursor[BUILD_PARTITION].getAccessor().getTupleCount()) {
-            return TupleStatus.LOADED;
-        }
-        return TupleStatus.EMPTY;
     }
 
     private void processBuildTuple(IFrameWriter writer) throws HyracksDataException {
@@ -248,11 +202,10 @@ public class IntervalMergeJoiner {
 
     private void unfreezeAndClearMemory(IFrameWriter writer) throws HyracksDataException {
         runFilePointer.reset(runFileStream.getReadPointer(), inputCursor[BUILD_PARTITION].getTupleId());
-        TupleStatus buildTs = TupleStatus.LOADED;
-        while (buildTs.isLoaded() && memoryHasTuples()) {
-            // Left side from stream
+        while (buildHasNext() && memoryHasTuples()) {
+            // Process build side from runfile
+            inputCursor[BUILD_PARTITION].next();
             processBuildTuple(writer);
-            buildTs = loadBuildTuple();
         }
         // Finish writing
         runFileStream.flushRunFile();
