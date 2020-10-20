@@ -167,11 +167,6 @@ class SubplanSpecialFlatteningCheckVisitor implements IQueryOperatorVisitor<Bool
     }
 
     @Override
-    public Boolean visitRangeForwardOperator(RangeForwardOperator op, Void arg) throws AlgebricksException {
-        return visitInputs(op);
-    }
-
-    @Override
     public Boolean visitMaterializeOperator(MaterializeOperator op, Void arg) throws AlgebricksException {
         return visitInputs(op);
     }

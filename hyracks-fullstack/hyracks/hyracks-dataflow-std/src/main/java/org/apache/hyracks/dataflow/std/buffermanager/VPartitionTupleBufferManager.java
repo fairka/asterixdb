@@ -293,10 +293,4 @@ public class VPartitionTupleBufferManager implements IPartitionedTupleBufferMana
 
     }
 
-    public IFrameBufferManager getPartitionFrameBufferManager(int partition) {
-        if (partitionArray[partition] == null || partitionArray[partition].getNumFrames() == 0) {
-            return null;
-        }
-        return partitionArray[partition];
-    }
 }
