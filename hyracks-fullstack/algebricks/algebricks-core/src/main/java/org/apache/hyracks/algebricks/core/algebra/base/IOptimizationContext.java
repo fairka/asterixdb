@@ -36,7 +36,7 @@ import org.apache.hyracks.algebricks.core.rewriter.base.IAlgebraicRewriteRule;
 import org.apache.hyracks.algebricks.core.rewriter.base.PhysicalOptimizationConfig;
 import org.apache.hyracks.api.exceptions.IWarningCollector;
 
-public interface IOptimizationContext extends ITypingContext, IVariableContext, IRangeContext {
+public interface IOptimizationContext extends ITypingContext, IVariableContext {
 
     @Override
     public IMetadataProvider<?, ?> getMetadataProvider();

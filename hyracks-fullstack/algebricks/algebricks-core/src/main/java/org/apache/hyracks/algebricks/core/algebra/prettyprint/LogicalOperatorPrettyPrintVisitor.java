@@ -56,7 +56,6 @@ import org.apache.hyracks.algebricks.core.algebra.operators.logical.MaterializeO
 import org.apache.hyracks.algebricks.core.algebra.operators.logical.NestedTupleSourceOperator;
 import org.apache.hyracks.algebricks.core.algebra.operators.logical.OrderOperator;
 import org.apache.hyracks.algebricks.core.algebra.operators.logical.ProjectOperator;
-import org.apache.hyracks.algebricks.core.algebra.operators.logical.RangeForwardOperator;
 import org.apache.hyracks.algebricks.core.algebra.operators.logical.ReplicateOperator;
 import org.apache.hyracks.algebricks.core.algebra.operators.logical.RunningAggregateOperator;
 import org.apache.hyracks.algebricks.core.algebra.operators.logical.ScriptOperator;
@@ -399,13 +398,6 @@ public class LogicalOperatorPrettyPrintVisitor extends AbstractLogicalOperatorPr
     @Override
     public Void visitReplicateOperator(ReplicateOperator op, Integer indent) throws AlgebricksException {
         addIndent(indent).append("replicate");
-        return null;
-    }
-
-    //Temporary Functions
-    @Override
-    public Void visitRangeForwardOperator(RangeForwardOperator op, Integer indent) throws AlgebricksException {
-        addIndent(indent).append("range forward");
         return null;
     }
 

@@ -40,7 +40,6 @@ import org.apache.hyracks.algebricks.core.algebra.functions.FunctionIdentifier;
 import org.apache.hyracks.algebricks.core.algebra.operators.logical.AbstractLogicalOperator;
 import org.apache.hyracks.algebricks.core.algebra.operators.logical.AbstractOperatorWithNestedPlans;
 import org.apache.hyracks.algebricks.core.algebra.operators.logical.AssignOperator;
-import org.apache.hyracks.algebricks.core.algebra.operators.logical.RangeForwardOperator;
 import org.apache.hyracks.algebricks.core.algebra.operators.logical.WindowOperator;
 import org.apache.hyracks.algebricks.core.algebra.operators.logical.visitors.VariableUtilities;
 import org.apache.hyracks.algebricks.core.algebra.visitors.ILogicalExpressionReferenceTransform;
@@ -227,13 +226,6 @@ public class InlineVariablesRule implements IAlgebraicRewriteRule {
         public void setOperator(ILogicalOperator op) {
             this.op = op;
             liveVars.clear();
-        }
-
-        //Temporary
-        @Override
-        public Boolean visitRangeForwardOperator(RangeForwardOperator op, ILogicalExpressionReferenceTransform arg)
-                throws AlgebricksException {
-            return null;
         }
 
         @Override

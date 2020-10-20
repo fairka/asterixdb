@@ -57,7 +57,6 @@ import org.apache.hyracks.algebricks.core.algebra.operators.logical.NestedTupleS
 import org.apache.hyracks.algebricks.core.algebra.operators.logical.OrderOperator;
 import org.apache.hyracks.algebricks.core.algebra.operators.logical.OrderOperator.IOrder;
 import org.apache.hyracks.algebricks.core.algebra.operators.logical.ProjectOperator;
-import org.apache.hyracks.algebricks.core.algebra.operators.logical.RangeForwardOperator;
 import org.apache.hyracks.algebricks.core.algebra.operators.logical.ReplicateOperator;
 import org.apache.hyracks.algebricks.core.algebra.operators.logical.RunningAggregateOperator;
 import org.apache.hyracks.algebricks.core.algebra.operators.logical.ScriptOperator;
@@ -464,12 +463,6 @@ public class UsedVariableVisitor implements ILogicalOperatorVisitor<Void, Void> 
     @Override
     public Void visitSplitOperator(SplitOperator op, Void arg) throws AlgebricksException {
         op.getBranchingExpression().getValue().getUsedVariables(usedVariables);
-        return null;
-    }
-
-    //Temporary Operator
-    @Override
-    public Void visitRangeForwardOperator(RangeForwardOperator op, Void arg) {
         return null;
     }
 

@@ -56,7 +56,6 @@ import org.apache.hyracks.algebricks.core.algebra.operators.logical.MaterializeO
 import org.apache.hyracks.algebricks.core.algebra.operators.logical.NestedTupleSourceOperator;
 import org.apache.hyracks.algebricks.core.algebra.operators.logical.OrderOperator;
 import org.apache.hyracks.algebricks.core.algebra.operators.logical.ProjectOperator;
-import org.apache.hyracks.algebricks.core.algebra.operators.logical.RangeForwardOperator;
 import org.apache.hyracks.algebricks.core.algebra.operators.logical.ReplicateOperator;
 import org.apache.hyracks.algebricks.core.algebra.operators.logical.RunningAggregateOperator;
 import org.apache.hyracks.algebricks.core.algebra.operators.logical.ScriptOperator;
@@ -466,11 +465,6 @@ public class LogicalOperatorDotVisitor implements ILogicalOperatorVisitor<String
         appendAnnotations(op, showDetails);
         appendPhysicalOperatorInfo(op, showDetails);
         return stringBuilder.toString();
-    }
-
-    @Override
-    public String visitRangeForwardOperator(RangeForwardOperator op, Boolean arg) {
-        return null;
     }
 
     @Override
