@@ -18,10 +18,11 @@
  */
 package org.apache.hyracks.algebricks.runtime.base;
 
+import org.apache.hyracks.algebricks.common.exceptions.AlgebricksException;
 import org.apache.hyracks.api.exceptions.HyracksDataException;
 import org.apache.hyracks.data.std.api.IPointable;
 import org.apache.hyracks.dataflow.common.data.accessors.IFrameTupleReference;
 
 public interface IScalarEvaluator {
-    void evaluate(IFrameTupleReference tuple, IPointable result) throws HyracksDataException;
+    void evaluate(IFrameTupleReference tuple, IPointable result) throws HyracksDataException, AlgebricksException;
 }

@@ -40,6 +40,8 @@ public enum LogicalOperatorTag {
     NESTEDTUPLESOURCE,
     ORDER,
     PROJECT,
+    //Remove Range_Forward
+    RANGE_FORWARD,
     REPLICATE,
     RUNNINGAGGREGATE,
     SCRIPT,

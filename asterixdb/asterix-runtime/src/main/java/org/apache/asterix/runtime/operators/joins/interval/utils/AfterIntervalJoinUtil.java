@@ -19,6 +19,7 @@
 package org.apache.asterix.runtime.operators.joins.interval.utils;
 
 import org.apache.asterix.om.pointables.nonvisitor.AIntervalPointable;
+import org.apache.asterix.runtime.evaluators.functions.temporal.IntervalPartitionLogic;
 import org.apache.asterix.runtime.operators.joins.interval.utils.memory.IntervalJoinUtil;
 import org.apache.hyracks.api.comm.IFrameTupleAccessor;
 import org.apache.hyracks.api.exceptions.HyracksDataException;
@@ -58,5 +59,9 @@ public class AfterIntervalJoinUtil extends AbstractIntervalJoinUtil {
         long buildEnd = IntervalJoinUtil.getIntervalEnd(buildAccessor, buildTupleIndex, idBuild);
         long probeStart = IntervalJoinUtil.getIntervalStart(probeAccessor, probeTupleIndex, idProbe);
         return probeStart <= buildEnd;
+    }
+
+    public boolean compareIntervalPartition(int s1, int e1, int s2, int e2) {
+        return IntervalPartitionLogic.after(s1, e1, s2, e2);
     }
 }

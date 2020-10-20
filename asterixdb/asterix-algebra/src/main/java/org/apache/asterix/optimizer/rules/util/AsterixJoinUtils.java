@@ -80,6 +80,9 @@ public class AsterixJoinUtils {
         }
         IntervalPartitions intervalPartitions =
                 IntervalJoinUtils.createIntervalPartitions(op, fi, sideLeft, sideRight, rangeMap, context, LEFT, RIGHT);
-        IntervalJoinUtils.setSortMergeIntervalJoinOp(op, fi, sideLeft, sideRight, context, intervalPartitions);
+        //Sort Merge Op
+        //IntervalJoinUtils.setSortMergeIntervalJoinOp(op, fi, sideLeft, sideRight, context, intervalPartitions);
+        IntervalJoinUtils.setOverlappingIntervalPartitionJoinOp(op, fi, sideLeft, sideRight, context,
+                intervalPartitions, LEFT, RIGHT);
     }
 }

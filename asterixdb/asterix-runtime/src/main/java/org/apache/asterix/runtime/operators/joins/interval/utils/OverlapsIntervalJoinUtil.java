@@ -19,6 +19,7 @@
 package org.apache.asterix.runtime.operators.joins.interval.utils;
 
 import org.apache.asterix.om.pointables.nonvisitor.AIntervalPointable;
+import org.apache.asterix.runtime.evaluators.functions.temporal.IntervalPartitionLogic;
 import org.apache.hyracks.api.exceptions.HyracksDataException;
 
 public class OverlapsIntervalJoinUtil extends AbstractIntervalJoinUtil {
@@ -30,5 +31,10 @@ public class OverlapsIntervalJoinUtil extends AbstractIntervalJoinUtil {
     @Override
     public boolean compareInterval(AIntervalPointable ipBuild, AIntervalPointable ipProbe) throws HyracksDataException {
         return il.overlaps(ipBuild, ipProbe);
+    }
+
+    @Override
+    public boolean compareIntervalPartition(int s1, int e1, int s2, int e2) {
+        return IntervalPartitionLogic.overlaps(s1, e1, s2, e2);
     }
 }

@@ -37,6 +37,7 @@ public class RunFileReader implements IFrameReader {
     private final long size;
     private long readPtr;
     private boolean deleteAfterClose;
+    private long readPreviousPtr;
 
     public RunFileReader(FileReference file, IIOManager ioManager, long size, boolean deleteAfterRead) {
         this.file = file;
@@ -51,12 +52,14 @@ public class RunFileReader implements IFrameReader {
         handle = ioManager.open(file, IIOManager.FileReadWriteMode.READ_ONLY,
                 IIOManager.FileSyncMode.METADATA_ASYNC_DATA_ASYNC);
         readPtr = 0;
+        readPreviousPtr = 0;
     }
 
     public void seek(long position) {
         if (position < 0) {
             throw new IllegalArgumentException(String.valueOf(position));
         }
+        readPreviousPtr = readPtr;
         readPtr = position;
     }
 
@@ -69,6 +72,7 @@ public class RunFileReader implements IFrameReader {
         if (readPtr >= size) {
             return false;
         }
+        readPreviousPtr = readPtr;
         frame.reset();
 
         int readLength = ioManager.syncRead(handle, readPtr, frame.getBuffer());
@@ -117,5 +121,14 @@ public class RunFileReader implements IFrameReader {
 
     public void setDeleteAfterClose(boolean deleteAfterClose) {
         this.deleteAfterClose = deleteAfterClose;
+    }
+
+    public void reset(long pointer) throws HyracksDataException {
+        readPtr = pointer;
+        readPreviousPtr = readPtr;
+    }
+
+    public long getReadPointer() {
+        return readPreviousPtr;
     }
 }

@@ -41,6 +41,7 @@ public class PhysicalOptimizationConfig {
     private static final String SORT_SAMPLES = "SORT_SAMPLES";
     private static final String INDEX_ONLY = "INDEX_ONLY";
     private static final String SANITY_CHECK = "SANITY_CHECK";
+    private static final String MAX_INTERVAL_DURATION = "MAX_INTERVAL_DURATION";
 
     private Properties properties = new Properties();
 
@@ -96,6 +97,10 @@ public class PhysicalOptimizationConfig {
 
     public void setMaxFramesForJoin(int frameLimit) {
         setInt(MAX_FRAMES_FOR_JOIN, frameLimit);
+    }
+
+    public int getMaxIntervalDuration() {
+        return getInt(MAX_INTERVAL_DURATION, 1000);
     }
 
     public int getMaxFramesForGroupBy() {

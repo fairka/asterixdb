@@ -41,6 +41,7 @@ import org.apache.hyracks.algebricks.core.algebra.operators.logical.MaterializeO
 import org.apache.hyracks.algebricks.core.algebra.operators.logical.NestedTupleSourceOperator;
 import org.apache.hyracks.algebricks.core.algebra.operators.logical.OrderOperator;
 import org.apache.hyracks.algebricks.core.algebra.operators.logical.ProjectOperator;
+import org.apache.hyracks.algebricks.core.algebra.operators.logical.RangeForwardOperator;
 import org.apache.hyracks.algebricks.core.algebra.operators.logical.ReplicateOperator;
 import org.apache.hyracks.algebricks.core.algebra.operators.logical.RunningAggregateOperator;
 import org.apache.hyracks.algebricks.core.algebra.operators.logical.ScriptOperator;
@@ -85,6 +86,9 @@ public interface ILogicalOperatorVisitor<R, T> {
     public R visitProjectOperator(ProjectOperator op, T arg) throws AlgebricksException;
 
     public R visitReplicateOperator(ReplicateOperator op, T arg) throws AlgebricksException;
+
+    //Temporary Remove
+    public R visitRangeForwardOperator(RangeForwardOperator op, T arg) throws AlgebricksException;
 
     public R visitSplitOperator(SplitOperator op, T arg) throws AlgebricksException;
 

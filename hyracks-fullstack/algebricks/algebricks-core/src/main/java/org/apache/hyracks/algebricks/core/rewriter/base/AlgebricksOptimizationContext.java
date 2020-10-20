@@ -46,6 +46,7 @@ import org.apache.hyracks.algebricks.core.algebra.properties.FunctionalDependenc
 import org.apache.hyracks.algebricks.core.algebra.properties.ILogicalPropertiesVector;
 import org.apache.hyracks.algebricks.core.algebra.properties.INodeDomain;
 import org.apache.hyracks.api.exceptions.IWarningCollector;
+import org.apache.hyracks.dataflow.std.base.RangeId;
 
 /**
  * The Algebricks default implementation for IOptimizationContext.
@@ -54,6 +55,7 @@ import org.apache.hyracks.api.exceptions.IWarningCollector;
 public class AlgebricksOptimizationContext implements IOptimizationContext {
 
     private int varCounter;
+    private int rangeIdCounter;
     private final IExpressionEvalSizeComputer expressionEvalSizeComputer;
     private final IMergeAggregationExpressionFactory mergeAggregationExpressionFactory;
     private final PhysicalOptimizationConfig physicalOptimizationConfig;
@@ -101,6 +103,7 @@ public class AlgebricksOptimizationContext implements IOptimizationContext {
             AlgebricksPartitionConstraint clusterLocations, IPlanPrettyPrinter prettyPrinter,
             IWarningCollector warningCollector) {
         this.varCounter = varCounter;
+        this.rangeIdCounter = -1;
         this.expressionEvalSizeComputer = expressionEvalSizeComputer;
         this.mergeAggregationExpressionFactory = mergeAggregationExpressionFactory;
         this.expressionTypeComputer = expressionTypeComputer;
@@ -145,6 +148,13 @@ public class AlgebricksOptimizationContext implements IOptimizationContext {
     @Override
     public void setMetadataDeclarations(IMetadataProvider<?, ?> metadataProvider) {
         this.metadataProvider = metadataProvider;
+    }
+
+    @Override
+    public RangeId newRangeId() {
+        rangeIdCounter++;
+        RangeId id = new RangeId(rangeIdCounter);
+        return id;
     }
 
     @Override

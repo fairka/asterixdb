@@ -66,6 +66,7 @@ import org.apache.hyracks.algebricks.core.algebra.operators.logical.MaterializeO
 import org.apache.hyracks.algebricks.core.algebra.operators.logical.NestedTupleSourceOperator;
 import org.apache.hyracks.algebricks.core.algebra.operators.logical.OrderOperator;
 import org.apache.hyracks.algebricks.core.algebra.operators.logical.ProjectOperator;
+import org.apache.hyracks.algebricks.core.algebra.operators.logical.RangeForwardOperator;
 import org.apache.hyracks.algebricks.core.algebra.operators.logical.ReplicateOperator;
 import org.apache.hyracks.algebricks.core.algebra.operators.logical.RunningAggregateOperator;
 import org.apache.hyracks.algebricks.core.algebra.operators.logical.ScriptOperator;
@@ -100,6 +101,7 @@ import org.apache.hyracks.algebricks.core.algebra.operators.physical.MicroUnionA
 import org.apache.hyracks.algebricks.core.algebra.operators.physical.NestedTupleSourcePOperator;
 import org.apache.hyracks.algebricks.core.algebra.operators.physical.PreSortedDistinctByPOperator;
 import org.apache.hyracks.algebricks.core.algebra.operators.physical.PreclusteredGroupByPOperator;
+import org.apache.hyracks.algebricks.core.algebra.operators.physical.RangeForwardPOperator;
 import org.apache.hyracks.algebricks.core.algebra.operators.physical.ReplicatePOperator;
 import org.apache.hyracks.algebricks.core.algebra.operators.physical.RunningAggregatePOperator;
 import org.apache.hyracks.algebricks.core.algebra.operators.physical.SinkPOperator;
@@ -301,6 +303,12 @@ public class SetAlgebricksPhysicalOperatorsRule implements IAlgebraicRewriteRule
         @Override
         public IPhysicalOperator visitReplicateOperator(ReplicateOperator op, Boolean topLevelOp) {
             return new ReplicatePOperator();
+        }
+
+        //Temporary  Function
+        @Override
+        public IPhysicalOperator visitRangeForwardOperator(RangeForwardOperator op, Boolean arg) {
+            return new RangeForwardPOperator(op.getRangeId(), op.getRangeMap());
         }
 
         @Override

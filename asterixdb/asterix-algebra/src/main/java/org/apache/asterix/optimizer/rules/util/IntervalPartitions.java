@@ -19,6 +19,7 @@
 
 package org.apache.asterix.optimizer.rules.util;
 
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
@@ -35,15 +36,20 @@ public class IntervalPartitions {
     private final List<IntervalColumn> rightIntervalColumn;
     private final PartitioningType leftPartitioningType;
     private final PartitioningType rightPartitioningType;
+    private final ArrayList<OrderColumn> leftLocalOrderColumn;
+    private final ArrayList<OrderColumn> rightLocalOrderColumn;
 
     IntervalPartitions(RangeMap rangeMap, List<IntervalColumn> leftIntervalColumn,
             List<IntervalColumn> rightIntervalColumn, PartitioningType leftPartitioningType,
-            PartitioningType rightPartitioningType) {
+            PartitioningType rightPartitioningType, ArrayList<OrderColumn> leftLocalOrderColumn,
+            ArrayList<OrderColumn> rightLocalOrderColumn) {
         this.rangeMap = rangeMap;
         this.leftIntervalColumn = leftIntervalColumn;
         this.rightIntervalColumn = rightIntervalColumn;
         this.leftPartitioningType = leftPartitioningType;
         this.rightPartitioningType = rightPartitioningType;
+        this.leftLocalOrderColumn = leftLocalOrderColumn;
+        this.rightLocalOrderColumn = rightLocalOrderColumn;
     }
 
     public RangeMap getRangeMap() {
@@ -64,6 +70,14 @@ public class IntervalPartitions {
 
     public List<IntervalColumn> getRightIntervalColumn() {
         return rightIntervalColumn;
+    }
+
+    public ArrayList<OrderColumn> getLeftLocalOrderColumn() {
+        return leftLocalOrderColumn;
+    }
+
+    public ArrayList<OrderColumn> getRightLocalOrderColumn() {
+        return rightLocalOrderColumn;
     }
 
     public List<OrderColumn> getLeftStartColumn() {

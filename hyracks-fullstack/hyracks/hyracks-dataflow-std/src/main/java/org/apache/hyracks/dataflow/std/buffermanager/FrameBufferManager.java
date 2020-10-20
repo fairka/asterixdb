@@ -22,7 +22,11 @@ package org.apache.hyracks.dataflow.std.buffermanager;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
 
+import org.apache.hyracks.api.comm.IFrameTupleAccessor;
+import org.apache.hyracks.api.dataflow.value.RecordDescriptor;
 import org.apache.hyracks.api.exceptions.HyracksDataException;
+import org.apache.hyracks.dataflow.common.comm.io.FrameTupleAccessor;
+import org.apache.hyracks.dataflow.std.structures.TuplePointer;
 
 /**
  * General Frame based buffer manager class
@@ -56,6 +60,60 @@ public class FrameBufferManager implements IFrameBufferManager {
     @Override
     public void close() {
         buffers = null;
+    }
+
+    @Override
+    public void resetIterator() {
+
+    }
+
+    @Override
+    public int next() {
+        return 0;
+    }
+
+    @Override
+    public boolean exists() {
+        return false;
+    }
+
+    @Override
+    public ITupleAccessor getTupleAccessor(final RecordDescriptor recordDescriptor) {
+        return new AbstractTupleAccessor() {
+            FrameTupleAccessor innerAccessor = new FrameTupleAccessor(recordDescriptor);
+
+            @Override
+            IFrameTupleAccessor getInnerAccessor() {
+                return innerAccessor;
+            }
+
+            @Override
+            void resetInnerAccessor(TuplePointer tuplePointer) {
+                //                buffers[parsePartitionId(tuplePointer.getFrameIndex())]
+                //                        .getFrame(parseFrameIdInPartition(tuplePointer.getFrameIndex()), tempInfo);
+                //                innerAccessor.reset(tempInfo.getBuffer(), tempInfo.getStartOffset(), tempInfo.getLength());
+            }
+
+            @Override
+            void resetInnerAccessor(int frameIndex) {
+                //                partitionArray[parsePartitionId(frameIndex)].getFrame(parseFrameIdInPartition(frameIndex), tempInfo);
+                //                innerAccessor.reset(tempInfo.getBuffer(), tempInfo.getStartOffset(), tempInfo.getLength());
+            }
+
+            @Override
+            int getFrameCount() {
+                return 0;
+                //                return partitionArray.length;
+            }
+        };
+    }
+
+    protected int parsePartitionId(int externalFrameId) {
+        return externalFrameId % getNumPartitions();
+    }
+
+    public int getNumPartitions() {
+        return 0;
     }
 
 }

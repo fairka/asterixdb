@@ -24,6 +24,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 import org.apache.hyracks.api.comm.FrameHelper;
+import org.apache.hyracks.api.dataflow.value.RecordDescriptor;
 import org.apache.hyracks.api.exceptions.HyracksDataException;
 import org.apache.hyracks.util.IntSerDeUtils;
 
@@ -129,5 +130,29 @@ public class VariableFrameMemoryManager implements IFrameBufferManager {
         logicalFrames.clear();
         freeSlotPolicy.close();
         framePool.close();
+    }
+
+    @Override
+    public int next() {
+        // TODO Auto-generated method stub
+        return 0;
+    }
+
+    @Override
+    public boolean exists() {
+        // TODO Auto-generated method stub
+        return false;
+    }
+
+    @Override
+    public void resetIterator() {
+        // TODO Auto-generated method stub
+
+    }
+
+    @Override
+    public ITupleAccessor getTupleAccessor(RecordDescriptor rd) {
+        // TODO Auto-generated method stub
+        return null;
     }
 }

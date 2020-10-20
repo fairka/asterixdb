@@ -20,19 +20,27 @@
 package org.apache.asterix.optimizer.rules.util;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 import org.apache.asterix.algebra.operators.physical.IntervalMergeJoinPOperator;
+import org.apache.asterix.algebra.operators.physical.OverlappingIntervalPartitionJoinPOperator;
 import org.apache.asterix.common.annotations.RangeAnnotation;
 import org.apache.asterix.common.exceptions.CompilationException;
 import org.apache.asterix.common.exceptions.ErrorCode;
 import org.apache.asterix.lang.common.util.FunctionUtil;
+import org.apache.asterix.om.base.AInt32;
+import org.apache.asterix.om.constants.AsterixConstantValue;
+import org.apache.asterix.om.functions.AsterixBuiltinFunctions;
 import org.apache.asterix.om.functions.BuiltinFunctions;
+import org.apache.asterix.runtime.operators.joins.interval.overlappingintervalpartition.OverlappingIntervalPartitionUtil;
 import org.apache.asterix.runtime.operators.joins.interval.utils.AfterIntervalJoinUtilFactory;
 import org.apache.asterix.runtime.operators.joins.interval.utils.BeforeIntervalJoinUtilFactory;
 import org.apache.asterix.runtime.operators.joins.interval.utils.CoveredByIntervalJoinUtilFactory;
@@ -47,24 +55,38 @@ import org.apache.hyracks.algebricks.common.exceptions.AlgebricksException;
 import org.apache.hyracks.algebricks.core.algebra.base.ILogicalExpression;
 import org.apache.hyracks.algebricks.core.algebra.base.ILogicalOperator;
 import org.apache.hyracks.algebricks.core.algebra.base.IOptimizationContext;
+import org.apache.hyracks.algebricks.core.algebra.base.IPhysicalOperator;
 import org.apache.hyracks.algebricks.core.algebra.base.LogicalExpressionTag;
 import org.apache.hyracks.algebricks.core.algebra.base.LogicalVariable;
 import org.apache.hyracks.algebricks.core.algebra.expressions.AbstractFunctionCallExpression;
+import org.apache.hyracks.algebricks.core.algebra.expressions.ConstantExpression;
 import org.apache.hyracks.algebricks.core.algebra.expressions.IExpressionAnnotation;
 import org.apache.hyracks.algebricks.core.algebra.expressions.ScalarFunctionCallExpression;
 import org.apache.hyracks.algebricks.core.algebra.expressions.VariableReferenceExpression;
 import org.apache.hyracks.algebricks.core.algebra.functions.FunctionIdentifier;
 import org.apache.hyracks.algebricks.core.algebra.functions.IFunctionInfo;
 import org.apache.hyracks.algebricks.core.algebra.operators.logical.AbstractBinaryJoinOperator;
+import org.apache.hyracks.algebricks.core.algebra.operators.logical.AbstractLogicalOperator;
 import org.apache.hyracks.algebricks.core.algebra.operators.logical.AssignOperator;
+import org.apache.hyracks.algebricks.core.algebra.operators.logical.ExchangeOperator;
 import org.apache.hyracks.algebricks.core.algebra.operators.logical.OrderOperator;
+import org.apache.hyracks.algebricks.core.algebra.operators.logical.RangeForwardOperator;
 import org.apache.hyracks.algebricks.core.algebra.operators.physical.AbstractJoinPOperator;
 import org.apache.hyracks.algebricks.core.algebra.operators.physical.AssignPOperator;
+import org.apache.hyracks.algebricks.core.algebra.operators.physical.RangeForwardPOperator;
+import org.apache.hyracks.algebricks.core.algebra.operators.physical.RangePartitionExchangePOperator;
 import org.apache.hyracks.algebricks.core.algebra.properties.IPartitioningProperty.PartitioningType;
 import org.apache.hyracks.algebricks.core.algebra.properties.IntervalColumn;
+import org.apache.hyracks.algebricks.core.algebra.properties.OrderColumn;
+import org.apache.hyracks.algebricks.core.algebra.util.OperatorPropertiesUtil;
+import org.apache.hyracks.algebricks.rewriter.util.JoinUtils;
+import org.apache.hyracks.algebricks.rewriter.util.PhysicalOptimizationsUtil;
 import org.apache.hyracks.dataflow.common.data.partition.range.RangeMap;
+import org.apache.hyracks.dataflow.std.base.RangeId;
 
 public class IntervalJoinUtils {
+
+    private static final Logger LOGGER = Logger.getLogger(JoinUtils.class.getName());
 
     private static final Map<FunctionIdentifier, FunctionIdentifier> INTERVAL_JOIN_CONDITIONS = new HashMap<>();
 
@@ -92,10 +114,71 @@ public class IntervalJoinUtils {
     protected static void setSortMergeIntervalJoinOp(AbstractBinaryJoinOperator op, FunctionIdentifier fi,
             List<LogicalVariable> sideLeft, List<LogicalVariable> sideRight, IOptimizationContext context,
             IntervalPartitions intervalPartitions) throws CompilationException {
-        IIntervalJoinUtilFactory mjcf = createIntervalJoinCheckerFactory(fi, intervalPartitions.getRangeMap());
+        IIntervalJoinUtilFactory mjcf = createIntervalJoinUtilFactory(fi, intervalPartitions.getRangeMap());
         op.setPhysicalOperator(new IntervalMergeJoinPOperator(op.getJoinKind(),
                 AbstractJoinPOperator.JoinPartitioningType.BROADCAST, sideLeft, sideRight,
                 context.getPhysicalOptimizationConfig().getMaxFramesForJoin(), mjcf, intervalPartitions));
+    }
+
+    protected static void setOverlappingIntervalPartitionJoinOp(AbstractBinaryJoinOperator op, FunctionIdentifier fi,
+            List<LogicalVariable> sideLeft, List<LogicalVariable> sideRight, IOptimizationContext context,
+            IntervalPartitions intervalPartitions, int left, int right) throws AlgebricksException {
+        long leftCount = 10000;
+        long rightCount = 10000;
+        long leftMaxDuration = 100;
+        long rightMaxDuration = 100;
+        int tuplesPerFrame = 300;
+
+        int k = OverlappingIntervalPartitionUtil.determineK(leftCount, leftMaxDuration, rightCount, rightMaxDuration,
+                tuplesPerFrame);
+
+        // Add two partition for intervals that start or end outside the given range.
+        k += 2;
+        if (k <= 2) {
+            if (LOGGER.isLoggable(Level.WARNING)) {
+                LOGGER.warning("IntervalPartitionJoin has overridden the suggested value of k (" + k + ") with 3.");
+            }
+            k = 3;
+        }
+
+        RangeId leftRangeId = context.newRangeId();
+        RangeId rightRangeId = context.newRangeId();
+        insertRangeForward(op, left, leftRangeId, intervalPartitions.getRangeMap(), context);
+        insertRangeForward(op, right, rightRangeId, intervalPartitions.getRangeMap(), context);
+
+        IIntervalJoinUtilFactory mjcf = createIntervalJoinUtilFactory(fi, intervalPartitions.getRangeMap());
+        // Custom range exchange
+//        insertRangeExchange(op, left, sideLeft, context, intervalPartitions);
+//        insertRangeExchange(op, right, sideRight, context, intervalPartitions);
+        // Custom range exchange END
+
+        List<LogicalVariable> leftPartitionVar = Arrays.asList(context.newVar(), context.newVar());
+        List<LogicalVariable> rightPartitionVar = Arrays.asList(context.newVar(), context.newVar());
+
+        insertPartitionSortKey(op, left, leftPartitionVar, sideLeft.get(0), context);
+        insertPartitionSortKey(op, right, rightPartitionVar, sideRight.get(0), context);
+
+        insertOverlappingIntervalPartitionSortKey(op, left, sideLeft, leftPartitionVar.get(0), context, k, leftRangeId);
+        insertOverlappingIntervalPartitionSortKey(op, right, sideRight, rightPartitionVar.get(0), context, k,
+                rightRangeId);
+
+        op.setPhysicalOperator(new OverlappingIntervalPartitionJoinPOperator(op.getJoinKind(),
+                AbstractJoinPOperator.JoinPartitioningType.BROADCAST, sideLeft, sideRight,
+                context.getPhysicalOptimizationConfig().getMaxFramesForJoin(), k, mjcf, leftPartitionVar,
+                rightPartitionVar, intervalPartitions));
+    }
+
+    private static void insertRangeForward(AbstractBinaryJoinOperator op, int branch, RangeId rangeId,
+            RangeMap rangeMap, IOptimizationContext context) throws AlgebricksException {
+        RangeForwardOperator rfo = new RangeForwardOperator(rangeId, rangeMap);
+        rfo.setExecutionMode(op.getExecutionMode());
+        rfo.getInputs().add(op.getInputs().get(branch));
+        RangeForwardPOperator rfpo = new RangeForwardPOperator(rangeId, rangeMap);
+        rfo.setPhysicalOperator(rfpo);
+        Mutable<ILogicalOperator> rfoRef = new MutableObject<>(rfo);
+        op.getInputs().set(branch, rfoRef);
+
+        context.computeAndSetTypeEnvironmentForOperator(rfo);
     }
 
     /**
@@ -142,7 +225,18 @@ public class IntervalJoinUtils {
         } else {
             throw new CompilationException(ErrorCode.COMPILATION_ILLEGAL_STATE, fi.getName());
         }
-        return new IntervalPartitions(rangeMap, leftIC, rightIC, leftPartitioningType, rightPartitioningType);
+
+        //Create Left and Right Local Order Column
+        ArrayList<OrderColumn> leftLocalOrderColumn = new ArrayList<>();
+        for (LogicalVariable v : sideLeft) {
+            leftLocalOrderColumn.add(new OrderColumn(v, rightIC.get(0).getOrder()));
+        }
+        ArrayList<OrderColumn> rightLocalOrderColumn = new ArrayList<>();
+        for (LogicalVariable v : sideRight) {
+            rightLocalOrderColumn.add(new OrderColumn(v, rightIC.get(0).getOrder()));
+        }
+        return new IntervalPartitions(rangeMap, leftIC, rightIC, leftPartitioningType, rightPartitioningType,
+                leftLocalOrderColumn, rightLocalOrderColumn);
     }
 
     protected static FunctionIdentifier isIntervalJoinCondition(ILogicalExpression e,
@@ -191,7 +285,7 @@ public class IntervalJoinUtils {
     /**
      * Certain Relations not yet supported as seen below. Will default to regular join.
      */
-    private static IIntervalJoinUtilFactory createIntervalJoinCheckerFactory(FunctionIdentifier fi, RangeMap rangeMap)
+    private static IIntervalJoinUtilFactory createIntervalJoinUtilFactory(FunctionIdentifier fi, RangeMap rangeMap)
             throws CompilationException {
         IIntervalJoinUtilFactory mjcf;
         if (fi.equals(BuiltinFunctions.INTERVAL_OVERLAPPED_BY)) {
@@ -247,5 +341,68 @@ public class IntervalJoinUtils {
         op.getInputs().set(branch, aoRef);
 
         context.computeAndSetTypeEnvironmentForOperator(ao);
+    }
+
+    private static void insertOverlappingIntervalPartitionSortKey(AbstractBinaryJoinOperator op, int branch,
+            List<LogicalVariable> sortVars, LogicalVariable intervalVar, IOptimizationContext context, int k,
+            RangeId rangeId) throws AlgebricksException {
+        MutableObject<ILogicalExpression> intervalExp =
+                new MutableObject<>(new VariableReferenceExpression(intervalVar));
+        MutableObject<ILogicalExpression> rangeIdConstant =
+                new MutableObject<>(new ConstantExpression(new AsterixConstantValue(new AInt32(rangeId.getId()))));
+        MutableObject<ILogicalExpression> kConstant =
+                new MutableObject<>(new ConstantExpression(new AsterixConstantValue(new AInt32(k))));
+
+        List<Mutable<ILogicalExpression>> assignExps = new ArrayList<>();
+        // Start partition
+        IFunctionInfo startFi = FunctionUtil.getFunctionInfo(AsterixBuiltinFunctions.INTERVAL_PARTITION_JOIN_START);
+        @SuppressWarnings("unchecked")
+        ScalarFunctionCallExpression startPartitionExp =
+                new ScalarFunctionCallExpression(startFi, intervalExp, rangeIdConstant, kConstant);
+        assignExps.add(new MutableObject<ILogicalExpression>(startPartitionExp));
+        // End partition
+        IFunctionInfo endFi = FunctionUtil.getFunctionInfo(AsterixBuiltinFunctions.INTERVAL_PARTITION_JOIN_END);
+        @SuppressWarnings("unchecked")
+        ScalarFunctionCallExpression endPartitionExp =
+                new ScalarFunctionCallExpression(endFi, intervalExp, rangeIdConstant, kConstant);
+        assignExps.add(new MutableObject<ILogicalExpression>(endPartitionExp));
+
+        AssignOperator ao = new AssignOperator(sortVars, assignExps);
+        ao.setExecutionMode(op.getExecutionMode());
+        AssignPOperator apo = new AssignPOperator();
+        ao.setPhysicalOperator(apo);
+        Mutable<ILogicalOperator> aoRef = new MutableObject<>(ao);
+        ao.getInputs().add(op.getInputs().get(branch));
+        op.getInputs().set(branch, aoRef);
+
+        context.computeAndSetTypeEnvironmentForOperator(ao);
+    }
+
+    private static void insertRangeExchange(AbstractBinaryJoinOperator op, int branch, List<LogicalVariable> keys,
+            IOptimizationContext context, IntervalPartitions intervalPartitions) throws AlgebricksException {
+        ArrayList<OrderColumn> order = new ArrayList<>();
+        for (LogicalVariable v : keys) {
+            order.add(new OrderColumn(v, intervalPartitions.getLeftLocalOrderColumn().get(0).getOrder()));
+        }
+        IPhysicalOperator rpe = new RangePartitionExchangePOperator(order, context.getComputationNodeDomain(),
+                intervalPartitions.getRangeMap());
+
+        Mutable<ILogicalOperator> ci = op.getInputs().get(branch);
+        ExchangeOperator exchg = new ExchangeOperator();
+        exchg.setPhysicalOperator(rpe);
+        setNewOp(ci, exchg, context);
+        exchg.setExecutionMode(AbstractLogicalOperator.ExecutionMode.PARTITIONED);
+        OperatorPropertiesUtil.computeSchemaAndPropertiesRecIfNull(exchg, context);
+        context.computeAndSetTypeEnvironmentForOperator(exchg);
+    }
+
+    private static void setNewOp(Mutable<ILogicalOperator> opRef, AbstractLogicalOperator newOp,
+            IOptimizationContext context) throws AlgebricksException {
+        ILogicalOperator oldOp = opRef.getValue();
+        opRef.setValue(newOp);
+        newOp.getInputs().add(new MutableObject<ILogicalOperator>(oldOp));
+        newOp.recomputeSchema();
+        context.computeAndSetTypeEnvironmentForOperator(newOp);
+        PhysicalOptimizationsUtil.computeFDsAndEquivalenceClasses(newOp, context);
     }
 }

@@ -131,4 +131,56 @@ public class RangeMap implements Serializable {
     public String toString() {
         return "{SPLIT:" + getSplitCount() + '}';
     }
+
+    public int getMinSlotFromPartition(int partition, int nPartitions) {
+        double rangesPerPart = 1.0;
+        if (getSplitCount() + 1 > nPartitions) {
+            rangesPerPart = ((double) getSplitCount() + 1) / nPartitions;
+        }
+        return (int) Math.ceil(partition * rangesPerPart) - 1;
+    }
+
+    public int getMaxSlotFromPartition(int partition, int nPartitions) {
+        double rangesPerPart = 1.0;
+        if (getSplitCount() + 1 > nPartitions) {
+            rangesPerPart = ((double) getSplitCount() + 1) / nPartitions;
+        }
+        return (int) Math.ceil((partition + 1) * rangesPerPart) - 1;
+    }
+
+    public byte[] getMinByteArray() {
+        return bytes;
+    }
+
+    public int getMinStartOffset(int columnIndex) {
+        return getFieldStart(getFieldIndex(columnIndex, getMinIndex()));
+    }
+
+    private int getMinIndex() {
+        return 0;
+    }
+
+    public byte[] getMaxByteArray() {
+        return bytes;
+    }
+
+    public int getMaxStartOffset(int columnIndex) {
+        return getFieldStart(getFieldIndex(columnIndex, getMaxIndex()));
+    }
+
+    private int getMaxIndex() {
+        return endOffsets.length / fields - 1;
+    }
+
+    private int getFieldIndex(int columnIndex, int splitIndex) {
+        return columnIndex + splitIndex * fields;
+    }
+
+    private int getFieldStart(int index) {
+        int start = 0;
+        if (index != 0) {
+            start = endOffsets[index - 1];
+        }
+        return start;
+    }
 }
