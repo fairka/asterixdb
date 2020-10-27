@@ -46,7 +46,6 @@ import org.apache.hyracks.algebricks.core.algebra.properties.FunctionalDependenc
 import org.apache.hyracks.algebricks.core.algebra.properties.ILogicalPropertiesVector;
 import org.apache.hyracks.algebricks.core.algebra.properties.INodeDomain;
 import org.apache.hyracks.api.exceptions.IWarningCollector;
-import org.apache.hyracks.dataflow.std.base.RangeId;
 
 /**
  * The Algebricks default implementation for IOptimizationContext.
@@ -148,13 +147,6 @@ public class AlgebricksOptimizationContext implements IOptimizationContext {
     @Override
     public void setMetadataDeclarations(IMetadataProvider<?, ?> metadataProvider) {
         this.metadataProvider = metadataProvider;
-    }
-
-    @Override
-    public RangeId newRangeId() {
-        rangeIdCounter++;
-        RangeId id = new RangeId(rangeIdCounter);
-        return id;
     }
 
     @Override

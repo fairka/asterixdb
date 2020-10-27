@@ -39,18 +39,20 @@ public class OverlappingIntervalPartitionUtil {
         //        int[] tuplesList = { poc.getMaxRecordsPerFrame(), 5, 50, 300, 900 };
 
         long[] countList = { poc.getMaxFramesForJoinLeftInput(), 7500, 15000, 30000, 60000, 120000 };
-        long[] maxDurationList = { poc.getMaxIntervalDuration(), 1, 3, 5, 50 };
+        //temporarily Delete for Optimization Building
+        //        long[] maxDurationList = { poc.getMaxIntervalDuration(), 1, 3, 5, 50 };
         int[] tuplesList = { poc.getMaxRecordsPerFrame(), 300, 350 };
 
         int k;
         for (long count : countList) {
-            for (long maxDuration : maxDurationList) {
-                for (int tuples : tuplesList) {
-                    k = determineK(count, maxDuration, count, maxDuration, tuples);
-                    System.err.println(
-                            "size: " + count + " duration: " + maxDuration + " tuples: " + tuples + " k: " + k);
-                }
-            }
+            //Temp Delete
+            //            for (long maxDuration : maxDurationList) {
+            //                for (int tuples : tuplesList) {
+            //                    k = determineK(count, maxDuration, count, maxDuration, tuples);
+            //                    System.err.println(
+            //                            "size: " + count + " duration: " + maxDuration + " tuples: " + tuples + " k: " + k);
+            //                }
+            //            }
         }
     }
 

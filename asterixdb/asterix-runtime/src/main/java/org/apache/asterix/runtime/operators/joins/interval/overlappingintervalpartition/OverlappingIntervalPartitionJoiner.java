@@ -211,12 +211,13 @@ public class OverlappingIntervalPartitionJoiner extends AbstractStreamJoiner {
             // Determine partitions to join.
             for (int buildId : buildInMemoryPartitions) {
                 Pair<Integer, Integer> build = OverlappingIntervalPartitionUtil.getIntervalPartition(buildId, k);
-                if (!(probe.first == 0 && build.first == 0)
-                        && imjc.compareIntervalPartition(probe.first, probe.second, build.first, build.second)) {
-                    fbms.add(buildBufferManager.getPartitionFrameBufferManager(buildId));
-                    //                    System.err.println("join " + probe + " (" + probePartitionSizes[probeRunFilePointers.get(probeId)]
-                    //                            + ") with (" + buildPartitionSizes[buildId] + "), ");
-                }
+                //Temporarily Deleted to develop Optimizer Plan
+                //                if (!(probe.first == 0 && build.first == 0)
+                //                        && imjc.compareIntervalPartition(probe.first, probe.second, build.first, build.second)) {
+                //                    fbms.add(buildBufferManager.getPartitionFrameBufferManager(buildId));
+                //                    //                    System.err.println("join " + probe + " (" + probePartitionSizes[probeRunFilePointers.get(probeId)]
+                //                    //                            + ") with (" + buildPartitionSizes[buildId] + "), ");
+                //                }
             }
 
             if (!fbms.isEmpty()) {

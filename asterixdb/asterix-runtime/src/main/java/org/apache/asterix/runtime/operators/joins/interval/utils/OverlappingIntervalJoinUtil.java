@@ -19,7 +19,6 @@
 package org.apache.asterix.runtime.operators.joins.interval.utils;
 
 import org.apache.asterix.om.pointables.nonvisitor.AIntervalPointable;
-import org.apache.asterix.runtime.evaluators.functions.temporal.IntervalPartitionLogic;
 import org.apache.asterix.runtime.operators.joins.interval.utils.memory.IntervalJoinUtil;
 import org.apache.hyracks.api.comm.IFrameTupleAccessor;
 import org.apache.hyracks.api.exceptions.HyracksDataException;
@@ -82,8 +81,4 @@ public class OverlappingIntervalJoinUtil extends AbstractIntervalJoinUtil {
         return il.overlapping(ipBuild, ipProbe);
     }
 
-    @Override
-    public boolean compareIntervalPartition(int s1, int e1, int s2, int e2) {
-        return IntervalPartitionLogic.overlapping(s1, e1, s2, e2);
-    }
 }

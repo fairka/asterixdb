@@ -99,6 +99,4 @@ public interface IIntervalJoinUtil {
     boolean checkToLoadNextProbeTuple(IFrameTupleAccessor buildAccessor, int buildTupleIndex,
             IFrameTupleAccessor probeAccessor, int probeTupleIndex);
 
-    boolean compareIntervalPartition(int s1, int e1, int s2, int e2);
-
 }
