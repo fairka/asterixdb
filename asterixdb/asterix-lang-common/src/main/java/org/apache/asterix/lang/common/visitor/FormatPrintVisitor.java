@@ -31,6 +31,7 @@ import java.util.stream.Collectors;
 import org.apache.asterix.common.config.DatasetConfig.DatasetType;
 import org.apache.asterix.common.config.DatasetConfig.IndexType;
 import org.apache.asterix.common.exceptions.CompilationException;
+import org.apache.asterix.common.exceptions.ErrorCode;
 import org.apache.asterix.common.functions.FunctionSignature;
 import org.apache.asterix.common.metadata.DataverseName;
 import org.apache.asterix.lang.common.base.Expression;
@@ -355,13 +356,22 @@ public abstract class FormatPrintVisitor implements ILangVisitor<Void, Integer> 
     }
 
     @Override
-    public Void visit(IndexAccessor fa, Integer step) throws CompilationException {
-        fa.getExpr().accept(this, step + 1);
+    public Void visit(IndexAccessor ia, Integer step) throws CompilationException {
+        ia.getExpr().accept(this, step + 1);
         out.print("[");
-        if (fa.isAny()) {
-            out.print("?");
-        } else {
-            fa.getIndexExpr().accept(this, step + 1);
+        switch (ia.getIndexKind()) {
+            case ANY:
+                out.print("?");
+                break;
+            case STAR:
+                out.print("*");
+                break;
+            case ELEMENT:
+                ia.getIndexExpr().accept(this, step + 1);
+                break;
+            default:
+                throw new CompilationException(ErrorCode.COMPILATION_ILLEGAL_STATE, ia.getSourceLocation(),
+                        ia.getIndexKind());
         }
         out.print("]");
         return null;
@@ -787,7 +797,7 @@ public abstract class FormatPrintVisitor implements ILangVisitor<Void, Integer> 
 
     @Override
     public Void visit(CreateFunctionStatement cfs, Integer step) throws CompilationException {
-        out.print(skip(step) + CREATE + " function ");
+        out.print(skip(step) + CREATE + generateOrReplace(cfs.getReplaceIfExists()) + " function ");
         out.print(generateIfNotExists(cfs.getIfNotExists()));
         out.print(this.generateFullName(cfs.getFunctionSignature().getDataverseName(),
                 cfs.getFunctionSignature().getName()));
@@ -1016,7 +1026,7 @@ public abstract class FormatPrintVisitor implements ILangVisitor<Void, Integer> 
         dataverseName.getParts(dataverseNameParts);
         for (int i = 0, ln = dataverseNameParts.size(); i < ln; i++) {
             if (i > 0) {
-                sb.append(DataverseName.SEPARATOR_CHAR);
+                sb.append(".");
             }
             sb.append(normalize(dataverseNameParts.get(i)));
         }
@@ -1040,6 +1050,10 @@ public abstract class FormatPrintVisitor implements ILangVisitor<Void, Integer> 
 
     protected String generateIfExists(boolean ifExits) {
         return ifExits ? " if exists" : "";
+    }
+
+    protected String generateOrReplace(boolean orReplace) {
+        return orReplace ? " or replace" : "";
     }
 
     protected String generateIndexTypeString(IndexType type) {

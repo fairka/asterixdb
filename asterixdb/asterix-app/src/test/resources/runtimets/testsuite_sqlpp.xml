@@ -5628,6 +5628,7 @@
         <expected-error>ASX1119: Invalid argument to grouping() function</expected-error>
         <expected-error>ASX1119: Invalid argument to grouping() function</expected-error>
         <expected-error>ASX1118: Too many grouping sets in group by clause: 512. Maximum allowed: 128.</expected-error>
+        <expected-error>ASX1129: Cannot compile SELECT variable.* with GROUP BY GROUPING SETS/ROLLUP/CUBE followed by ORDER BY/LIMIT</expected-error>
       </compilation-unit>
     </test-case>
     <test-case FilePath="group-by">
@@ -6188,6 +6189,11 @@
         <output-dir compare="Text">hash_join_record</output-dir>
       </compilation-unit>
     </test-case>
+    <test-case FilePath="join">
+      <compilation-unit name="join-with-empty-dataset">
+        <output-dir compare="Text">join-with-empty-dataset</output-dir>
+      </compilation-unit>
+    </test-case>
   </test-group>
   <test-group name="list">
     <test-case FilePath="list">
@@ -6253,6 +6259,11 @@
     <test-case FilePath="list">
       <compilation-unit name="list-slice_03">
         <output-dir compare="Text">list-slice_03</output-dir>
+      </compilation-unit>
+    </test-case>
+    <test-case FilePath="list">
+      <compilation-unit name="list-star_01">
+        <output-dir compare="Text">list-star_01</output-dir>
       </compilation-unit>
     </test-case>
     <test-case FilePath="list">
@@ -6759,6 +6770,11 @@
     <test-case FilePath="multipart-dataverse">
       <compilation-unit name="special_chars_1">
         <output-dir compare="Text">special_chars_1</output-dir>
+      </compilation-unit>
+    </test-case>
+    <test-case FilePath="multipart-dataverse">
+      <compilation-unit name="special_chars_2">
+        <output-dir compare="Text">special_chars_2</output-dir>
       </compilation-unit>
     </test-case>
     <test-case FilePath="multipart-dataverse">
@@ -9153,6 +9169,11 @@
     </test-case>
   </test-group>
   <test-group name="statement-params">
+    <test-case FilePath="statement-params">
+      <compilation-unit name="index_01">
+        <output-dir compare="Text">index_01</output-dir>
+      </compilation-unit>
+    </test-case>
     <test-case FilePath="statement-params">
       <compilation-unit name="mixed_01">
         <output-dir compare="Text">mixed_01</output-dir>
@@ -11764,45 +11785,56 @@
       </compilation-unit>
     </test-case>
     <test-case FilePath="user-defined-functions">
+      <compilation-unit name="create-or-replace-function-1">
+        <output-dir compare="Text">create-or-replace-function-1</output-dir>
+      </compilation-unit>
+    </test-case>
+    <test-case FilePath="user-defined-functions">
       <compilation-unit name="drop-dependency-1">
         <output-dir compare="Text">drop-dependency-1</output-dir>
-        <expected-error>Cannot drop dataverse. Function B.f0@2 depends on function C.f1@2</expected-error>
+        <expected-error>Cannot drop dataverse. Function B.f0(2) depends on function C.f1(2)</expected-error>
         <source-location>false</source-location>
       </compilation-unit>
     </test-case>
     <test-case FilePath="user-defined-functions">
       <compilation-unit name="drop-dependency-2">
         <output-dir compare="Text">drop-dependency-2</output-dir>
-        <expected-error>Cannot drop dataverse. Function B.f2@2 depends on dataset C.TweetMessages</expected-error>
+        <expected-error>Cannot drop dataverse. Function B.f2(2) depends on dataset C.TweetMessages</expected-error>
         <source-location>false</source-location>
       </compilation-unit>
     </test-case>
     <test-case FilePath="user-defined-functions">
       <compilation-unit name="drop-dependency-3">
         <output-dir compare="Text">drop-dependency-3</output-dir>
-        <expected-error>Cannot drop function C.f1@2 being used by function B.f0@2</expected-error>
+        <expected-error>Cannot drop function C.f1(2) being used by function B.f0(2)</expected-error>
         <source-location>false</source-location>
       </compilation-unit>
     </test-case>
     <test-case FilePath="user-defined-functions">
       <compilation-unit name="drop-dependency-4">
         <output-dir compare="Text">drop-dependency-4</output-dir>
-        <expected-error>Cannot drop dataset C.TweetMessages being used by function B.f2@2</expected-error>
+        <expected-error>Cannot drop dataset C.TweetMessages being used by function B.f2(2)</expected-error>
         <source-location>false</source-location>
       </compilation-unit>
     </test-case>
     <test-case FilePath="user-defined-functions">
       <compilation-unit name="drop-dependency-5">
         <output-dir compare="Text">drop-dependency-5</output-dir>
-        <expected-error>Cannot drop function C.f1@2 being used by function C.f0@2</expected-error>
+        <expected-error>Cannot drop function C.f1(2) being used by function C.f0(2)</expected-error>
         <source-location>false</source-location>
       </compilation-unit>
     </test-case>
     <test-case FilePath="user-defined-functions">
       <compilation-unit name="drop-dependency-6">
         <output-dir compare="Text">drop-dependency-6</output-dir>
-        <expected-error>Cannot drop dataset C.TweetMessages being used by function C.f2@2</expected-error>
+        <expected-error>Cannot drop dataset C.TweetMessages being used by function C.f2(2)</expected-error>
         <source-location>false</source-location>
+      </compilation-unit>
+    </test-case>
+    <test-case FilePath="user-defined-functions">
+      <compilation-unit name="drop-function-1">
+        <output-dir compare="Text">drop-function-1</output-dir>
+        <expected-error>ASX1081: Cannot find function with name experiments.my_sum</expected-error>
       </compilation-unit>
     </test-case>
     <test-case FilePath="user-defined-functions">
@@ -12012,6 +12044,16 @@
     <test-case FilePath="user-defined-functions">
       <compilation-unit name="udf32_metadata">
         <output-dir compare="Text">udf32_metadata</output-dir>
+      </compilation-unit>
+    </test-case>
+    <test-case FilePath="user-defined-functions">
+      <compilation-unit name="udf33_overloading">
+        <output-dir compare="Text">udf33_overloading</output-dir>
+      </compilation-unit>
+    </test-case>
+    <test-case FilePath="user-defined-functions">
+      <compilation-unit name="udf34">
+        <output-dir compare="Text">udf34</output-dir>
       </compilation-unit>
     </test-case>
     <test-case FilePath="user-defined-functions">
@@ -12311,6 +12353,11 @@
       </compilation-unit>
     </test-case>
     <test-case FilePath="feeds">
+      <compilation-unit name="change-feed-filter-on-meta-dataset">
+        <output-dir compare="Text">change-feed-filter-on-meta-dataset</output-dir>
+      </compilation-unit>
+    </test-case>
+    <test-case FilePath="feeds">
       <compilation-unit name="change-feed-with-meta-pk-index">
         <output-dir compare="Text">change-feed-with-meta-pk-index</output-dir>
       </compilation-unit>
@@ -12475,7 +12522,7 @@
     <test-case FilePath="feeds">
       <compilation-unit name="drop-function-used-by-feed">
         <output-dir compare="Text">drop-function-used-by-feed</output-dir>
-        <expected-error>Cannot drop function experiments.test_func0@1 being used by feed connection TwitterUsers.UserFeed</expected-error>
+        <expected-error>Cannot drop function experiments.test_func0(1) being used by feed connection TwitterUsers.UserFeed</expected-error>
         <source-location>false</source-location>
       </compilation-unit>
     </test-case>
@@ -12487,7 +12534,7 @@
     <test-case FilePath="feeds">
       <compilation-unit name="drop-dataverse-with-function-used-by-feed">
         <output-dir compare="Text">drop-dataverse-with-function-used-by-feed</output-dir>
-        <expected-error>Cannot drop dataverse. Feed connection feeddv.UserFeed depends on function fundv.test_func0@1</expected-error>
+        <expected-error>Cannot drop dataverse. Feed connection feeddv.UserFeed depends on function fundv.test_func0(1)</expected-error>
         <source-location>false</source-location>
       </compilation-unit>
     </test-case>
@@ -12502,8 +12549,8 @@
       </compilation-unit>
     </test-case>
     <test-case FilePath="feeds">
-      <compilation-unit name="change-feed-with-filter-on-meta">
-        <output-dir compare="Text">change-feed-with-filter-on-meta</output-dir>
+      <compilation-unit name="change-feed-with-where-on-meta">
+        <output-dir compare="Text">change-feed-with-where-on-meta</output-dir>
       </compilation-unit>
     </test-case>
   </test-group>

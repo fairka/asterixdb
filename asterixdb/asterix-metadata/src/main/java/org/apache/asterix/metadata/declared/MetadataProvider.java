@@ -446,7 +446,7 @@ public class MetadataProvider implements IMetadataProvider<DataSourceId, String>
 
     @Override
     public IFunctionInfo lookupFunction(FunctionIdentifier fid) {
-        return BuiltinFunctions.lookupFunction(fid);
+        return BuiltinFunctions.getBuiltinFunctionInfo(fid);
     }
 
     public Function lookupUserDefinedFunction(FunctionSignature signature) throws AlgebricksException {
@@ -965,18 +965,21 @@ public class MetadataProvider implements IMetadataProvider<DataSourceId, String>
         }
         // set the record permutation
         fieldPermutation[i++] = inputSchema.findVariable(payload);
-        // set the filters' permutations.
-        if (numFilterFields > 0) {
-            int idx = inputSchema.findVariable(filterKeys.get(0));
-            fieldPermutation[i++] = idx;
-        }
 
+        // set the meta record permutation
         if (additionalNonFilterFields != null) {
             for (LogicalVariable var : additionalNonFilterFields) {
                 int idx = inputSchema.findVariable(var);
                 fieldPermutation[i++] = idx;
             }
         }
+
+        // set the filters' permutations.
+        if (numFilterFields > 0) {
+            int idx = inputSchema.findVariable(filterKeys.get(0));
+            fieldPermutation[i++] = idx;
+        }
+
         return createPrimaryIndexUpsertOp(spec, this, dataset, recordDesc, fieldPermutation,
                 context.getMissingWriterFactory());
     }

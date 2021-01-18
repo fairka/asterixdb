@@ -109,10 +109,12 @@ import org.apache.hyracks.algebricks.core.algebra.expressions.AbstractFunctionCa
 import org.apache.hyracks.algebricks.core.algebra.expressions.AbstractLogicalExpression;
 import org.apache.hyracks.algebricks.core.algebra.expressions.AggregateFunctionCallExpression;
 import org.apache.hyracks.algebricks.core.algebra.expressions.ConstantExpression;
+import org.apache.hyracks.algebricks.core.algebra.expressions.IExpressionAnnotation;
 import org.apache.hyracks.algebricks.core.algebra.expressions.ScalarFunctionCallExpression;
 import org.apache.hyracks.algebricks.core.algebra.expressions.UnnestingFunctionCallExpression;
 import org.apache.hyracks.algebricks.core.algebra.expressions.VariableReferenceExpression;
 import org.apache.hyracks.algebricks.core.algebra.functions.FunctionIdentifier;
+import org.apache.hyracks.algebricks.core.algebra.functions.IFunctionInfo;
 import org.apache.hyracks.algebricks.core.algebra.operators.logical.AbstractBinaryJoinOperator;
 import org.apache.hyracks.algebricks.core.algebra.operators.logical.AbstractUnnestNonMapOperator;
 import org.apache.hyracks.algebricks.core.algebra.operators.logical.AbstractUnnestOperator;
@@ -855,6 +857,14 @@ public class SqlppExpressionToPlanTranslator extends LangExpressionToPlanTransla
                 outFieldBindings.add(getFieldBinding(var, outFieldNames));
             }
         }
+        if (groupbyClause.hasDecorList()) {
+            for (GbyVariableExpressionPair pair : groupbyClause.getDecorPairList()) {
+                VariableExpr var = pair.getVar();
+                if (gbyKeyVars.add(var)) {
+                    outFieldBindings.add(getFieldBinding(var, outFieldNames));
+                }
+            }
+        }
         if (groupbyClause.hasGroupVar()) {
             outFieldBindings.add(getFieldBinding(groupbyClause.getGroupVar(), outFieldNames));
         }
@@ -983,7 +993,9 @@ public class SqlppExpressionToPlanTranslator extends LangExpressionToPlanTransla
 
         QuantifiedPair qp = qe.getQuantifiedList().get(0);
         VariableExpr varExpr = qp.getVarExpr();
-        List<Expression> operandExprs = ((OperatorExpr) qe.getSatisfiesExpr()).getExprList();
+        OperatorExpr condExpr = (OperatorExpr) qe.getSatisfiesExpr();
+        List<IExpressionAnnotation> condExprHints = condExpr.getHints();
+        List<Expression> operandExprs = condExpr.getExprList();
         int varIdx = operandExprs.indexOf(varExpr);
         Expression operandExpr = operandExprs.get(1 - varIdx);
 
@@ -1016,7 +1028,7 @@ public class SqlppExpressionToPlanTranslator extends LangExpressionToPlanTransla
                             throw new CompilationException(ErrorCode.COMPILATION_ILLEGAL_STATE, sourceLoc,
                                     itemExpr.getKind());
                     }
-                    ILogicalExpression eqExpr = createEqExpr(operandVar, inValue, sourceLoc);
+                    ILogicalExpression eqExpr = createEqExpr(operandVar, inValue, condExprHints, sourceLoc);
                     disjuncts.add(new MutableObject<>(eqExpr));
                 }
                 break;
@@ -1027,7 +1039,7 @@ public class SqlppExpressionToPlanTranslator extends LangExpressionToPlanTransla
                 inVarCursor.reset();
                 while (inVarCursor.next()) {
                     IAObject inValue = inVarCursor.get();
-                    ILogicalExpression eqExpr = createEqExpr(operandVar, inValue, sourceLoc);
+                    ILogicalExpression eqExpr = createEqExpr(operandVar, inValue, condExprHints, sourceLoc);
                     disjuncts.add(new MutableObject<>(eqExpr));
                 }
                 break;
@@ -1035,25 +1047,25 @@ public class SqlppExpressionToPlanTranslator extends LangExpressionToPlanTransla
                 throw new IllegalStateException(String.valueOf(inExpr.getKind()));
         }
 
-        MutableObject<ILogicalExpression> condExpr;
+        MutableObject<ILogicalExpression> disjunctiveExpr;
         if (disjuncts.size() == 1) {
-            condExpr = disjuncts.get(0);
+            disjunctiveExpr = disjuncts.get(0);
         } else {
             AbstractFunctionCallExpression orExpr =
                     createFunctionCallExpressionForBuiltinOperator(OperatorType.OR, sourceLoc);
             orExpr.getArguments().addAll(disjuncts);
-            condExpr = new MutableObject<>(orExpr);
+            disjunctiveExpr = new MutableObject<>(orExpr);
         }
 
         LogicalVariable assignVar = context.newVar();
-        AssignOperator assignOp = new AssignOperator(assignVar, condExpr);
+        AssignOperator assignOp = new AssignOperator(assignVar, disjunctiveExpr);
         assignOp.getInputs().add(topOp);
         assignOp.setSourceLocation(sourceLoc);
         return new Pair<>(assignOp, assignVar);
     }
 
-    private ILogicalExpression createEqExpr(LogicalVariable lhsVar, IAObject rhsValue, SourceLocation sourceLoc)
-            throws CompilationException {
+    private ILogicalExpression createEqExpr(LogicalVariable lhsVar, IAObject rhsValue,
+            List<IExpressionAnnotation> hints, SourceLocation sourceLoc) throws CompilationException {
         VariableReferenceExpression lhsExpr = new VariableReferenceExpression(lhsVar);
         lhsExpr.setSourceLocation(sourceLoc);
         ILogicalExpression rhsExpr = translateConstantValue(rhsValue, sourceLoc);
@@ -1061,6 +1073,11 @@ public class SqlppExpressionToPlanTranslator extends LangExpressionToPlanTransla
                 createFunctionCallExpressionForBuiltinOperator(OperatorType.EQ, sourceLoc);
         opExpr.getArguments().add(new MutableObject<>(lhsExpr));
         opExpr.getArguments().add(new MutableObject<>(rhsExpr));
+        if (hints != null) {
+            for (IExpressionAnnotation hint : hints) {
+                opExpr.getAnnotations().put(hint, hint);
+            }
+        }
         return opExpr;
     }
 
@@ -1071,11 +1088,12 @@ public class SqlppExpressionToPlanTranslator extends LangExpressionToPlanTransla
         List<Expression> fargs = winExpr.getExprList();
 
         FunctionSignature fs = winExpr.getFunctionSignature();
-        FunctionIdentifier fi = getBuiltinFunctionIdentifier(fs.getName(), fs.getArity());
-        if (fi == null) {
+        IFunctionInfo finfo = BuiltinFunctions.getBuiltinFunctionInfo(fs.createFunctionIdentifier());
+        if (finfo == null) {
             throw new CompilationException(ErrorCode.COMPILATION_EXPECTED_WINDOW_FUNCTION, winExpr.getSourceLocation(),
                     fs.getName());
         }
+        FunctionIdentifier fi = finfo.getFunctionIdentifier();
         boolean isWin = BuiltinFunctions.isWindowFunction(fi);
         boolean isWinAgg = isWin && BuiltinFunctions.builtinFunctionHasProperty(fi,
                 BuiltinFunctions.WindowFunctionProperty.HAS_LIST_ARG);
