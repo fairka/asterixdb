@@ -93,7 +93,6 @@ import org.apache.asterix.optimizer.rules.am.IntroducePrimaryIndexForAggregation
 import org.apache.asterix.optimizer.rules.am.IntroduceSelectAccessMethodRule;
 import org.apache.asterix.optimizer.rules.subplan.AsterixMoveFreeVariableOperatorOutOfSubplanRule;
 import org.apache.asterix.optimizer.rules.subplan.InlineSubplanInputForNestedTupleSourceRule;
-import org.apache.asterix.optimizer.rules.temporal.TranslateIntervalExpressionRule;
 import org.apache.hyracks.algebricks.core.rewriter.base.HeuristicOptimizer;
 import org.apache.hyracks.algebricks.core.rewriter.base.IAlgebraicRewriteRule;
 import org.apache.hyracks.algebricks.rewriter.rules.BreakSelectIntoConjunctsRule;
@@ -153,7 +152,7 @@ public final class RuleCollections {
 
     public static List<IAlgebraicRewriteRule> buildInitialTranslationRuleCollection() {
         List<IAlgebraicRewriteRule> translationRules = new LinkedList<>();
-        translationRules.add(new TranslateIntervalExpressionRule());
+        //translationRules.add(new TranslateIntervalExpressionRule());
         translationRules.add(new ExtractGroupByDecorVariablesRule());
         translationRules.add(new RemoveDuplicateFieldsRule());
         return translationRules;
