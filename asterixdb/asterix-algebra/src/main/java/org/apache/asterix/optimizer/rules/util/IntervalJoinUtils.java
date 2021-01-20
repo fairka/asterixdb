@@ -128,8 +128,12 @@ public class IntervalJoinUtils {
         insertPartitionSortKey(op, left, leftPartitionVar, sideLeft.get(0), context);
         insertPartitionSortKey(op, right, rightPartitionVar, sideRight.get(0), context);
 
-        int varLeftKey = 0;
-        int varRightKey = 1;
+        final int INTERVAL_START_INDEX = 0;
+        final int INTERVAL_END_INDEX = 1;
+        int rightFirstSortField = INTERVAL_START_INDEX;
+        int rightSecondSortField = INTERVAL_END_INDEX;
+        int leftFirstSortField = INTERVAL_START_INDEX;
+        int leftSecondSortField = INTERVAL_END_INDEX;
         OrderKind orderOfJoin = OrderKind.ASC;
 
         //Set Partitioning Types and reverse order of join if necessary
@@ -156,26 +160,34 @@ public class IntervalJoinUtils {
             // Default Partitioning
         } else if (fi.equals(BuiltinFunctions.INTERVAL_ENDS)) {
             // Reverse order of Join
-            varLeftKey = 1;
-            varRightKey = 0;
+            leftFirstSortField = INTERVAL_END_INDEX;
+            leftSecondSortField = INTERVAL_START_INDEX;
+            rightFirstSortField = INTERVAL_END_INDEX;
+            rightSecondSortField = INTERVAL_START_INDEX;
             orderOfJoin = OrderKind.DESC;
         } else if (fi.equals(BuiltinFunctions.INTERVAL_ENDED_BY)) {
             // Reverse order of Join
-            varLeftKey = 1;
-            varRightKey = 0;
+            leftFirstSortField = INTERVAL_END_INDEX;
+            leftSecondSortField = INTERVAL_START_INDEX;
+            rightFirstSortField = INTERVAL_END_INDEX;
+            rightSecondSortField = INTERVAL_START_INDEX;
             orderOfJoin = OrderKind.DESC;
         } else if (fi.equals(BuiltinFunctions.INTERVAL_MEETS)) {
-            leftPartitioningType = PartitioningType.PARTIAL_BROADCAST_ORDERED_INTERSECT;
+            leftFirstSortField = INTERVAL_END_INDEX;
+            leftSecondSortField = INTERVAL_START_INDEX;
         } else if (fi.equals(BuiltinFunctions.INTERVAL_MET_BY)) {
-            rightPartitioningType = PartitioningType.PARTIAL_BROADCAST_ORDERED_INTERSECT;
+            rightFirstSortField = INTERVAL_END_INDEX;
+            rightSecondSortField = INTERVAL_START_INDEX;
         } else {
             throw new CompilationException(ErrorCode.COMPILATION_ILLEGAL_STATE, fi.getName());
         }
 
-        List<IntervalColumn> leftIC = Collections.singletonList(
-                new IntervalColumn(leftPartitionVar.get(varLeftKey), leftPartitionVar.get(varRightKey), orderOfJoin));
-        List<IntervalColumn> rightIC = Collections.singletonList(
-                new IntervalColumn(rightPartitionVar.get(varLeftKey), rightPartitionVar.get(varRightKey), orderOfJoin));
+        List<IntervalColumn> leftIC =
+                Collections.singletonList(new IntervalColumn(leftPartitionVar.get(leftFirstSortField),
+                        leftPartitionVar.get(leftSecondSortField), orderOfJoin));
+        List<IntervalColumn> rightIC =
+                Collections.singletonList(new IntervalColumn(rightPartitionVar.get(rightFirstSortField),
+                        rightPartitionVar.get(rightSecondSortField), orderOfJoin));
 
         return new IntervalPartitions(rangeMap, leftIC, rightIC, leftPartitioningType, rightPartitioningType);
     }
