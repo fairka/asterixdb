@@ -190,7 +190,7 @@ public class VPartitionTupleBufferManager implements IPartitionedTupleBufferMana
     }
 
     protected int createNewBuffer(int partition, int size) throws HyracksDataException {
-        ByteBuffer newBuffer = requestNewBufferFromPool(size);
+        ByteBuffer newBuffer = requestNewBufferFromPool(size, partition);
 
         if (newBuffer == null) {
             return -1;
