@@ -59,6 +59,10 @@ public class DatasetRewriter implements IFunctionToDataSourceRewriter, IResultTy
     @Override
     public boolean rewrite(Mutable<ILogicalOperator> opRef, IOptimizationContext context) throws AlgebricksException {
         AbstractFunctionCallExpression f = UnnestToDataScanRule.getFunctionCall(opRef);
+        if (f == null) {
+            throw new CompilationException(ErrorCode.COMPILATION_ILLEGAL_STATE, opRef.getValue().getSourceLocation(),
+                    "");
+        }
         UnnestOperator unnest = (UnnestOperator) opRef.getValue();
         if (unnest.getPositionalVariable() != null) {
             // TODO remove this after enabling the support of positional variables in data scan
@@ -67,15 +71,7 @@ public class DatasetRewriter implements IFunctionToDataSourceRewriter, IResultTy
         }
 
         MetadataProvider metadataProvider = (MetadataProvider) context.getMetadataProvider();
-        Pair<DataverseName, String> datasetReference = FunctionUtil.parseDatasetFunctionArguments(f.getArguments(),
-                metadataProvider.getDefaultDataverseName(), unnest.getSourceLocation());
-        DataverseName dataverseName = datasetReference.first;
-        String datasetName = datasetReference.second;
-        Dataset dataset = metadataProvider.findDataset(dataverseName, datasetName);
-        if (dataset == null) {
-            throw new CompilationException(ErrorCode.UNKNOWN_DATASET_IN_DATAVERSE, unnest.getSourceLocation(),
-                    datasetName, dataverseName);
-        }
+        Dataset dataset = fetchDataset(metadataProvider, f);
         DataSourceId dsid = new DataSourceId(dataset.getDataverseName(), dataset.getDatasetName());
         List<LogicalVariable> variables = new ArrayList<>();
         if (dataset.getDatasetType() == DatasetType.INTERNAL) {
@@ -120,22 +116,35 @@ public class DatasetRewriter implements IFunctionToDataSourceRewriter, IResultTy
     @Override
     public IAType computeType(ILogicalExpression expression, IVariableTypeEnvironment env, IMetadataProvider<?, ?> mp)
             throws AlgebricksException {
-        AbstractFunctionCallExpression f = (AbstractFunctionCallExpression) expression;
+        AbstractFunctionCallExpression datasetFnCall = (AbstractFunctionCallExpression) expression;
         MetadataProvider metadata = (MetadataProvider) mp;
-        Pair<DataverseName, String> datasetInfo = FunctionUtil.parseDatasetFunctionArguments(f.getArguments(),
-                metadata.getDefaultDataverseName(), f.getSourceLocation());
-        DataverseName dataverseName = datasetInfo.first;
-        String datasetName = datasetInfo.second;
-        Dataset dataset = metadata.findDataset(dataverseName, datasetName);
+        Dataset dataset = fetchDataset(metadata, datasetFnCall);
+        IAType type = metadata.findType(dataset.getItemTypeDataverseName(), dataset.getItemTypeName());
+        if (type == null) {
+            throw new CompilationException(ErrorCode.COMPILATION_ERROR, datasetFnCall.getSourceLocation(),
+                    "No type for dataset " + dataset.getDatasetName());
+        }
+        return type;
+    }
+
+    public static Dataset fetchDataset(MetadataProvider metadataProvider, AbstractFunctionCallExpression datasetFnCall)
+            throws CompilationException {
+        Pair<DataverseName, String> datasetReference = FunctionUtil.parseDatasetFunctionArguments(datasetFnCall);
+        DataverseName dataverseName = datasetReference.first;
+        String datasetName = datasetReference.second;
+        Dataset dataset;
+        try {
+            dataset = metadataProvider.findDataset(dataverseName, datasetName);
+        } catch (CompilationException e) {
+            throw e;
+        } catch (AlgebricksException e) {
+            throw new CompilationException(ErrorCode.COMPILATION_ERROR, e, datasetFnCall.getSourceLocation(),
+                    e.getMessage());
+        }
         if (dataset == null) {
-            throw new CompilationException(ErrorCode.UNKNOWN_DATASET_IN_DATAVERSE, f.getSourceLocation(), datasetName,
-                    dataverseName);
+            throw new CompilationException(ErrorCode.UNKNOWN_DATASET_IN_DATAVERSE, datasetFnCall.getSourceLocation(),
+                    datasetName, dataverseName);
         }
-        String tn = dataset.getItemTypeName();
-        IAType t2 = metadata.findType(dataset.getItemTypeDataverseName(), tn);
-        if (t2 == null) {
-            throw new AlgebricksException("No type for dataset " + datasetName);
-        }
-        return t2;
+        return dataset;
     }
 }

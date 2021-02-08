@@ -70,6 +70,8 @@ import org.apache.asterix.lang.common.statement.CreateAdapterStatement;
 import org.apache.asterix.lang.common.statement.CreateDataverseStatement;
 import org.apache.asterix.lang.common.statement.CreateFeedPolicyStatement;
 import org.apache.asterix.lang.common.statement.CreateFeedStatement;
+import org.apache.asterix.lang.common.statement.CreateFullTextConfigStatement;
+import org.apache.asterix.lang.common.statement.CreateFullTextFilterStatement;
 import org.apache.asterix.lang.common.statement.CreateFunctionStatement;
 import org.apache.asterix.lang.common.statement.CreateIndexStatement;
 import org.apache.asterix.lang.common.statement.CreateLibraryStatement;
@@ -83,6 +85,8 @@ import org.apache.asterix.lang.common.statement.DropDatasetStatement;
 import org.apache.asterix.lang.common.statement.ExternalDetailsDecl;
 import org.apache.asterix.lang.common.statement.FeedDropStatement;
 import org.apache.asterix.lang.common.statement.FeedPolicyDropStatement;
+import org.apache.asterix.lang.common.statement.FullTextConfigDropStatement;
+import org.apache.asterix.lang.common.statement.FullTextFilterDropStatement;
 import org.apache.asterix.lang.common.statement.FunctionDecl;
 import org.apache.asterix.lang.common.statement.FunctionDropStatement;
 import org.apache.asterix.lang.common.statement.IndexDropStatement;
@@ -317,11 +321,18 @@ public abstract class FormatPrintVisitor implements ILangVisitor<Void, Integer> 
 
     @Override
     public Void visit(LimitClause lc, Integer step) throws CompilationException {
-        out.print(skip(step) + "limit ");
-        lc.getLimitExpr().accept(this, step + 1);
-        if (lc.getOffset() != null) {
-            out.print(" offset ");
+        if (lc.hasLimitExpr()) {
+            out.print(skip(step) + "limit ");
+            lc.getLimitExpr().accept(this, step + 1);
+            if (lc.hasOffset()) {
+                out.print(" offset ");
+                lc.getOffset().accept(this, step + 1);
+            }
+        } else if (lc.hasOffset()) {
+            out.print(skip(step) + "offset ");
             lc.getOffset().accept(this, step + 1);
+        } else {
+            throw new CompilationException(ErrorCode.COMPILATION_ILLEGAL_STATE, lc.getSourceLocation(), "");
         }
         out.println();
         return null;
@@ -679,6 +690,20 @@ public abstract class FormatPrintVisitor implements ILangVisitor<Void, Integer> 
     }
 
     @Override
+    public Void visit(CreateFullTextFilterStatement cis, Integer step) throws CompilationException {
+        out.print(skip(step) + "create fulltext filter " + cis.getFilterName());
+        out.println(SEMICOLON);
+        return null;
+    }
+
+    @Override
+    public Void visit(CreateFullTextConfigStatement cis, Integer step) throws CompilationException {
+        out.print(skip(step) + "create fulltext config " + cis.getConfigName());
+        out.println(SEMICOLON);
+        return null;
+    }
+
+    @Override
     public Void visit(IndexDropStatement del, Integer step) throws CompilationException {
         out.print(skip(step) + "drop index ");
         out.print(generateFullName(del.getDataverseName(), del.getDatasetName()));
@@ -707,6 +732,20 @@ public abstract class FormatPrintVisitor implements ILangVisitor<Void, Integer> 
     public Void visit(TypeDropStatement del, Integer step) throws CompilationException {
         out.print(skip(step) + "drop type ");
         out.print(generateFullName(del.getDataverseName(), del.getTypeName()));
+        out.println(generateIfExists(del.getIfExists()) + SEMICOLON);
+        return null;
+    }
+
+    @Override
+    public Void visit(FullTextFilterDropStatement del, Integer step) throws CompilationException {
+        out.print(skip(step) + "drop fulltext filter " + del.getFilterName());
+        out.println(generateIfExists(del.getIfExists()) + SEMICOLON);
+        return null;
+    }
+
+    @Override
+    public Void visit(FullTextConfigDropStatement del, Integer step) throws CompilationException {
+        out.print(skip(step) + "drop fulltext config " + del.getConfigName());
         out.println(generateIfExists(del.getIfExists()) + SEMICOLON);
         return null;
     }

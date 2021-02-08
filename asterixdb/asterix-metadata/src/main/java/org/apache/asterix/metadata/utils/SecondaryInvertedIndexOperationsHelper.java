@@ -26,6 +26,8 @@ import org.apache.asterix.dataflow.data.nontagged.MissingWriterFactory;
 import org.apache.asterix.metadata.declared.MetadataProvider;
 import org.apache.asterix.metadata.entities.Dataset;
 import org.apache.asterix.metadata.entities.Index;
+import org.apache.asterix.metadata.entities.InternalDatasetDetails;
+import org.apache.asterix.om.types.ARecordType;
 import org.apache.asterix.om.types.IAType;
 import org.apache.asterix.om.utils.NonTaggedFormatUtil;
 import org.apache.asterix.runtime.utils.RuntimeUtils;
@@ -56,6 +58,7 @@ import org.apache.hyracks.dataflow.std.sort.ExternalSortOperatorDescriptor;
 import org.apache.hyracks.storage.am.common.dataflow.IIndexDataflowHelperFactory;
 import org.apache.hyracks.storage.am.common.dataflow.IndexDataflowHelperFactory;
 import org.apache.hyracks.storage.am.lsm.invertedindex.dataflow.BinaryTokenizerOperatorDescriptor;
+import org.apache.hyracks.storage.am.lsm.invertedindex.fulltext.IFullTextConfigEvaluatorFactory;
 import org.apache.hyracks.storage.am.lsm.invertedindex.tokenizers.IBinaryTokenizerFactory;
 
 public class SecondaryInvertedIndexOperationsHelper extends SecondaryTreeIndexOperationsHelper {
@@ -65,6 +68,7 @@ public class SecondaryInvertedIndexOperationsHelper extends SecondaryTreeIndexOp
     private IBinaryComparatorFactory[] tokenComparatorFactories;
     private ITypeTraits[] tokenTypeTraits;
     private IBinaryTokenizerFactory tokenizerFactory;
+    private IFullTextConfigEvaluatorFactory fullTextConfigEvaluatorFactory;
     // For tokenization, sorting and loading. Represents <token, primary keys>.
     private int numTokenKeyPairFields;
     private IBinaryComparatorFactory[] tokenKeyPairComparatorFactories;
@@ -77,6 +81,8 @@ public class SecondaryInvertedIndexOperationsHelper extends SecondaryTreeIndexOp
     protected SecondaryInvertedIndexOperationsHelper(Dataset dataset, Index index, MetadataProvider metadataProvider,
             SourceLocation sourceLoc) throws AlgebricksException {
         super(dataset, index, metadataProvider, sourceLoc);
+        this.fullTextConfigEvaluatorFactory = FullTextUtil.fetchFilterAndCreateConfigEvaluator(metadataProvider,
+                index.getDataverseName(), index.getFullTextConfigName());
     }
 
     @Override
@@ -122,10 +128,13 @@ public class SecondaryInvertedIndexOperationsHelper extends SecondaryTreeIndexOp
             secondaryTypeTraits[0] = typeTraitProvider.getTypeTrait(secondaryKeyType);
         }
         if (numFilterFields > 0) {
+            ARecordType filterItemType =
+                    ((InternalDatasetDetails) dataset.getDatasetDetails()).getFilterSourceIndicator() == 0 ? itemType
+                            : metaType;
             secondaryFieldAccessEvalFactories[numSecondaryKeys] = metadataProvider.getDataFormat()
-                    .getFieldAccessEvaluatorFactory(metadataProvider.getFunctionManager(), itemType, filterFieldName,
-                            numPrimaryKeys, sourceLoc);
-            Pair<IAType, Boolean> keyTypePair = Index.getNonNullableKeyFieldType(filterFieldName, itemType);
+                    .getFieldAccessEvaluatorFactory(metadataProvider.getFunctionManager(), filterItemType,
+                            filterFieldName, numPrimaryKeys, sourceLoc);
+            Pair<IAType, Boolean> keyTypePair = Index.getNonNullableKeyFieldType(filterFieldName, filterItemType);
             IAType type = keyTypePair.first;
             ISerializerDeserializer serde = serdeProvider.getSerializerDeserializer(type);
             secondaryRecFields[numPrimaryKeys + numSecondaryKeys] = serde;
@@ -270,9 +279,9 @@ public class SecondaryInvertedIndexOperationsHelper extends SecondaryTreeIndexOp
         for (int i = 0; i < primaryKeyFields.length; i++) {
             primaryKeyFields[i] = numSecondaryKeys + i;
         }
-        BinaryTokenizerOperatorDescriptor tokenizerOp =
-                new BinaryTokenizerOperatorDescriptor(spec, tokenKeyPairRecDesc, tokenizerFactory, docField,
-                        primaryKeyFields, isPartitioned, false, false, MissingWriterFactory.INSTANCE);
+        BinaryTokenizerOperatorDescriptor tokenizerOp = new BinaryTokenizerOperatorDescriptor(spec, tokenKeyPairRecDesc,
+                tokenizerFactory, fullTextConfigEvaluatorFactory, docField, primaryKeyFields, isPartitioned, false,
+                false, MissingWriterFactory.INSTANCE);
         tokenizerOp.setSourceLocation(sourceLoc);
         AlgebricksPartitionConstraintHelper.setPartitionConstraintInJobSpec(spec, tokenizerOp,
                 primaryPartitionConstraint);

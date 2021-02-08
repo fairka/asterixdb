@@ -42,14 +42,14 @@ import org.apache.hyracks.dataflow.std.buffermanager.BufferManagerBackedVSizeFra
 import org.apache.hyracks.dataflow.std.buffermanager.ISimpleFrameBufferManager;
 import org.apache.hyracks.storage.am.lsm.invertedindex.api.IInPlaceInvertedIndex;
 import org.apache.hyracks.storage.am.lsm.invertedindex.api.IInvertedIndexSearcher;
+import org.apache.hyracks.storage.am.lsm.invertedindex.api.IInvertedListCursor;
+import org.apache.hyracks.storage.am.lsm.invertedindex.api.IInvertedListTupleReference;
 import org.apache.hyracks.storage.am.lsm.invertedindex.api.IObjectFactory;
-import org.apache.hyracks.storage.am.lsm.invertedindex.api.InvertedListCursor;
-import org.apache.hyracks.storage.am.lsm.invertedindex.ondisk.FixedSizeFrameTupleAccessor;
-import org.apache.hyracks.storage.am.lsm.invertedindex.ondisk.FixedSizeTupleReference;
+import org.apache.hyracks.storage.am.lsm.invertedindex.fulltext.IFullTextConfigEvaluator;
 import org.apache.hyracks.storage.am.lsm.invertedindex.tokenizers.DelimitedUTF8StringBinaryTokenizer;
-import org.apache.hyracks.storage.am.lsm.invertedindex.tokenizers.IBinaryTokenizer;
 import org.apache.hyracks.storage.am.lsm.invertedindex.tokenizers.IToken;
 import org.apache.hyracks.storage.am.lsm.invertedindex.tokenizers.TokenizerInfo.TokenizerType;
+import org.apache.hyracks.storage.am.lsm.invertedindex.util.InvertedIndexUtils;
 import org.apache.hyracks.storage.am.lsm.invertedindex.util.ObjectCache;
 import org.apache.hyracks.storage.common.MultiComparator;
 
@@ -76,21 +76,21 @@ public abstract class AbstractTOccurrenceSearcher implements IInvertedIndexSearc
 
     protected int occurrenceThreshold;
 
-    protected final IObjectFactory<InvertedListCursor> invListCursorFactory;
-    protected final ObjectCache<InvertedListCursor> invListCursorCache;
+    protected final IObjectFactory<IInvertedListCursor> invListCursorFactory;
+    protected final ObjectCache<IInvertedListCursor> invListCursorCache;
 
     protected final ISimpleFrameBufferManager bufferManager;
     protected boolean isFinishedSearch;
 
     // For a single inverted list case
-    protected InvertedListCursor singleInvListCursor;
+    protected IInvertedListCursor singleInvListCursor;
     protected boolean isSingleInvertedList;
 
     // To read the final search result
     protected ByteBuffer searchResultBuffer;
     protected int searchResultTupleIndex = 0;
     protected final IFrameTupleAccessor searchResultFta;
-    protected FixedSizeTupleReference searchResultTuple;
+    protected IInvertedListTupleReference searchResultTuple;
 
     public AbstractTOccurrenceSearcher(IInPlaceInvertedIndex invIndex, IHyracksTaskContext ctx)
             throws HyracksDataException {
@@ -118,33 +118,35 @@ public abstract class AbstractTOccurrenceSearcher implements IInvertedIndexSearc
         this.queryTokenAppender = new FrameTupleAppenderAccessor(QUERY_TOKEN_REC_DESC);
         this.queryTokenAppender.reset(queryTokenFrame, true);
         this.isSingleInvertedList = false;
-        this.searchResultTuple = new FixedSizeTupleReference(invIndex.getInvListTypeTraits());
-        this.searchResultFta =
-                new FixedSizeFrameTupleAccessor(ctx.getInitialFrameSize(), invIndex.getInvListTypeTraits());
+        this.searchResultTuple = InvertedIndexUtils.createInvertedListTupleReference(invIndex.getInvListTypeTraits());
+        this.searchResultFta = InvertedIndexUtils.createInvertedListFrameTupleAccessor(ctx.getInitialFrameSize(),
+                invIndex.getInvListTypeTraits());
     }
 
     protected void tokenizeQuery(InvertedIndexSearchPredicate searchPred) throws HyracksDataException {
         ITupleReference queryTuple = searchPred.getQueryTuple();
         int queryFieldIndex = searchPred.getQueryFieldIndex();
-        IBinaryTokenizer queryTokenizer = searchPred.getQueryTokenizer();
+        IFullTextConfigEvaluator fullTextAnalyzer = searchPred.getFullTextConfigEvaluator();
+        fullTextAnalyzer.setTokenizer(searchPred.getQueryTokenizer());
+
         // Is this a full-text query?
         // Then, the last argument is conjunctive or disjunctive search option, not a query text.
         // Thus, we need to remove the last argument.
         boolean isFullTextSearchQuery = searchPred.getIsFullTextSearchQuery();
         // Get the type of query tokenizer.
-        TokenizerType queryTokenizerType = queryTokenizer.getTokenizerType();
+        TokenizerType queryTokenizerType = fullTextAnalyzer.getTokenizer().getTokenizerType();
         int tokenCountInOneField = 0;
 
         queryTokenAppender.reset(queryTokenFrame, true);
-        queryTokenizer.reset(queryTuple.getFieldData(queryFieldIndex), queryTuple.getFieldStart(queryFieldIndex),
+        fullTextAnalyzer.reset(queryTuple.getFieldData(queryFieldIndex), queryTuple.getFieldStart(queryFieldIndex),
                 queryTuple.getFieldLength(queryFieldIndex));
 
-        while (queryTokenizer.hasNext()) {
-            queryTokenizer.next();
+        while (fullTextAnalyzer.hasNext()) {
+            fullTextAnalyzer.next();
             queryTokenBuilder.reset();
             tokenCountInOneField++;
             try {
-                IToken token = queryTokenizer.getToken();
+                IToken token = fullTextAnalyzer.getToken();
                 // For the full-text search, we don't support a phrase search yet.
                 // So, each field should have only one token.
                 // If it's a list, it can have multiple keywords in it. But, each keyword should not be a phrase.
@@ -161,6 +163,7 @@ public abstract class AbstractTOccurrenceSearcher implements IInvertedIndexSearc
                     }
                 }
 
+                // Includes the length of the string, e.g. 8database where 8 (of type byte instead of char) is the length of "database"
                 token.serializeToken(queryTokenBuilder.getFieldData());
                 queryTokenBuilder.addFieldEndOffset();
                 // WARNING: assuming one frame is big enough to hold all tokens
@@ -178,7 +181,7 @@ public abstract class AbstractTOccurrenceSearcher implements IInvertedIndexSearc
 
     public void printNewResults(int maxResultBufIdx, List<ByteBuffer> buffer) {
         StringBuffer strBuffer = new StringBuffer();
-        FixedSizeFrameTupleAccessor resultFrameTupleAcc = finalSearchResult.getAccessor();
+        IFrameTupleAccessor resultFrameTupleAcc = finalSearchResult.getAccessor();
         for (int i = 0; i <= maxResultBufIdx; i++) {
             ByteBuffer testBuf = buffer.get(i);
             resultFrameTupleAcc.reset(testBuf);

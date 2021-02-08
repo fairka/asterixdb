@@ -42,7 +42,6 @@ import org.apache.asterix.common.exceptions.RuntimeDataException;
 import org.apache.asterix.common.messaging.api.ICcAddressedMessage;
 import org.apache.asterix.compiler.provider.ILangCompilationProvider;
 import org.apache.asterix.hyracks.bootstrap.CCApplication;
-import org.apache.asterix.lang.aql.parser.TokenMgrError;
 import org.apache.asterix.lang.common.base.IParser;
 import org.apache.asterix.lang.common.base.Statement;
 import org.apache.asterix.messaging.CCMessageBroker;
@@ -66,8 +65,8 @@ import org.apache.logging.log4j.Level;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
-public final class ExecuteStatementRequestMessage implements ICcAddressedMessage {
-    private static final long serialVersionUID = 1L;
+public class ExecuteStatementRequestMessage implements ICcAddressedMessage {
+    private static final long serialVersionUID = 2L;
     private static final Logger LOGGER = LogManager.getLogger();
     //TODO: Make configurable: https://issues.apache.org/jira/browse/ASTERIXDB-2062
     public static final long DEFAULT_NC_TIMEOUT_MILLIS = TimeUnit.MILLISECONDS.toMillis(Long.MAX_VALUE);
@@ -87,12 +86,13 @@ public final class ExecuteStatementRequestMessage implements ICcAddressedMessage
     private final int statementCategoryRestrictionMask;
     private final ProfileType profileType;
     private final IRequestReference requestReference;
+    private final boolean forceDropDataset;
 
     public ExecuteStatementRequestMessage(String requestNodeId, long requestMessageId, ILangExtension.Language lang,
             String statementsText, SessionConfig sessionConfig, ResultProperties resultProperties,
             String clientContextID, String handleUrl, Map<String, String> optionalParameters,
             Map<String, byte[]> statementParameters, boolean multiStatement, ProfileType profileType,
-            int statementCategoryRestrictionMask, IRequestReference requestReference) {
+            int statementCategoryRestrictionMask, IRequestReference requestReference, boolean forceDropDataset) {
         this.requestNodeId = requestNodeId;
         this.requestMessageId = requestMessageId;
         this.lang = lang;
@@ -107,6 +107,7 @@ public final class ExecuteStatementRequestMessage implements ICcAddressedMessage
         this.statementCategoryRestrictionMask = statementCategoryRestrictionMask;
         this.profileType = profileType;
         this.requestReference = requestReference;
+        this.forceDropDataset = forceDropDataset;
     }
 
     @Override
@@ -115,9 +116,9 @@ public final class ExecuteStatementRequestMessage implements ICcAddressedMessage
         ClusterControllerService ccSrv = (ClusterControllerService) ccSrvContext.getControllerService();
         CCApplication ccApp = (CCApplication) ccSrv.getApplication();
         CCMessageBroker messageBroker = (CCMessageBroker) ccSrvContext.getMessageBroker();
-        final RuntimeDataException rejectionReason = getRejectionReason(ccSrv);
+        final RuntimeDataException rejectionReason = getRejectionReason(ccSrv, requestNodeId);
         if (rejectionReason != null) {
-            sendRejection(rejectionReason, messageBroker);
+            sendRejection(rejectionReason, messageBroker, requestMessageId, requestNodeId);
             return;
         }
         CCExtensionManager ccExtMgr = (CCExtensionManager) ccAppCtx.getExtensionManager();
@@ -151,7 +152,7 @@ public final class ExecuteStatementRequestMessage implements ICcAddressedMessage
             Map<String, IAObject> stmtParams = RequestParameters.deserializeParameterValues(statementParameters);
             final IRequestParameters requestParameters = new RequestParameters(requestReference, statementsText, null,
                     resultProperties, stats, statementProperties, outMetadata, clientContextID, optionalParameters,
-                    stmtParams, multiStatement, statementCategoryRestrictionMask);
+                    stmtParams, multiStatement, statementCategoryRestrictionMask, forceDropDataset);
             translator.compileAndExecute(ccApp.getHcc(), requestParameters);
             translator.getWarnings(warnings, maxWarnings - warnings.size());
             stats.updateTotalWarningsCount(parserTotalWarningsCount);
@@ -162,8 +163,7 @@ public final class ExecuteStatementRequestMessage implements ICcAddressedMessage
             responseMsg.setStatementProperties(statementProperties);
             responseMsg.setExecutionPlans(translator.getExecutionPlans());
             responseMsg.setWarnings(warnings);
-        } catch (AlgebricksException | HyracksException | TokenMgrError
-                | org.apache.asterix.lang.sqlpp.parser.TokenMgrError pe) {
+        } catch (AlgebricksException | HyracksException | org.apache.asterix.lang.sqlpp.parser.TokenMgrError pe) {
             // we trust that "our" exceptions are serializable and have a comprehensible error message
             GlobalConfig.ASTERIX_LOGGER.log(Level.WARN, pe.getMessage(), pe);
             responseMsg.setError(pe);
@@ -178,7 +178,7 @@ public final class ExecuteStatementRequestMessage implements ICcAddressedMessage
         }
     }
 
-    private RuntimeDataException getRejectionReason(ClusterControllerService ccSrv) {
+    static RuntimeDataException getRejectionReason(ClusterControllerService ccSrv, String requestNodeId) {
         if (ccSrv.getNodeManager().getNodeControllerState(requestNodeId) == null) {
             return new RuntimeDataException(ErrorCode.REJECT_NODE_UNREGISTERED);
         }
@@ -191,7 +191,8 @@ public final class ExecuteStatementRequestMessage implements ICcAddressedMessage
         return null;
     }
 
-    private void sendRejection(RuntimeDataException reason, CCMessageBroker messageBroker) {
+    static void sendRejection(RuntimeDataException reason, CCMessageBroker messageBroker, long requestMessageId,
+            String requestNodeId) {
         ExecuteStatementResponseMessage responseMsg = new ExecuteStatementResponseMessage(requestMessageId);
         responseMsg.setError(reason);
         try {

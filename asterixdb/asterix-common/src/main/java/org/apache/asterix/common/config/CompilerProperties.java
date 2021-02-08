@@ -67,16 +67,31 @@ public class CompilerProperties extends AbstractProperties {
                         + "other integer values dictate the number of query execution parallel partitions. The system will "
                         + "fall back to use the number of all available CPU cores in the cluster as the degree of parallelism "
                         + "if the number set by a user is too large or too small"),
-        COMPILER_SORT_PARALLEL(BOOLEAN, AlgebricksConfig.SORT_PARALLEL, "Enabling/Disabling full parallel sort"),
+        COMPILER_SORT_PARALLEL(
+                BOOLEAN,
+                AlgebricksConfig.SORT_PARALLEL_DEFAULT,
+                "Enabling/Disabling full parallel sort"),
         COMPILER_SORT_SAMPLES(
                 POSITIVE_INTEGER,
-                AlgebricksConfig.SORT_SAMPLES,
+                AlgebricksConfig.SORT_SAMPLES_DEFAULT,
                 "The number of samples which parallel sorting should take from each partition"),
         COMPILER_INDEXONLY(BOOLEAN, AlgebricksConfig.INDEX_ONLY_DEFAULT, "Enabling/disabling index-only plans"),
         COMPILER_INTERNAL_SANITYCHECK(
                 BOOLEAN,
                 AlgebricksConfig.SANITYCHECK_DEFAULT,
-                "Enable/disable compiler sanity check");
+                "Enable/disable compiler sanity check"),
+        COMPILER_EXTERNAL_FIELD_PUSHDOWN(
+                BOOLEAN,
+                AlgebricksConfig.EXTERNAL_FIELD_PUSHDOWN_DEFAULT,
+                "Enable pushdown of field accesses to the external dataset data-scan operator"),
+        COMPILER_SUBPLAN_MERGE(
+                BOOLEAN,
+                AlgebricksConfig.SUBPLAN_MERGE_DEFAULT,
+                "Enable merging subplans with other subplans"),
+        COMPILER_SUBPLAN_NESTEDPUSHDOWN(
+                BOOLEAN,
+                AlgebricksConfig.SUBPLAN_NESTEDPUSHDOWN_DEFAULT,
+                "When merging subplans into groupby/suplan allow nesting of subplans");
 
         private final IOptionType type;
         private final Object defaultValue;
@@ -129,6 +144,12 @@ public class CompilerProperties extends AbstractProperties {
 
     public static final String COMPILER_INTERNAL_SANITYCHECK_KEY = Option.COMPILER_INTERNAL_SANITYCHECK.ini();
 
+    public static final String COMPILER_EXTERNAL_FIELD_PUSHDOWN_KEY = Option.COMPILER_EXTERNAL_FIELD_PUSHDOWN.ini();
+
+    public static final String COMPILER_SUBPLAN_MERGE_KEY = Option.COMPILER_SUBPLAN_MERGE.ini();
+
+    public static final String COMPILER_SUBPLAN_NESTEDPUSHDOWN_KEY = Option.COMPILER_SUBPLAN_NESTEDPUSHDOWN.ini();
+
     public static final int COMPILER_PARALLELISM_AS_STORAGE = 0;
 
     public CompilerProperties(PropertiesAccessor accessor) {
@@ -177,5 +198,17 @@ public class CompilerProperties extends AbstractProperties {
 
     public boolean isSanityCheck() {
         return accessor.getBoolean(Option.COMPILER_INTERNAL_SANITYCHECK);
+    }
+
+    public boolean isFieldAccessPushdown() {
+        return accessor.getBoolean(Option.COMPILER_EXTERNAL_FIELD_PUSHDOWN);
+    }
+
+    public boolean getSubplanMerge() {
+        return accessor.getBoolean(Option.COMPILER_SUBPLAN_MERGE);
+    }
+
+    public boolean getSubplanNestedPushdown() {
+        return accessor.getBoolean(Option.COMPILER_SUBPLAN_NESTEDPUSHDOWN);
     }
 }

@@ -20,10 +20,10 @@ package org.apache.hyracks.control.common.controllers;
 
 import static org.apache.hyracks.control.common.config.OptionTypes.BOOLEAN;
 import static org.apache.hyracks.control.common.config.OptionTypes.LONG;
+import static org.apache.hyracks.control.common.config.OptionTypes.NONNEGATIVE_INTEGER;
 import static org.apache.hyracks.control.common.config.OptionTypes.POSITIVE_INTEGER;
 import static org.apache.hyracks.control.common.config.OptionTypes.SHORT;
 import static org.apache.hyracks.control.common.config.OptionTypes.STRING;
-import static org.apache.hyracks.control.common.config.OptionTypes.UNSIGNED_INTEGER;
 
 import java.io.File;
 import java.net.InetAddress;
@@ -37,6 +37,7 @@ import org.apache.hyracks.api.config.IOptionType;
 import org.apache.hyracks.api.config.Section;
 import org.apache.hyracks.api.control.CcId;
 import org.apache.hyracks.control.common.config.ConfigManager;
+import org.apache.hyracks.control.common.config.OptionTypes;
 import org.apache.hyracks.util.file.FileUtil;
 import org.ini4j.Ini;
 
@@ -49,22 +50,22 @@ public class CCConfig extends ControllerConfig {
         ADDRESS(STRING, InetAddress.getLoopbackAddress().getHostAddress()),
         PUBLIC_ADDRESS(STRING, ADDRESS),
         CLUSTER_LISTEN_ADDRESS(STRING, ADDRESS),
-        CLUSTER_LISTEN_PORT(UNSIGNED_INTEGER, 1099),
+        CLUSTER_LISTEN_PORT(NONNEGATIVE_INTEGER, 1099),
         CLUSTER_PUBLIC_ADDRESS(STRING, PUBLIC_ADDRESS),
-        CLUSTER_PUBLIC_PORT(UNSIGNED_INTEGER, CLUSTER_LISTEN_PORT),
+        CLUSTER_PUBLIC_PORT(NONNEGATIVE_INTEGER, CLUSTER_LISTEN_PORT),
         CLIENT_LISTEN_ADDRESS(STRING, ADDRESS),
-        CLIENT_LISTEN_PORT(UNSIGNED_INTEGER, 1098),
+        CLIENT_LISTEN_PORT(NONNEGATIVE_INTEGER, 1098),
         CLIENT_PUBLIC_ADDRESS(STRING, PUBLIC_ADDRESS),
-        CLIENT_PUBLIC_PORT(UNSIGNED_INTEGER, CLIENT_LISTEN_PORT),
+        CLIENT_PUBLIC_PORT(NONNEGATIVE_INTEGER, CLIENT_LISTEN_PORT),
         CONSOLE_LISTEN_ADDRESS(STRING, ADDRESS),
-        CONSOLE_LISTEN_PORT(UNSIGNED_INTEGER, 16001),
+        CONSOLE_LISTEN_PORT(NONNEGATIVE_INTEGER, 16001),
         CONSOLE_PUBLIC_ADDRESS(STRING, PUBLIC_ADDRESS),
-        CONSOLE_PUBLIC_PORT(UNSIGNED_INTEGER, CONSOLE_LISTEN_PORT),
+        CONSOLE_PUBLIC_PORT(NONNEGATIVE_INTEGER, CONSOLE_LISTEN_PORT),
         HEARTBEAT_PERIOD(LONG, 10000L), // TODO (mblow): add time unit
-        HEARTBEAT_MAX_MISSES(UNSIGNED_INTEGER, 5),
+        HEARTBEAT_MAX_MISSES(NONNEGATIVE_INTEGER, 5),
         DEAD_NODE_SWEEP_THRESHOLD(LONG, HEARTBEAT_PERIOD),
-        PROFILE_DUMP_PERIOD(UNSIGNED_INTEGER, 0),
-        JOB_HISTORY_SIZE(UNSIGNED_INTEGER, 10),
+        PROFILE_DUMP_PERIOD(NONNEGATIVE_INTEGER, 0),
+        JOB_HISTORY_SIZE(NONNEGATIVE_INTEGER, 10),
         RESULT_TTL(LONG, 86400000L), // TODO(mblow): add time unit
         RESULT_SWEEP_THRESHOLD(LONG, 60000L), // TODO(mblow): add time unit
         @SuppressWarnings("RedundantCast") // not redundant- false positive from IDEA
@@ -78,7 +79,12 @@ public class CCConfig extends ControllerConfig {
         CONTROLLER_ID(SHORT, (short) 0x0000),
         KEY_STORE_PATH(STRING),
         TRUST_STORE_PATH(STRING),
-        KEY_STORE_PASSWORD(STRING);
+        KEY_STORE_PASSWORD(STRING),
+        CREDENTIAL_FILE(
+                OptionTypes.STRING,
+                (Function<IApplicationConfig, String>) appConfig -> FileUtil
+                        .joinPath(appConfig.getString(ControllerConfig.Option.DEFAULT_DIR), "passwd"),
+                ControllerConfig.Option.DEFAULT_DIR.cmdline() + "/passwd");
 
         private final IOptionType parser;
         private Object defaultValue;
@@ -198,6 +204,8 @@ public class CCConfig extends ControllerConfig {
                     return "A fully-qualified path to a trust store file that will be used for secured connections";
                 case KEY_STORE_PASSWORD:
                     return "The password to the provided key store";
+                case CREDENTIAL_FILE:
+                    return "Path to HTTP basic credentials";
                 default:
                     throw new IllegalStateException("NYI: " + this);
             }
@@ -465,7 +473,12 @@ public class CCConfig extends ControllerConfig {
     }
 
     public void setTrustStorePath(String trustStorePath) {
+
         configManager.set(Option.TRUST_STORE_PATH, trustStorePath);
+    }
+
+    public String getCredentialFilePath() {
+        return getAppConfig().getString(Option.CREDENTIAL_FILE);
     }
 
 }

@@ -84,6 +84,7 @@ public class ErrorCode {
     public static final int PARAMETERS_REQUIRED = 49;
     public static final int INVALID_PARAM = 50;
     public static final int INCOMPARABLE_TYPES = 51;
+    public static final int ILLEGAL_STATE = 52;
 
     public static final int UNSUPPORTED_JRE = 100;
 
@@ -203,7 +204,7 @@ public class ErrorCode {
     public static final int INVALID_PROPERTY_FORMAT = 1112;
     public static final int INVALID_REGEX_PATTERN = 1113;
     public static final int EXTERNAL_SOURCE_CONFIGURATION_RETURNED_NO_FILES = 1114;
-    public static final int SYNONYM_EXISTS = 1115;
+    public static final int INVALID_DATABASE_OBJECT_NAME = 1115;
     public static final int UNKNOWN_SYNONYM = 1116;
     public static final int UNKNOWN_LIBRARY = 1117;
     public static final int COMPILATION_GROUPING_SETS_OVERFLOW = 1118;
@@ -218,6 +219,16 @@ public class ErrorCode {
     public static final int UNSUPPORTED_ADAPTER_LANGUAGE = 1127;
     public static final int INCONSISTENT_FILTER_INDICATOR = 1128;
     public static final int UNSUPPORTED_GBY_OBY_SELECT_COMBO = 1129;
+    public static final int ILLEGAL_RIGHT_OUTER_JOIN = 1130;
+    public static final int SYNONYM_EXISTS = 1131;
+    public static final int INVALID_HINT = 1132;
+    public static final int FULL_TEXT_FILTER_NOT_FOUND = 1133;
+    public static final int FULL_TEXT_DEFAULT_CONFIG_CANNOT_BE_DELETED_OR_CREATED = 1134;
+    public static final int FULL_TEXT_CONFIG_ALREADY_EXISTS = 1135;
+    public static final int FULL_TEXT_FILTER_ALREADY_EXISTS = 1136;
+    public static final int FULL_TEXT_CONFIG_NOT_FOUND = 1137;
+    public static final int ONLY_SINGLE_AUTHENTICATION_IS_ALLOWED = 1138;
+    public static final int NO_AUTH_METHOD_PROVIDED = 1139;
 
     // Feed errors
     public static final int DATAFLOW_ILLEGAL_STATE = 3001;
@@ -330,6 +341,7 @@ public class ErrorCode {
     public static final int FAILED_TO_PARSE_METADATA = 3115;
     public static final int INPUT_DECODE_FAILURE = 3116;
     public static final int FAILED_TO_PARSE_MALFORMED_LOG_RECORD = 3117;
+    public static final int ACTIVE_ENTITY_NOT_RUNNING = 3118;
 
     // Lifecycle management errors
     public static final int DUPLICATE_PARTITION_ID = 4000;

@@ -31,9 +31,12 @@ import org.apache.asterix.common.cluster.IClusterStateManager;
 import org.apache.asterix.common.cluster.IGlobalRecoveryManager;
 import org.apache.asterix.common.dataflow.ICcApplicationContext;
 import org.apache.asterix.common.exceptions.AsterixException;
+import org.apache.asterix.common.exceptions.CompilationException;
 import org.apache.asterix.common.exceptions.ErrorCode;
+import org.apache.asterix.common.functions.FunctionConstants;
 import org.apache.asterix.common.metadata.DataverseName;
 import org.apache.asterix.lang.common.base.Statement;
+import org.apache.asterix.lang.common.statement.CreateDataverseStatement;
 import org.apache.asterix.lang.common.statement.DatasetDecl;
 import org.apache.asterix.lang.common.statement.DataverseDropStatement;
 import org.apache.asterix.lang.common.statement.DeleteStatement;
@@ -141,12 +144,22 @@ public abstract class AbstractLangTranslator {
                 }
                 break;
 
+            case CREATE_DATAVERSE:
+                CreateDataverseStatement dvCreateStmt = (CreateDataverseStatement) stmt;
+                dataverseName = dvCreateStmt.getDataverseName();
+                invalidOperation = FunctionConstants.ASTERIX_DV.equals(dataverseName)
+                        || FunctionConstants.ALGEBRICKS_DV.equals(dataverseName);
+                if (invalidOperation) {
+                    message = "Cannot create dataverse: " + dataverseName;
+                }
+                break;
+
             case DATAVERSE_DROP:
                 DataverseDropStatement dvDropStmt = (DataverseDropStatement) stmt;
                 dataverseName = dvDropStmt.getDataverseName();
                 invalidOperation = MetadataConstants.METADATA_DATAVERSE_NAME.equals(dataverseName);
                 if (invalidOperation) {
-                    message = "Cannot drop dataverse:" + dataverseName;
+                    message = "Cannot drop dataverse: " + dataverseName;
                 }
                 break;
 
@@ -157,10 +170,11 @@ public abstract class AbstractLangTranslator {
                 }
                 invalidOperation = MetadataConstants.METADATA_DATAVERSE_NAME.equals(dataverseName);
                 if (invalidOperation) {
-                    message = "Cannot drop a dataset belonging to the dataverse:"
+                    message = "Cannot drop a dataset belonging to the dataverse: "
                             + MetadataConstants.METADATA_DATAVERSE_NAME;
                 }
                 break;
+
             case DATASET_DECL:
                 DatasetDecl datasetStmt = (DatasetDecl) stmt;
                 Map<String, String> hints = datasetStmt.getHints();
@@ -182,12 +196,11 @@ public abstract class AbstractLangTranslator {
                     }
                 }
                 break;
-            default:
-                break;
         }
 
         if (invalidOperation) {
-            throw new AsterixException("Invalid operation - " + message);
+            throw new CompilationException(ErrorCode.COMPILATION_ERROR, stmt.getSourceLocation(),
+                    "Invalid operation - " + message);
         }
     }
 }

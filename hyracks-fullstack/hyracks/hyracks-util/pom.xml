@@ -22,7 +22,7 @@
   <parent>
     <artifactId>hyracks</artifactId>
     <groupId>org.apache.hyracks</groupId>
-    <version>0.3.5-SNAPSHOT</version>
+    <version>0.3.6-SNAPSHOT</version>
   </parent>
 
   <modelVersion>4.0.0</modelVersion>
@@ -98,6 +98,10 @@
     <dependency>
       <groupId>com.google.guava</groupId>
       <artifactId>guava</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>it.unimi.dsi</groupId>
+      <artifactId>fastutil</artifactId>
     </dependency>
   </dependencies>
 

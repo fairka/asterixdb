@@ -55,7 +55,7 @@ public class ConcurrentLockManager implements ILockManager, ILifeCycleComponent 
     private static final boolean ENABLED_DEADLOCK_FREE_LOCKING_PROTOCOL = true;
 
     private static final int NIL = -1;
-    private static final long NILL = -1L;
+    static final long NILL = -1L;
 
     private static final boolean DEBUG_MODE = false;//true
     private static final boolean CHECK_CONSISTENCY = false;
@@ -74,6 +74,7 @@ public class ConcurrentLockManager implements ILockManager, ILifeCycleComponent 
         WAIT(true, false),
         CONV(true, true) // convert (upgrade) a lock (e.g. from S to X)
         ;
+
         boolean wait;
         boolean modify;
 
@@ -92,14 +93,13 @@ public class ConcurrentLockManager implements ILockManager, ILifeCycleComponent 
             { LockAction.ERR, LockAction.WAIT, LockAction.WAIT, LockAction.WAIT, LockAction.WAIT } // X
     };
 
-    public ConcurrentLockManager(final int lockManagerShrinkTimer) throws ACIDException {
-        this(lockManagerShrinkTimer, Runtime.getRuntime().availableProcessors() * 2, 1024);
-        // TODO increase table size?
+    public ConcurrentLockManager(final int lockManagerShrinkTimer, int tableSize) throws ACIDException {
+        this(lockManagerShrinkTimer, Runtime.getRuntime().availableProcessors() * 2, tableSize);
     }
 
     public ConcurrentLockManager(final int lockManagerShrinkTimer, final int noArenas, final int tableSize)
             throws ACIDException {
-        this.table = new ResourceGroupTable(tableSize);
+        table = new ResourceGroupTable(tableSize);
         resArenaMgr = new ResourceArenaManager(noArenas, lockManagerShrinkTimer);
         reqArenaMgr = new RequestArenaManager(noArenas, lockManagerShrinkTimer);
         jobArenaMgr = new JobArenaManager(noArenas, lockManagerShrinkTimer);
@@ -338,7 +338,7 @@ public class ConcurrentLockManager implements ILockManager, ILifeCycleComponent 
 
         final long txnId = txnContext.getTxnId().getId();
         final ResourceGroup group = table.get(datasetId.getId(), entityHashValue);
-        if (group.firstResourceIndex.get() == NILL) {
+        if (group.firstResourceIndex == NILL) {
             validateJob(txnContext);
             // if we do not have a resource in the group, we know that the
             // resource that we are looking for is not locked
@@ -436,7 +436,7 @@ public class ConcurrentLockManager implements ILockManager, ILifeCycleComponent 
 
         final long txnId = txnContext.getTxnId().getId();
         final ResourceGroup group = table.get(datasetId.getId(), entityHashValue);
-        if (group.firstResourceIndex.get() == NILL) {
+        if (group.firstResourceIndex == NILL) {
             validateJob(txnContext);
             // if we do not have a resource in the group, we know that the
             // resource that we are looking for is not locked
@@ -508,9 +508,9 @@ public class ConcurrentLockManager implements ILockManager, ILifeCycleComponent 
             reqArenaMgr.deallocate(holder);
             // deallocate resource or fix max lock mode
             if (resourceNotUsed(resource)) {
-                long prev = group.firstResourceIndex.get();
+                long prev = group.firstResourceIndex;
                 if (prev == resource) {
-                    group.firstResourceIndex.set(resArenaMgr.getNext(resource));
+                    group.firstResourceIndex = resArenaMgr.getNext(resource);
                 } else {
                     while (resArenaMgr.getNext(prev) != resource) {
                         prev = resArenaMgr.getNext(prev);
@@ -602,8 +602,8 @@ public class ConcurrentLockManager implements ILockManager, ILifeCycleComponent 
             resSlot = resArenaMgr.allocate();
             resArenaMgr.setDatasetId(resSlot, dsId);
             resArenaMgr.setPkHashVal(resSlot, entityHashValue);
-            resArenaMgr.setNext(resSlot, group.firstResourceIndex.get());
-            group.firstResourceIndex.set(resSlot);
+            resArenaMgr.setNext(resSlot, group.firstResourceIndex);
+            group.firstResourceIndex = resSlot;
             if (DEBUG_MODE) {
                 LOGGER.trace("new res slot " + TypeUtil.Global.toString(resSlot) + " (" + dsId + ", " + entityHashValue
                         + ")");
@@ -677,7 +677,7 @@ public class ConcurrentLockManager implements ILockManager, ILifeCycleComponent 
 
     private long findResourceInGroup(ResourceGroup group, int dsId, int entityHashValue) {
         stats.logCounters(LOGGER, LVL, false);
-        long resSlot = group.firstResourceIndex.get();
+        long resSlot = group.firstResourceIndex;
         while (resSlot != NILL) {
             // either we already have a lock on this resource or we have a
             // hash collision
@@ -971,7 +971,7 @@ public class ConcurrentLockManager implements ILockManager, ILifeCycleComponent 
                 final ResourceGroup group = table.get(i);
                 if (group.tryLatch(100, TimeUnit.MILLISECONDS)) {
                     try {
-                        long resSlot = group.firstResourceIndex.get();
+                        long resSlot = group.firstResourceIndex;
                         while (resSlot != NILL) {
                             int dsId = resArenaMgr.getDatasetId(resSlot);
                             int entityHashValue = resArenaMgr.getPkHashVal(resSlot);

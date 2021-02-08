@@ -151,7 +151,7 @@ public class FunctionTupleTranslator extends AbstractDatatypeTupleTranslator<Fun
             externalIdentifier = new ArrayList<>(externalIdentifierList.size());
             IACursor externalIdentifierCursor = externalIdentifierList.getCursor();
             while (externalIdentifierCursor.next()) {
-                externalIdentifierList.add(externalIdentifierCursor.get());
+                externalIdentifier.add(((AString) externalIdentifierCursor.get()).getStringValue());
             }
             libraryName = getString(functionRecord, MetadataRecordTypes.FIELD_NAME_LIBRARY_NAME);
             String libraryDataverseCanonicalName = getString(functionRecord, FIELD_NAME_LIBRARY_DATAVERSE_NAME);
@@ -197,7 +197,8 @@ public class FunctionTupleTranslator extends AbstractDatatypeTupleTranslator<Fun
                 dependencies);
     }
 
-    private List<TypeSignature> getParamTypes(ARecord functionRecord, DataverseName functionDataverseName) {
+    private List<TypeSignature> getParamTypes(ARecord functionRecord, DataverseName functionDataverseName)
+            throws AsterixException {
         ARecordType functionRecordType = functionRecord.getType();
         int paramTypesFieldIdx = functionRecordType.getFieldIndex(FUNCTION_ARECORD_FUNCTION_PARAMTYPES_FIELD_NAME);
         if (paramTypesFieldIdx < 0) {
@@ -221,7 +222,7 @@ public class FunctionTupleTranslator extends AbstractDatatypeTupleTranslator<Fun
                     paramType = getTypeSignature(paramTypeName, paramTypeDataverseNameCanonical, functionDataverseName);
                     break;
                 default:
-                    throw new IllegalStateException(); //TODO:FIXME
+                    throw new AsterixException(ErrorCode.METADATA_ERROR, paramTypeObject.getType().getTypeName());
             }
             paramTypes.add(paramType);
         }

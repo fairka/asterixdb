@@ -21,7 +21,7 @@
   <parent>
     <artifactId>apache-asterixdb</artifactId>
     <groupId>org.apache.asterix</groupId>
-    <version>0.9.5-SNAPSHOT</version>
+    <version>0.9.6-SNAPSHOT</version>
   </parent>
   <artifactId>asterix-tools</artifactId>
 
@@ -84,12 +84,6 @@
   </build>
 
   <dependencies>
-    <dependency>
-      <groupId>org.apache.asterix</groupId>
-      <artifactId>asterix-lang-aql</artifactId>
-      <version>${project.version}</version>
-      <scope>test</scope>
-    </dependency>
     <dependency>
       <groupId>org.apache.asterix</groupId>
       <artifactId>asterix-algebra</artifactId>

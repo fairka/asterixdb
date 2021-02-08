@@ -22,7 +22,7 @@
   <parent>
     <artifactId>apache-asterixdb</artifactId>
     <groupId>org.apache.asterix</groupId>
-    <version>0.9.5-SNAPSHOT</version>
+    <version>0.9.6-SNAPSHOT</version>
   </parent>
   <artifactId>asterix-app</artifactId>
   <licenses>
@@ -154,7 +154,6 @@
           </ignoredUsedUndeclaredDependencies>
           <usedDependencies combine.children="append">
             <usedDependency>org.apache.hadoop:hadoop-common</usedDependency>
-            <usedDependency>org.apache.asterix:asterix-fuzzyjoin</usedDependency>
             <usedDependency>org.apache.asterix:asterix-geo</usedDependency>
           </usedDependencies>
           <ignoredUnusedDeclaredDependencies>
@@ -580,11 +579,6 @@
       <artifactId>commons-io</artifactId>
     </dependency>
     <dependency>
-      <groupId>org.apache.asterix</groupId>
-      <artifactId>asterix-lang-aql</artifactId>
-      <version>${project.version}</version>
-    </dependency>
-    <dependency>
       <groupId>org.apache.hyracks</groupId>
       <artifactId>hyracks-storage-am-lsm-btree</artifactId>
     </dependency>
@@ -761,12 +755,6 @@
     </dependency>
     <dependency>
       <groupId>org.apache.asterix</groupId>
-      <artifactId>asterix-fuzzyjoin</artifactId>
-      <version>${project.version}</version>
-      <scope>test</scope>
-    </dependency>
-    <dependency>
-      <groupId>org.apache.asterix</groupId>
       <artifactId>asterix-geo</artifactId>
       <version>${project.version}</version>
       <scope>test</scope>
@@ -858,6 +846,25 @@
     <dependency>
       <groupId>com.typesafe.akka</groupId>
       <artifactId>akka-http-core_2.12</artifactId>
+      <scope>test</scope>
+    </dependency>
+    <!-- Azure -->
+    <dependency>
+      <groupId>com.azure</groupId>
+      <artifactId>azure-storage-blob</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>com.azure</groupId>
+      <artifactId>azure-storage-common</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.logging.log4j</groupId>
+      <artifactId>log4j-1.2-api</artifactId>
+    </dependency>
+    <!-- Needed for inferring the schema for writing Parquet files -->
+    <dependency>
+      <groupId>org.kitesdk</groupId>
+      <artifactId>kite-data-core</artifactId>
       <scope>test</scope>
     </dependency>
   </dependencies>

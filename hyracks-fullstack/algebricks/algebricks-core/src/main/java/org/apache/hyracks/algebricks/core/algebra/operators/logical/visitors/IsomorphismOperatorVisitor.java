@@ -197,11 +197,13 @@ public class IsomorphismOperatorVisitor implements ILogicalOperatorVisitor<Boole
             return Boolean.FALSE;
         }
         LimitOperator limitOpArg = (LimitOperator) copyAndSubstituteVar(op, arg);
+        if (!Objects.equals(op.getMaxObjects().getValue(), limitOpArg.getMaxObjects().getValue())) {
+            return Boolean.FALSE;
+        }
         if (!Objects.equals(op.getOffset().getValue(), limitOpArg.getOffset().getValue())) {
             return Boolean.FALSE;
         }
-        boolean isomorphic = op.getMaxObjects().getValue().equals(limitOpArg.getMaxObjects().getValue());
-        return isomorphic;
+        return Boolean.TRUE;
     }
 
     @Override
@@ -460,12 +462,19 @@ public class IsomorphismOperatorVisitor implements ILogicalOperatorVisitor<Boole
             return Boolean.FALSE;
         }
         DataSourceScanOperator argScan = (DataSourceScanOperator) arg;
-        if (!argScan.getDataSource().toString().equals(op.getDataSource().toString())) {
+        boolean isomorphic = op.getDataSource().getId().equals(argScan.getDataSource().getId())
+                && op.getOutputLimit() == argScan.getOutputLimit()
+                && Objects.equals(op.getProjectionInfo(), argScan.getProjectionInfo());
+
+        if (!isomorphic) {
             return Boolean.FALSE;
         }
         DataSourceScanOperator scanOpArg = (DataSourceScanOperator) copyAndSubstituteVar(op, arg);
-        boolean isomorphic = VariableUtilities.varListEqualUnordered(op.getVariables(), scanOpArg.getVariables())
-                && op.getDataSource().toString().equals(scanOpArg.getDataSource().toString());
+        ILogicalExpression opCondition = op.getSelectCondition() != null ? op.getSelectCondition().getValue() : null;
+        ILogicalExpression argCondition =
+                scanOpArg.getSelectCondition() != null ? scanOpArg.getSelectCondition().getValue() : null;
+        isomorphic = VariableUtilities.varListEqualUnordered(op.getVariables(), scanOpArg.getVariables())
+                && Objects.equals(opCondition, argCondition);
         return isomorphic;
     }
 

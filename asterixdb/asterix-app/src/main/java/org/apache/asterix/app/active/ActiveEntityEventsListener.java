@@ -18,9 +18,12 @@
  */
 package org.apache.asterix.app.active;
 
+import static org.apache.asterix.common.exceptions.ErrorCode.ACTIVE_ENTITY_NOT_RUNNING;
+
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.EnumSet;
+import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Set;
@@ -83,7 +86,7 @@ public abstract class ActiveEntityEventsListener implements IActiveEntityControl
     protected final MetadataProvider metadataProvider;
     protected final IHyracksClientConnection hcc;
     protected final EntityId entityId;
-    private final List<Dataset> datasets;
+    private final Set<Dataset> datasets;
     protected final ActiveEvent statsUpdatedEvent;
     protected final String runtimeName;
     protected final IRetryPolicyFactory retryPolicyFactory;
@@ -93,7 +96,7 @@ public abstract class ActiveEntityEventsListener implements IActiveEntityControl
     protected ActivityState prevState;
     protected JobId jobId;
     protected volatile long statsTimestamp;
-    protected String stats;
+    protected volatile String stats;
     protected volatile boolean isFetchingStats;
     protected int numRegistered;
     protected int numDeRegistered;
@@ -116,7 +119,7 @@ public abstract class ActiveEntityEventsListener implements IActiveEntityControl
         this.metadataProvider = MetadataProvider.create(appCtx, null);
         this.hcc = hcc;
         this.entityId = entityId;
-        this.datasets = datasets;
+        this.datasets = new HashSet<>(datasets);
         this.retryPolicyFactory = retryPolicyFactory;
         this.state = ActivityState.STOPPED;
         this.statsTimestamp = -1;
@@ -249,19 +252,19 @@ public abstract class ActiveEntityEventsListener implements IActiveEntityControl
     }
 
     @Override
-    public synchronized void remove(Dataset dataset) throws HyracksDataException {
+    public synchronized boolean remove(Dataset dataset) throws HyracksDataException {
         if (isActive()) {
             throw new RuntimeDataException(ErrorCode.CANNOT_REMOVE_DATASET_FROM_ACTIVE_ENTITY, entityId, state);
         }
-        getDatasets().remove(dataset);
+        return getDatasets().remove(dataset);
     }
 
     @Override
-    public synchronized void add(Dataset dataset) throws HyracksDataException {
+    public synchronized boolean add(Dataset dataset) throws HyracksDataException {
         if (isActive()) {
             throw new RuntimeDataException(ErrorCode.CANNOT_ADD_DATASET_TO_ACTIVE_ENTITY, entityId, state);
         }
-        getDatasets().add(dataset);
+        return getDatasets().add(dataset);
     }
 
     public JobId getJobId() {
@@ -292,12 +295,17 @@ public abstract class ActiveEntityEventsListener implements IActiveEntityControl
     @Override
     public void refreshStats(long timeout) throws HyracksDataException {
         LOGGER.log(level, "refreshStats called");
+        // first check state & if we are fetching outside of the lock- in the event we are recovering it may take some
+        // time to obtain the lock...
+        ensureRunning();
+        if (isFetchingStats) {
+            LOGGER.log(level, "returning immediately since fetchingStats = " + isFetchingStats);
+            return;
+        }
         synchronized (this) {
-            if (state != ActivityState.RUNNING) {
-                LOGGER.log(level, "returning immediately since state = " + state);
-                notifySubscribers(statsUpdatedEvent);
-                return;
-            } else if (isFetchingStats) {
+            // now that we have the lock, again verify the state & ensure we are not already fetching new stats
+            ensureRunning();
+            if (isFetchingStats) {
                 LOGGER.log(level, "returning immediately since fetchingStats = " + isFetchingStats);
                 return;
             } else {
@@ -321,6 +329,12 @@ public abstract class ActiveEntityEventsListener implements IActiveEntityControl
             throw HyracksDataException.create(e);
         }
         isFetchingStats = false;
+    }
+
+    protected void ensureRunning() throws RuntimeDataException {
+        if (state != ActivityState.RUNNING) {
+            throw new RuntimeDataException(ACTIVE_ENTITY_NOT_RUNNING, runtimeName, String.valueOf(state).toLowerCase());
+        }
     }
 
     protected synchronized void notifySubscribers(ActiveEvent event) {
@@ -595,6 +609,7 @@ public abstract class ActiveEntityEventsListener implements IActiveEntityControl
             suspendTask.get();
             LOGGER.log(level, "waiting for state to become SUSPENDED or TEMPORARILY_FAILED");
             subscriber.sync();
+            suspended = true;
         } catch (Exception e) {
             synchronized (this) {
                 if (LOGGER.isErrorEnabled()) {
@@ -663,7 +678,7 @@ public abstract class ActiveEntityEventsListener implements IActiveEntityControl
     }
 
     @Override
-    public List<Dataset> getDatasets() {
+    public Set<Dataset> getDatasets() {
         return datasets;
     }
 

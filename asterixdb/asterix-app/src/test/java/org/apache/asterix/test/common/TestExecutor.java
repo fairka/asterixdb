@@ -92,6 +92,7 @@ import org.apache.asterix.testframework.xml.ComparisonEnum;
 import org.apache.asterix.testframework.xml.ParameterTypeEnum;
 import org.apache.asterix.testframework.xml.TestCase.CompilationUnit;
 import org.apache.asterix.testframework.xml.TestCase.CompilationUnit.Parameter;
+import org.apache.asterix.testframework.xml.TestCase.CompilationUnit.Placeholder;
 import org.apache.asterix.testframework.xml.TestGroup;
 import org.apache.asterix.translator.ExecutionPlansJsonPrintUtil;
 import org.apache.commons.io.FileUtils;
@@ -144,7 +145,6 @@ public class TestExecutor {
             .with(DeserializationFeature.FAIL_ON_TRAILING_TOKENS, DeserializationFeature.FAIL_ON_READING_DUP_TREE_KEY);
     private static final ObjectReader RESULT_NODE_READER =
             JSON_NODE_READER.with(DeserializationFeature.ACCEPT_EMPTY_STRING_AS_NULL_OBJECT);
-    private static final String AQL = "aql";
     private static final String SQLPP = "sqlpp";
     private static final String DEFAULT_PLAN_FORMAT = "string";
     // see
@@ -215,6 +215,7 @@ public class TestExecutor {
     protected IExternalUDFLibrarian librarian;
     private Map<File, TestLoop> testLoops = new HashMap<>();
     private double timeoutMultiplier = 1;
+    protected int loopIteration;
 
     public TestExecutor() {
         this(Inet4Address.getLoopbackAddress().getHostAddress(), 19002);
@@ -669,6 +670,12 @@ public class TestExecutor {
     }
 
     public InputStream executeQueryService(String str, OutputFormat fmt, URI uri, List<Parameter> params,
+            List<Placeholder> placeholders, boolean jsonEncoded, Charset responseCharset) throws Exception {
+        return executeQueryService(str, fmt, uri, constructQueryParameters(str, fmt, params), placeholders, jsonEncoded,
+                responseCharset, null, false);
+    }
+
+    public InputStream executeQueryService(String str, OutputFormat fmt, URI uri, List<Parameter> params,
             boolean jsonEncoded, Predicate<Integer> responseCodeValidator) throws Exception {
         return executeQueryService(str, fmt, uri, constructQueryParameters(str, fmt, params), jsonEncoded, UTF_8,
                 responseCodeValidator, false);
@@ -692,6 +699,13 @@ public class TestExecutor {
     public InputStream executeQueryService(String str, OutputFormat fmt, URI uri, List<Parameter> params,
             boolean jsonEncoded, Charset responseCharset, Predicate<Integer> responseCodeValidator, boolean cancellable)
             throws Exception {
+        return executeQueryService(str, fmt, uri, params, Collections.emptyList(), jsonEncoded, responseCharset,
+                responseCodeValidator, cancellable);
+    }
+
+    public InputStream executeQueryService(String str, OutputFormat fmt, URI uri, List<Parameter> params,
+            List<Placeholder> placeholders, boolean jsonEncoded, Charset responseCharset,
+            Predicate<Integer> responseCodeValidator, boolean cancellable) throws Exception {
 
         final List<Parameter> macroParameters = extractMacro(str);
         if (!macroParameters.isEmpty()) {
@@ -701,6 +715,10 @@ public class TestExecutor {
         final List<Parameter> additionalParams = extractParameters(str);
         for (Parameter param : additionalParams) {
             params = upsertParam(params, param.getName(), param.getType(), param.getValue());
+        }
+
+        if (!placeholders.isEmpty()) {
+            str = applyExternalDatasetSubstitution(str, placeholders);
         }
 
         HttpUriRequest method = jsonEncoded ? constructPostMethodJson(str, uri, "statement", params)
@@ -1006,25 +1024,19 @@ public class TestExecutor {
         File expectedResultFile;
         switch (ctx.getType()) {
             case "ddl":
-                if (ctx.getFile().getName().endsWith("aql")) {
-                    executeAqlUpdateOrDdl(statement, OutputFormat.CLEAN_JSON);
-                } else {
-                    executeSqlppUpdateOrDdl(statement, OutputFormat.CLEAN_JSON);
-                }
+                ExtractedResult ddlExtractedResult = executeSqlppUpdateOrDdl(statement, OutputFormat.CLEAN_JSON, cUnit);
+                validateWarning(ddlExtractedResult, testCaseCtx, cUnit, testFile, expectedWarnings);
                 break;
             case "update":
                 // isDmlRecoveryTest: set IP address
                 if (isDmlRecoveryTest && statement.contains("nc1://")) {
                     statement = statement.replaceAll("nc1://", "127.0.0.1://../../../../../../asterix-app/");
                 }
-                if (ctx.getFile().getName().endsWith("aql")) {
-                    executeAqlUpdateOrDdl(statement, OutputFormat.forCompilationUnit(cUnit));
-                } else {
-                    executeSqlppUpdateOrDdl(statement, OutputFormat.forCompilationUnit(cUnit));
-                }
+                executeSqlppUpdateOrDdl(statement, OutputFormat.forCompilationUnit(cUnit));
                 break;
             case "pollget":
             case "pollquery":
+            case "pollpost":
                 poll(testCaseCtx, ctx, variableCtx, statement, isDmlRecoveryTest, pb, cUnit, queryCount,
                         expectedResultFileCtxs, testFile, actualPath, ctx.getType().substring("poll".length()),
                         expectedWarnings, plainExecutor);
@@ -1056,11 +1068,7 @@ public class TestExecutor {
                         variableCtx, ctx, expectedResultFile, actualResultFile, queryCount,
                         expectedResultFileCtxs.size(), cUnit.getParameter(), ComparisonEnum.TEXT);
 
-                if (testCaseCtx.getTestCase().isCheckWarnings()) {
-                    boolean expectedSourceLoc = testCaseCtx.isSourceLocationExpected(cUnit);
-                    validateWarnings(extractedResult.getWarnings(), cUnit.getExpectedWarn(), expectedWarnings,
-                            expectedSourceLoc);
-                }
+                validateWarning(extractedResult, testCaseCtx, cUnit, testFile, expectedWarnings);
                 break;
             case "store":
                 // This is a query that returns the expected output of a subsequent query
@@ -1095,8 +1103,9 @@ public class TestExecutor {
                 runScriptAndCompareWithResult(testFile, qbcFile, qarFile, ComparisonEnum.TEXT, UTF_8, statement);
                 break;
             case "txneu": // eu represents erroneous update
+            case "errddl":
                 try {
-                    executeAqlUpdateOrDdl(statement, OutputFormat.forCompilationUnit(cUnit));
+                    executeSqlppUpdateOrDdl(statement, OutputFormat.forCompilationUnit(cUnit));
                 } catch (Exception e) {
                     // An exception is expected.
                     failed = true;
@@ -1121,18 +1130,6 @@ public class TestExecutor {
                 String[] lines = stripLineComments(statement).trim().split("\n");
                 Thread.sleep(Long.parseLong(lines[lines.length - 1].trim()));
                 break;
-            case "errddl": // a ddlquery that expects error
-                try {
-                    executeAqlUpdateOrDdl(statement, OutputFormat.forCompilationUnit(cUnit));
-                } catch (Exception e) {
-                    // expected error happens
-                    failed = true;
-                    LOGGER.info("testFile {} raised an (expected) exception", testFile, e.toString());
-                }
-                if (!failed) {
-                    throw new Exception("Test \"" + testFile + "\" FAILED; an exception was expected");
-                }
-                break;
             case "get":
             case "post":
             case "put":
@@ -1147,7 +1144,7 @@ public class TestExecutor {
                         ctx.extension(), cUnit.getOutputDir().getCompare());
                 break;
             case "server": // (start <test server name> <port>
-                               // [<arg1>][<arg2>][<arg3>]...|stop (<port>|all))
+                // [<arg1>][<arg2>][<arg3>]...|stop (<port>|all))
                 try {
                     lines = statement.trim().split("\n");
                     String[] command = lines[lines.length - 1].trim().split(" ");
@@ -1195,9 +1192,9 @@ public class TestExecutor {
                 }
                 break;
             case "lib": // expected format <dataverse-name> <library-name>
-                            // <library-directory>
-                        // TODO: make this case work well with entity names containing spaces by
-                        // looking for \"
+                // <library-directory>
+                // TODO: make this case work well with entity names containing spaces by
+                // looking for \"
                 lines = stripAllComments(statement).trim().split("\n");
                 for (String line : lines) {
                     String[] command = line.trim().split(" ");
@@ -1214,13 +1211,15 @@ public class TestExecutor {
                                 throw new Exception("invalid library format");
                             }
                             String libPath = command[5];
-                            librarian.install(dataverse, library, libPath, new Pair<>(username, pw));
+                            URI create = createEndpointURI("/admin/udf/" + dataverse + "/" + library);
+                            librarian.install(create, libPath, new Pair<>(username, pw));
                             break;
                         case "uninstall":
                             if (command.length != 5) {
                                 throw new Exception("invalid library format");
                             }
-                            librarian.uninstall(dataverse, library, new Pair<>(username, pw));
+                            URI delete = createEndpointURI("/admin/udf/" + dataverse + "/" + library);
+                            librarian.uninstall(delete, new Pair<>(username, pw));
                             break;
                         default:
                             throw new Exception("invalid library format");
@@ -1273,6 +1272,9 @@ public class TestExecutor {
                                 } else if (TimeUnit.SECONDS.toDays(durationSecs) > 1) {
                                     throw new IllegalArgumentException("duration cannot be exceed 1d");
                                 }
+                                break;
+                            case "":
+                                // ignore blank lines;
                                 break;
                             default:
                                 throw new IllegalArgumentException("unknown directive: " + command[0]);
@@ -1458,8 +1460,7 @@ public class TestExecutor {
     public ExtractedResult executeQuery(OutputFormat fmt, String statement, Map<String, Object> variableCtx,
             TestFileContext ctx, File expectedResultFile, File actualResultFile, MutableInt queryCount,
             int numResultFiles, List<Parameter> params, ComparisonEnum compare) throws Exception {
-        URI uri = getEndpoint(ctx.getFile().getName().endsWith("aql") ? Servlets.QUERY_AQL : Servlets.QUERY_SERVICE,
-                FilenameUtils.getExtension(ctx.getFile().getName()));
+        URI uri = getEndpoint(Servlets.QUERY_SERVICE, FilenameUtils.getExtension(ctx.getFile().getName()));
         return executeQuery(fmt, statement, variableCtx, ctx, expectedResultFile, actualResultFile, queryCount,
                 numResultFiles, params, compare, uri);
     }
@@ -1606,18 +1607,28 @@ public class TestExecutor {
         }
     }
 
-    public InputStream executeSqlppUpdateOrDdl(String statement, OutputFormat outputFormat) throws Exception {
+    public ExtractedResult executeSqlppUpdateOrDdl(String statement, OutputFormat outputFormat) throws Exception {
         return executeUpdateOrDdl(statement, outputFormat, getQueryServiceUri(SQLPP));
     }
 
-    private InputStream executeAqlUpdateOrDdl(String statement, OutputFormat outputFormat) throws Exception {
-        return executeUpdateOrDdl(statement, outputFormat, getQueryServiceUri(AQL));
+    public ExtractedResult executeSqlppUpdateOrDdl(String statement, OutputFormat outputFormat, CompilationUnit cUnit)
+            throws Exception {
+        return executeUpdateOrDdl(statement, outputFormat, getQueryServiceUri(SQLPP), cUnit);
     }
 
-    private InputStream executeUpdateOrDdl(String statement, OutputFormat outputFormat, URI serviceUri)
+    private ExtractedResult executeUpdateOrDdl(String statement, OutputFormat outputFormat, URI serviceUri)
             throws Exception {
-        InputStream resultStream = executeQueryService(statement, serviceUri, outputFormat, UTF_8);
-        return ResultExtractor.extract(resultStream, UTF_8, outputFormat).getResult();
+        try (InputStream resultStream = executeQueryService(statement, serviceUri, outputFormat, UTF_8)) {
+            return ResultExtractor.extract(resultStream, UTF_8, outputFormat);
+        }
+    }
+
+    private ExtractedResult executeUpdateOrDdl(String statement, OutputFormat outputFormat, URI serviceUri,
+            CompilationUnit cUnit) throws Exception {
+        try (InputStream resultStream = executeQueryService(statement, outputFormat, serviceUri, cUnit.getParameter(),
+                cUnit.getPlaceholder(), false, UTF_8)) {
+            return ResultExtractor.extract(resultStream, UTF_8, outputFormat);
+        }
     }
 
     protected static boolean isExpected(Exception e, CompilationUnit cUnit) {
@@ -1749,7 +1760,7 @@ public class TestExecutor {
             String name = m.group("name");
             param.setName(name);
             String value = m.group("value");
-            param.setValue(value);
+            param.setValue(value.replace("\\n", "\n"));
             String type = m.group("type");
             if (type != null) {
                 try {
@@ -1889,6 +1900,7 @@ public class TestExecutor {
             }
             List<TestFileContext> expectedResultFileCtxs = testCaseCtx.getExpectedResultFiles(cUnit);
             int[] savedQueryCounts = new int[numOfFiles + testFileCtxs.size()];
+            loopIteration = 0;
             for (ListIterator<TestFileContext> iter = testFileCtxs.listIterator(); iter.hasNext();) {
                 TestFileContext ctx = iter.next();
                 savedQueryCounts[numOfFiles] = queryCount.getValue();
@@ -1896,9 +1908,14 @@ public class TestExecutor {
                 final File testFile = ctx.getFile();
                 final String statement = readTestFile(testFile);
                 try {
+                    boolean loopCmd = testFile.getName().endsWith(".loop.cmd");
                     if (!testFile.getName().startsWith(DIAGNOSE)) {
                         executeTestFile(testCaseCtx, ctx, variableCtx, statement, isDmlRecoveryTest, pb, cUnit,
                                 queryCount, expectedResultFileCtxs, testFile, actualPath, expectedWarnings);
+                    }
+                    if (loopCmd) {
+                        // this was a loop file and we have exited the loop; reset the loop iteration
+                        loopIteration = 0;
                     }
                 } catch (TestLoop loop) {
                     // rewind the iterator until we find our target
@@ -1910,6 +1927,7 @@ public class TestExecutor {
                         numOfFiles--;
                         queryCount.setValue(savedQueryCounts[numOfFiles]);
                     }
+                    loopIteration++;
                 } catch (Exception e) {
                     numOfErrors++;
                     boolean unexpected = isUnExpected(e, expectedErrors, numOfErrors, queryCount,
@@ -2049,6 +2067,134 @@ public class TestExecutor {
         return substitute;
     }
 
+    protected String applyExternalDatasetSubstitution(String str, List<Placeholder> placeholders) {
+        // This replaces the full template of parameters depending on the adapter type
+        for (Placeholder placeholder : placeholders) {
+            // For adapter placeholder, it means we have a template to replace
+            if (placeholder.getName().equals("adapter")) {
+                str = str.replace("%adapter%", placeholder.getValue());
+
+                // Early terminate if there are no template place holders to replace
+                if (noTemplateRequired(str)) {
+                    continue;
+                }
+
+                if (placeholder.getValue().equalsIgnoreCase("S3")) {
+                    str = applyS3Substitution(str, placeholders);
+                } else if (placeholder.getValue().equalsIgnoreCase("AzureBlob")) {
+                    str = applyAzureSubstitution(str, placeholders);
+                }
+            } else {
+                // Any other place holders, just replace with the value
+                str = str.replace("%" + placeholder.getName() + "%", placeholder.getValue());
+            }
+        }
+
+        // This replaces specific external dataset placeholders
+        str = str.replace(TestConstants.AZURE_CONNECTION_STRING_ACCOUNT_KEY_PLACEHOLDER,
+                TestConstants.AZURE_CONNECTION_STRING_ACCOUNT_KEY);
+        str = str.replace(TestConstants.AZURE_CONNECTION_STRING_SAS_TOKEN_PLACEHOLDER,
+                TestConstants.AZURE_CONNECTION_STRING_SAS_TOKEN);
+        str = str.replace(TestConstants.AZURE_ACCOUNT_NAME_PLACEHOLDER,
+                TestConstants.AZURE_AZURITE_ACCOUNT_NAME_DEFAULT);
+        str = str.replace(TestConstants.AZURE_ACCOUNT_KEY_PLACEHOLDER, TestConstants.AZURE_AZURITE_ACCOUNT_KEY_DEFAULT);
+        str = str.replace(TestConstants.AZURE_SAS_TOKEN_PLACEHOLDER, TestConstants.sasToken);
+        str = replaceExternalEndpoint(str);
+
+        return str;
+    }
+
+    protected String replaceExternalEndpoint(String str) {
+        return str.replace(TestConstants.AZURE_BLOB_ENDPOINT_PLACEHOLDER, TestConstants.AZURE_BLOB_ENDPOINT_DEFAULT);
+    }
+
+    protected boolean noTemplateRequired(String str) {
+        return !str.contains("%template%");
+    }
+
+    protected String applyS3Substitution(String str, List<Placeholder> placeholders) {
+        boolean isReplaced = false;
+        boolean hasRegion = false;
+        boolean hasServiceEndpoint = false;
+
+        for (Placeholder placeholder : placeholders) {
+            // Stop if all parameters are met
+            if (hasRegion && hasServiceEndpoint) {
+                break;
+            } else if (!hasRegion && placeholder.getName().equals("region")) {
+                hasRegion = true;
+                if (!isReplaced) {
+                    isReplaced = true;
+                    str = setS3Template(str);
+                }
+                str = str.replace(TestConstants.S3_REGION_PLACEHOLDER, placeholder.getValue());
+            } else if (!hasServiceEndpoint && placeholder.getName().equals("serviceEndpoint")) {
+                hasServiceEndpoint = true;
+                if (!isReplaced) {
+                    isReplaced = true;
+                    str = setS3Template(str);
+                }
+                str = str.replace(TestConstants.S3_SERVICE_ENDPOINT_PLACEHOLDER, placeholder.getValue());
+            }
+        }
+
+        // Use default template if no parameters are passed
+        if (!isReplaced) {
+            str = setS3TemplateDefault(str);
+        }
+
+        // Set to default if not replaced
+        if (isReplaced && !hasRegion) {
+            str = str.replace(TestConstants.S3_REGION_PLACEHOLDER, TestConstants.S3_REGION_DEFAULT);
+        }
+
+        if (isReplaced && !hasServiceEndpoint) {
+            str = str.replace(TestConstants.S3_SERVICE_ENDPOINT_PLACEHOLDER, TestConstants.S3_SERVICE_ENDPOINT_DEFAULT);
+        }
+
+        return str;
+    }
+
+    protected String setS3Template(String str) {
+        return str.replace("%template%", TestConstants.S3_TEMPLATE);
+    }
+
+    protected String setS3TemplateDefault(String str) {
+        return str.replace("%template%", TestConstants.S3_TEMPLATE_DEFAULT);
+    }
+
+    protected String applyAzureSubstitution(String str, List<Placeholder> placeholders) {
+        boolean isReplaced = false;
+        boolean hasBlobEndpoint = false;
+
+        for (Placeholder placeholder : placeholders) {
+            // Stop if all parameters are met
+            if (hasBlobEndpoint) {
+                break;
+            } else if (placeholder.getName().equals("blobEndpoint")) {
+                hasBlobEndpoint = true;
+                isReplaced = true;
+                str = setAzureTemplate(str);
+                str = str.replace(TestConstants.AZURE_BLOB_ENDPOINT_PLACEHOLDER, placeholder.getValue());
+            }
+        }
+
+        // Use default template if no parameters are passed
+        if (!isReplaced) {
+            str = setAzureTemplateDefault(str);
+        }
+
+        return str;
+    }
+
+    protected String setAzureTemplate(String str) {
+        return str.replace("%template%", TestConstants.AZURE_TEMPLATE);
+    }
+
+    protected String setAzureTemplateDefault(String str) {
+        return str.replace("%template%", TestConstants.AZURE_TEMPLATE_DEFAULT);
+    }
+
     protected void fail(boolean runDiagnostics, TestCaseContext testCaseCtx, CompilationUnit cUnit,
             List<TestFileContext> testFileCtxs, ProcessBuilder pb, File testFile, Exception e) throws Exception {
         if (runDiagnostics) {
@@ -2115,7 +2261,8 @@ public class TestExecutor {
 
     protected URI createEndpointURI(String pathAndQuery) throws URISyntaxException {
         InetSocketAddress endpoint;
-        if (!ncEndPointsList.isEmpty() && pathAndQuery.equals(Servlets.QUERY_SERVICE)) {
+        if (!ncEndPointsList.isEmpty() && (pathAndQuery.equals(Servlets.QUERY_SERVICE)
+                || pathAndQuery.startsWith(Servlets.getAbsolutePath(Servlets.UDF)))) {
             int endpointIdx = Math.abs(endpointSelector++ % ncEndPointsList.size());
             endpoint = ncEndPointsList.get(endpointIdx);
         } else if (isCcEndPointPath(pathAndQuery)) {
@@ -2417,11 +2564,20 @@ public class TestExecutor {
     }
 
     private URI getQueryServiceUri(String extension) throws URISyntaxException {
-        return extension.endsWith(AQL) ? getEndpoint(Servlets.QUERY_AQL) : getEndpoint(Servlets.QUERY_SERVICE);
+        return getEndpoint(Servlets.QUERY_SERVICE);
     }
 
-    private void validateWarnings(List<String> actualWarnings, List<String> expectedWarn, BitSet expectedWarnings,
-            boolean expectedSourceLoc) throws Exception {
+    protected void validateWarning(ExtractedResult result, TestCaseContext testCaseCtx, CompilationUnit cUnit,
+            File testFile, BitSet expectedWarnings) throws Exception {
+        if (testCaseCtx.getTestCase().isCheckWarnings()) {
+            boolean expectedSourceLoc = testCaseCtx.isSourceLocationExpected(cUnit);
+            validateWarnings(result.getWarnings(), cUnit.getExpectedWarn(), expectedWarnings, expectedSourceLoc,
+                    testFile);
+        }
+    }
+
+    protected void validateWarnings(List<String> actualWarnings, List<String> expectedWarn, BitSet expectedWarnings,
+            boolean expectedSourceLoc, File testFile) throws Exception {
         if (actualWarnings != null) {
             for (String actualWarn : actualWarnings) {
                 OptionalInt first = IntStream.range(0, expectedWarn.size())
@@ -2444,6 +2600,7 @@ public class TestExecutor {
                 }
                 int warningIndex = first.getAsInt();
                 expectedWarnings.clear(warningIndex);
+                LOGGER.info("testFile {} issued an (expected) warning", testFile);
             }
         }
     }

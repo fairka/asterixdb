@@ -22,9 +22,9 @@ import static org.apache.hyracks.control.common.config.OptionTypes.DOUBLE;
 import static org.apache.hyracks.control.common.config.OptionTypes.INTEGER;
 import static org.apache.hyracks.control.common.config.OptionTypes.INTEGER_BYTE_UNIT;
 import static org.apache.hyracks.control.common.config.OptionTypes.LONG_BYTE_UNIT;
+import static org.apache.hyracks.control.common.config.OptionTypes.NONNEGATIVE_INTEGER;
 import static org.apache.hyracks.control.common.config.OptionTypes.POSITIVE_INTEGER;
 import static org.apache.hyracks.control.common.config.OptionTypes.STRING;
-import static org.apache.hyracks.control.common.config.OptionTypes.UNSIGNED_INTEGER;
 import static org.apache.hyracks.util.StorageUtil.StorageUnit.KILOBYTE;
 import static org.apache.hyracks.util.StorageUtil.StorageUnit.MEGABYTE;
 
@@ -43,9 +43,9 @@ public class StorageProperties extends AbstractProperties {
     public enum Option implements IOption {
         STORAGE_BUFFERCACHE_PAGESIZE(INTEGER_BYTE_UNIT, StorageUtil.getIntSizeInBytes(128, KILOBYTE)),
         // By default, uses 1/4 of the maximum heap size for read cache, i.e., disk buffer cache.
-        STORAGE_BUFFERCACHE_SIZE(LONG_BYTE_UNIT, Runtime.getRuntime().maxMemory() / 4),
-        STORAGE_BUFFERCACHE_MAXOPENFILES(UNSIGNED_INTEGER, Integer.MAX_VALUE),
-        STORAGE_MEMORYCOMPONENT_GLOBALBUDGET(LONG_BYTE_UNIT, Runtime.getRuntime().maxMemory() / 4),
+        STORAGE_BUFFERCACHE_SIZE(LONG_BYTE_UNIT, MAX_HEAP_BYTES / 4),
+        STORAGE_BUFFERCACHE_MAXOPENFILES(NONNEGATIVE_INTEGER, Integer.MAX_VALUE),
+        STORAGE_MEMORYCOMPONENT_GLOBALBUDGET(LONG_BYTE_UNIT, MAX_HEAP_BYTES / 4),
         STORAGE_MEMORYCOMPONENT_PAGESIZE(INTEGER_BYTE_UNIT, StorageUtil.getIntSizeInBytes(128, KILOBYTE)),
         STORAGE_MEMORYCOMPONENT_NUMCOMPONENTS(POSITIVE_INTEGER, 2),
         STORAGE_MEMORYCOMPONENT_FLUSH_THRESHOLD(DOUBLE, 0.9d),
@@ -54,7 +54,8 @@ public class StorageProperties extends AbstractProperties {
         STORAGE_LSM_BLOOMFILTER_FALSEPOSITIVERATE(DOUBLE, 0.01d),
         STORAGE_COMPRESSION_BLOCK(STRING, "snappy"),
         STORAGE_DISK_FORCE_BYTES(LONG_BYTE_UNIT, StorageUtil.getLongSizeInBytes(16, MEGABYTE)),
-        STORAGE_IO_SCHEDULER(STRING, "greedy");
+        STORAGE_IO_SCHEDULER(STRING, "greedy"),
+        STORAGE_WRITE_RATE_LIMIT(LONG_BYTE_UNIT, 0l);
 
         private final IOptionType interpreter;
         private final Object defaultValue;
@@ -104,6 +105,8 @@ public class StorageProperties extends AbstractProperties {
                     return "The maximum acceptable false positive rate for bloom filters associated with LSM indexes";
                 case STORAGE_COMPRESSION_BLOCK:
                     return "The default compression scheme for the storage";
+                case STORAGE_WRITE_RATE_LIMIT:
+                    return "The maximum disk write rate (bytes/s) for each storage partition (disabled if the provided value <= 0)";
                 case STORAGE_DISK_FORCE_BYTES:
                     return "The number of bytes before each disk force (fsync)";
                 case STORAGE_IO_SCHEDULER:
@@ -129,6 +132,7 @@ public class StorageProperties extends AbstractProperties {
         }
     }
 
+    public static final long MAX_HEAP_BYTES = Runtime.getRuntime().maxMemory();
     private static final int SYSTEM_RESERVED_DATASETS = 0;
 
     public StorageProperties(PropertiesAccessor accessor) {
@@ -181,13 +185,12 @@ public class StorageProperties extends AbstractProperties {
     }
 
     public long getJobExecutionMemoryBudget() {
-        final long jobExecutionMemory =
-                Runtime.getRuntime().maxMemory() - getBufferCacheSize() - getMemoryComponentGlobalBudget();
+        final long jobExecutionMemory = MAX_HEAP_BYTES - getBufferCacheSize() - getMemoryComponentGlobalBudget();
         if (jobExecutionMemory <= 0) {
             final String msg = String.format(
                     "Invalid node memory configuration, more memory budgeted than available in JVM. Runtime max memory:"
                             + " (%d), Buffer cache memory (%d), memory component global budget (%d)",
-                    Runtime.getRuntime().maxMemory(), getBufferCacheSize(), getMemoryComponentGlobalBudget());
+                    MAX_HEAP_BYTES, getBufferCacheSize(), getMemoryComponentGlobalBudget());
             throw new IllegalStateException(msg);
         }
         return jobExecutionMemory;
@@ -207,6 +210,10 @@ public class StorageProperties extends AbstractProperties {
 
     protected int geSystemReservedDatasets() {
         return SYSTEM_RESERVED_DATASETS;
+    }
+
+    public long getWriteRateLimit() {
+        return accessor.getLong(Option.STORAGE_WRITE_RATE_LIMIT);
     }
 
     public int getDiskForcePages() {

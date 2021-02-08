@@ -18,13 +18,12 @@
  */
 package org.apache.asterix.optimizer.rules;
 
+import java.util.ArrayList;
 import java.util.Collections;
-import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
-import java.util.Map;
 
-import org.apache.asterix.common.annotations.SkipSecondaryIndexSearchExpressionAnnotation;
+import org.apache.asterix.common.annotations.IndexedNLJoinExpressionAnnotation;
 import org.apache.asterix.metadata.declared.MetadataProvider;
 import org.apache.asterix.om.base.AOrderedList;
 import org.apache.asterix.om.constants.AsterixConstantValue;
@@ -44,7 +43,6 @@ import org.apache.hyracks.algebricks.core.algebra.expressions.AbstractFunctionCa
 import org.apache.hyracks.algebricks.core.algebra.expressions.BroadcastExpressionAnnotation;
 import org.apache.hyracks.algebricks.core.algebra.expressions.ConstantExpression;
 import org.apache.hyracks.algebricks.core.algebra.expressions.IExpressionAnnotation;
-import org.apache.hyracks.algebricks.core.algebra.expressions.IndexedNLJoinExpressionAnnotation;
 import org.apache.hyracks.algebricks.core.algebra.expressions.ScalarFunctionCallExpression;
 import org.apache.hyracks.algebricks.core.algebra.expressions.UnnestingFunctionCallExpression;
 import org.apache.hyracks.algebricks.core.algebra.expressions.VariableReferenceExpression;
@@ -93,8 +91,8 @@ public class DisjunctivePredicateToJoinRule implements IAlgebraicRewriteRule {
 
         VariableReferenceExpression varEx = null;
         IAType valType = null;
-        HashSet<AsterixConstantValue> values = new HashSet<AsterixConstantValue>();
-        Map<Object, IExpressionAnnotation> allAnnotations = Collections.emptyMap();
+        HashSet<AsterixConstantValue> values = new HashSet<>();
+        List<IExpressionAnnotation> allAnnotations = Collections.emptyList();
 
         for (Mutable<ILogicalExpression> arg : args) {
             AbstractFunctionCallExpression fctCall;
@@ -134,11 +132,11 @@ public class DisjunctivePredicateToJoinRule implements IAlgebraicRewriteRule {
             if (!(haveVar && haveConst)) {
                 return false;
             }
-            if (!fctCall.getAnnotations().isEmpty()) {
+            if (fctCall.hasAnnotations()) {
                 if (allAnnotations.isEmpty()) {
-                    allAnnotations = new HashMap<>();
+                    allAnnotations = new ArrayList<>();
                 }
-                allAnnotations.putAll(fctCall.getAnnotations());
+                fctCall.copyAnnotationsInto(allAnnotations);
             }
         }
 
@@ -171,14 +169,13 @@ public class DisjunctivePredicateToJoinRule implements IAlgebraicRewriteRule {
         scanVarRef.setSourceLocation(sourceLoc);
         eqExp.getArguments().add(new MutableObject<>(scanVarRef));
         eqExp.getArguments().add(new MutableObject<>(varEx.cloneExpression()));
-        if (!allAnnotations.containsKey(SkipSecondaryIndexSearchExpressionAnnotation.INSTANCE)) {
-            eqExp.getAnnotations().put(IndexedNLJoinExpressionAnnotation.INSTANCE,
-                    IndexedNLJoinExpressionAnnotation.INSTANCE);
-        }
-        BroadcastExpressionAnnotation bcast = new BroadcastExpressionAnnotation();
-        bcast.setObject(BroadcastExpressionAnnotation.BroadcastSide.LEFT); // Broadcast the OR predicates branch.
-        eqExp.getAnnotations().put(bcast, bcast);
-        eqExp.getAnnotations().putAll(allAnnotations);
+        // if allAnnotations contains SkipSecondaryIndexSearchExpressionAnnotation then it'll take precedence over
+        // IndexedNLJoinExpressionAnnotation and index will be skipped anyway
+        eqExp.putAnnotation(IndexedNLJoinExpressionAnnotation.INSTANCE_ANY_INDEX);
+        BroadcastExpressionAnnotation bcast =
+                new BroadcastExpressionAnnotation(BroadcastExpressionAnnotation.BroadcastSide.LEFT); // Broadcast the OR predicates branch.
+        eqExp.putAnnotation(bcast);
+        eqExp.putAnnotations(allAnnotations);
 
         InnerJoinOperator jOp = new InnerJoinOperator(new MutableObject<>(eqExp));
         jOp.setSourceLocation(sourceLoc);

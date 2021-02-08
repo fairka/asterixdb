@@ -26,6 +26,7 @@ import org.apache.hyracks.api.dataflow.value.IBinaryComparatorFactory;
 import org.apache.hyracks.api.dataflow.value.INormalizedKeyComputer;
 import org.apache.hyracks.api.dataflow.value.INormalizedKeyComputerFactory;
 import org.apache.hyracks.api.dataflow.value.RecordDescriptor;
+import org.apache.hyracks.api.exceptions.ErrorCode;
 import org.apache.hyracks.api.exceptions.HyracksDataException;
 import org.apache.hyracks.api.io.FileReference;
 import org.apache.hyracks.dataflow.common.io.RunFileWriter;
@@ -38,11 +39,17 @@ import org.apache.logging.log4j.Logger;
 
 public class ExternalGroupBuildOperatorNodePushable extends AbstractUnaryInputSinkOperatorNodePushable
         implements IRunFileWriterGenerator {
+    /**
+     * Use a random seed to avoid hash collision with the hash exchange operator.
+     * See https://issues.apache.org/jira/browse/ASTERIXDB-2783 for more details.
+     */
+    private static final int INIT_SEED = 573275022;
 
     private static final Logger LOGGER = LogManager.getLogger();
     private final IHyracksTaskContext ctx;
     private final Object stateId;
-    private final int[] keyFields;
+    private final int[] gbyFields;
+    private final int[] fdFields; // nullable
     private final IBinaryComparator[] comparators;
     private final INormalizedKeyComputer firstNormalizerComputer;
     private final IAggregatorDescriptorFactory aggregatorFactory;
@@ -58,15 +65,19 @@ public class ExternalGroupBuildOperatorNodePushable extends AbstractUnaryInputSi
     private boolean isFailed = false;
 
     public ExternalGroupBuildOperatorNodePushable(IHyracksTaskContext ctx, Object stateId, int tableSize, long fileSize,
-            int[] keyFields, int framesLimit, IBinaryComparatorFactory[] comparatorFactories,
+            int[] gbyFields, int[] fdFields, int framesLimit, IBinaryComparatorFactory[] comparatorFactories,
             INormalizedKeyComputerFactory firstNormalizerFactory, IAggregatorDescriptorFactory aggregatorFactory,
             RecordDescriptor inRecordDescriptor, RecordDescriptor outRecordDescriptor,
-            ISpillableTableFactory spillableTableFactory) {
+            ISpillableTableFactory spillableTableFactory) throws HyracksDataException {
+        if (comparatorFactories.length != gbyFields.length) {
+            throw HyracksDataException.create(ErrorCode.ILLEGAL_STATE, "mismatch in group by fields and comparators");
+        }
         this.ctx = ctx;
         this.stateId = stateId;
         this.framesLimit = framesLimit;
         this.aggregatorFactory = aggregatorFactory;
-        this.keyFields = keyFields;
+        this.gbyFields = gbyFields;
+        this.fdFields = fdFields;
         this.comparators = new IBinaryComparator[comparatorFactories.length];
         for (int i = 0; i < comparatorFactories.length; ++i) {
             comparators[i] = comparatorFactories[i].createBinaryComparator();
@@ -83,9 +94,9 @@ public class ExternalGroupBuildOperatorNodePushable extends AbstractUnaryInputSi
     @Override
     public void open() throws HyracksDataException {
         state = new ExternalGroupState(ctx.getJobletContext().getJobId(), stateId);
-        ISpillableTable table = spillableTableFactory.buildSpillableTable(ctx, tableSize, fileSize, keyFields,
+        ISpillableTable table = spillableTableFactory.buildSpillableTable(ctx, tableSize, fileSize, gbyFields, fdFields,
                 comparators, firstNormalizerComputer, aggregatorFactory, inRecordDescriptor, outRecordDescriptor,
-                framesLimit, 0);
+                framesLimit, INIT_SEED);
         RunFileWriter[] runFileWriters = new RunFileWriter[table.getNumPartitions()];
         this.externalGroupBy = new ExternalHashGroupBy(this, table, runFileWriters, inRecordDescriptor);
 

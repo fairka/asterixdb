@@ -22,10 +22,10 @@ import static org.apache.hyracks.control.common.config.OptionTypes.BOOLEAN;
 import static org.apache.hyracks.control.common.config.OptionTypes.INTEGER;
 import static org.apache.hyracks.control.common.config.OptionTypes.INTEGER_BYTE_UNIT;
 import static org.apache.hyracks.control.common.config.OptionTypes.LONG;
+import static org.apache.hyracks.control.common.config.OptionTypes.NONNEGATIVE_INTEGER;
 import static org.apache.hyracks.control.common.config.OptionTypes.POSITIVE_INTEGER;
 import static org.apache.hyracks.control.common.config.OptionTypes.STRING;
 import static org.apache.hyracks.control.common.config.OptionTypes.STRING_ARRAY;
-import static org.apache.hyracks.control.common.config.OptionTypes.UNSIGNED_INTEGER;
 
 import java.net.InetAddress;
 import java.util.ArrayList;
@@ -37,6 +37,7 @@ import org.apache.hyracks.api.config.IOption;
 import org.apache.hyracks.api.config.IOptionType;
 import org.apache.hyracks.api.config.Section;
 import org.apache.hyracks.control.common.config.ConfigManager;
+import org.apache.hyracks.control.common.config.OptionTypes;
 import org.apache.hyracks.util.file.FileUtil;
 
 public class NCConfig extends ControllerConfig {
@@ -46,31 +47,31 @@ public class NCConfig extends ControllerConfig {
         ADDRESS(STRING, InetAddress.getLoopbackAddress().getHostAddress()),
         PUBLIC_ADDRESS(STRING, ADDRESS),
         CLUSTER_LISTEN_ADDRESS(STRING, ADDRESS),
-        CLUSTER_LISTEN_PORT(UNSIGNED_INTEGER, 0),
+        CLUSTER_LISTEN_PORT(NONNEGATIVE_INTEGER, 0),
         NCSERVICE_ADDRESS(STRING, PUBLIC_ADDRESS),
         NCSERVICE_PORT(INTEGER, 9090),
         CLUSTER_ADDRESS(STRING, (String) null),
-        CLUSTER_PORT(UNSIGNED_INTEGER, 1099),
+        CLUSTER_PORT(NONNEGATIVE_INTEGER, 1099),
         CLUSTER_PUBLIC_ADDRESS(STRING, PUBLIC_ADDRESS),
-        CLUSTER_PUBLIC_PORT(UNSIGNED_INTEGER, CLUSTER_LISTEN_PORT),
+        CLUSTER_PUBLIC_PORT(NONNEGATIVE_INTEGER, CLUSTER_LISTEN_PORT),
         NODE_ID(STRING, (String) null),
         DATA_LISTEN_ADDRESS(STRING, ADDRESS),
-        DATA_LISTEN_PORT(UNSIGNED_INTEGER, 0),
+        DATA_LISTEN_PORT(NONNEGATIVE_INTEGER, 0),
         DATA_PUBLIC_ADDRESS(STRING, PUBLIC_ADDRESS),
-        DATA_PUBLIC_PORT(UNSIGNED_INTEGER, DATA_LISTEN_PORT),
+        DATA_PUBLIC_PORT(NONNEGATIVE_INTEGER, DATA_LISTEN_PORT),
         RESULT_LISTEN_ADDRESS(STRING, ADDRESS),
-        RESULT_LISTEN_PORT(UNSIGNED_INTEGER, 0),
+        RESULT_LISTEN_PORT(NONNEGATIVE_INTEGER, 0),
         RESULT_PUBLIC_ADDRESS(STRING, PUBLIC_ADDRESS),
-        RESULT_PUBLIC_PORT(UNSIGNED_INTEGER, RESULT_LISTEN_PORT),
+        RESULT_PUBLIC_PORT(NONNEGATIVE_INTEGER, RESULT_LISTEN_PORT),
         MESSAGING_LISTEN_ADDRESS(STRING, ADDRESS),
-        MESSAGING_LISTEN_PORT(UNSIGNED_INTEGER, 0),
+        MESSAGING_LISTEN_PORT(NONNEGATIVE_INTEGER, 0),
         MESSAGING_PUBLIC_ADDRESS(STRING, PUBLIC_ADDRESS),
-        MESSAGING_PUBLIC_PORT(UNSIGNED_INTEGER, MESSAGING_LISTEN_PORT),
+        MESSAGING_PUBLIC_PORT(NONNEGATIVE_INTEGER, MESSAGING_LISTEN_PORT),
         REPLICATION_LISTEN_ADDRESS(STRING, ADDRESS),
-        REPLICATION_LISTEN_PORT(UNSIGNED_INTEGER, 2000),
+        REPLICATION_LISTEN_PORT(NONNEGATIVE_INTEGER, 2000),
         REPLICATION_PUBLIC_ADDRESS(STRING, PUBLIC_ADDRESS),
-        REPLICATION_PUBLIC_PORT(UNSIGNED_INTEGER, REPLICATION_LISTEN_PORT),
-        CLUSTER_CONNECT_RETRIES(UNSIGNED_INTEGER, 5),
+        REPLICATION_PUBLIC_PORT(NONNEGATIVE_INTEGER, REPLICATION_LISTEN_PORT),
+        CLUSTER_CONNECT_RETRIES(NONNEGATIVE_INTEGER, 5),
         IODEVICES(
                 STRING_ARRAY,
                 appConfig -> new String[] {
@@ -93,9 +94,14 @@ public class NCConfig extends ControllerConfig {
         IO_WORKERS_PER_PARTITION(POSITIVE_INTEGER, 2),
         IO_QUEUE_SIZE(POSITIVE_INTEGER, 10),
         PYTHON_CMD(STRING, (String) null),
-        PYTHON_ADDITIONAL_PACKAGES(STRING, (String) null),
+        PYTHON_ADDITIONAL_PACKAGES(STRING_ARRAY, new String[0]),
         PYTHON_USE_BUNDLED_MSGPACK(BOOLEAN, true),
-        PYTHON_ARGS(STRING_ARRAY, (String[]) null);
+        PYTHON_ARGS(STRING_ARRAY, (String[]) null),
+        CREDENTIAL_FILE(
+                OptionTypes.STRING,
+                (Function<IApplicationConfig, String>) appConfig -> FileUtil
+                        .joinPath(appConfig.getString(ControllerConfig.Option.DEFAULT_DIR), "passwd"),
+                ControllerConfig.Option.DEFAULT_DIR.cmdline() + "/passwd");
 
         private final IOptionType parser;
         private final String defaultValueDescription;
@@ -236,6 +242,8 @@ public class NCConfig extends ControllerConfig {
                     return "True to include bundled msgpack on Python sys.path, false to use system-provided msgpack";
                 case PYTHON_ARGS:
                     return "Python args to pass to Python interpreter";
+                case CREDENTIAL_FILE:
+                    return "Path to HTTP basic credentials";
                 default:
                     throw new IllegalStateException("Not yet implemented: " + this);
             }
@@ -605,5 +613,9 @@ public class NCConfig extends ControllerConfig {
 
     public int getIOQueueSize() {
         return appConfig.getInt(Option.IO_QUEUE_SIZE);
+    }
+
+    public String getCredentialFilePath() {
+        return getAppConfig().getString(Option.CREDENTIAL_FILE);
     }
 }

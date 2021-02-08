@@ -41,6 +41,9 @@ public class PhysicalOptimizationConfig {
     private static final String SORT_SAMPLES = "SORT_SAMPLES";
     private static final String INDEX_ONLY = "INDEX_ONLY";
     private static final String SANITY_CHECK = "SANITY_CHECK";
+    private static final String EXTERNAL_FIELD_PUSHDOWN = "EXTERNAL_FIELD_PUSHDOWN";
+    private static final String SUBPLAN_MERGE = "SUBPLAN_MERGE";
+    private static final String SUBPLAN_NESTEDPUSHDOWN = "SUBPLAN_NESTEDPUSHDOWN";
 
     private Properties properties = new Properties();
 
@@ -159,7 +162,7 @@ public class PhysicalOptimizationConfig {
     }
 
     public boolean getSortParallel() {
-        return getBoolean(SORT_PARALLEL, AlgebricksConfig.SORT_PARALLEL);
+        return getBoolean(SORT_PARALLEL, AlgebricksConfig.SORT_PARALLEL_DEFAULT);
     }
 
     public void setSortParallel(boolean sortParallel) {
@@ -167,7 +170,7 @@ public class PhysicalOptimizationConfig {
     }
 
     public int getSortSamples() {
-        return getInt(SORT_SAMPLES, AlgebricksConfig.SORT_SAMPLES);
+        return getInt(SORT_SAMPLES, AlgebricksConfig.SORT_SAMPLES_DEFAULT);
     }
 
     public void setSortSamples(int sortSamples) {
@@ -188,6 +191,30 @@ public class PhysicalOptimizationConfig {
 
     public boolean isSanityCheckEnabled() {
         return getBoolean(SANITY_CHECK, AlgebricksConfig.SANITYCHECK_DEFAULT);
+    }
+
+    public boolean isExternalFieldPushdown() {
+        return getBoolean(EXTERNAL_FIELD_PUSHDOWN, AlgebricksConfig.EXTERNAL_FIELD_PUSHDOWN_DEFAULT);
+    }
+
+    public void setExternalFieldPushdown(boolean externalFieldPushDown) {
+        setBoolean(EXTERNAL_FIELD_PUSHDOWN, externalFieldPushDown);
+    }
+
+    public boolean getSubplanMerge() {
+        return getBoolean(SUBPLAN_MERGE, AlgebricksConfig.SUBPLAN_MERGE_DEFAULT);
+    }
+
+    public void setSubplanMerge(boolean value) {
+        setBoolean(SUBPLAN_MERGE, value);
+    }
+
+    public boolean getSubplanNestedPushdown() {
+        return getBoolean(SUBPLAN_NESTEDPUSHDOWN, AlgebricksConfig.SUBPLAN_NESTEDPUSHDOWN_DEFAULT);
+    }
+
+    public void setSubplanNestedPushdown(boolean value) {
+        setBoolean(SUBPLAN_NESTEDPUSHDOWN, value);
     }
 
     private void setInt(String property, int value) {
