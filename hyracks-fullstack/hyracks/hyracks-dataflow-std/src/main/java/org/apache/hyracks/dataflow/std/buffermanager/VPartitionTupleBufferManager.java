@@ -45,12 +45,12 @@ public class VPartitionTupleBufferManager implements IPartitionedTupleBufferMana
         }
     };
 
-    private IDeallocatableFramePool framePool;
-    private IFrameBufferManager[] partitionArray;
-    private int[] numTuples;
+    protected IDeallocatableFramePool framePool;
+    protected IFrameBufferManager[] partitionArray;
+    protected int[] numTuples;
     private final FixedSizeFrame appendFrame;
     private final FixedSizeFrameTupleAppender appender;
-    private BufferInfo tempInfo;
+    protected BufferInfo tempInfo;
     private IPartitionedMemoryConstrain constrain;
 
     // In case where a frame pool is shared by one or more buffer manager(s), it can be provided from the caller.
@@ -180,19 +180,19 @@ public class VPartitionTupleBufferManager implements IPartitionedTupleBufferMana
         return FrameHelper.calcRequiredSpace(0, size);
     }
 
-    private int makeGroupFrameId(int partition, int fid) {
+    protected int makeGroupFrameId(int partition, int fid) {
         return fid * getNumPartitions() + partition;
     }
 
-    private int parsePartitionId(int externalFrameId) {
+    protected int parsePartitionId(int externalFrameId) {
         return externalFrameId % getNumPartitions();
     }
 
-    private int parseFrameIdInPartition(int externalFrameId) {
+    protected int parseFrameIdInPartition(int externalFrameId) {
         return externalFrameId / getNumPartitions();
     }
 
-    private int createNewBuffer(int partition, int size) throws HyracksDataException {
+    protected int createNewBuffer(int partition, int size) throws HyracksDataException {
         ByteBuffer newBuffer = requestNewBufferFromPool(size);
         if (newBuffer == null) {
             return -1;
@@ -266,12 +266,12 @@ public class VPartitionTupleBufferManager implements IPartitionedTupleBufferMana
             FrameTupleAccessor innerAccessor = new FrameTupleAccessor(recordDescriptor);
 
             @Override
-            IFrameTupleAccessor getInnerAccessor() {
+            protected IFrameTupleAccessor getInnerAccessor() {
                 return innerAccessor;
             }
 
             @Override
-            void resetInnerAccessor(TuplePointer tuplePointer) {
+            protected void resetInnerAccessor(TuplePointer tuplePointer) {
                 partitionArray[parsePartitionId(tuplePointer.getFrameIndex())]
                         .getFrame(parseFrameIdInPartition(tuplePointer.getFrameIndex()), tempInfo);
                 innerAccessor.reset(tempInfo.getBuffer(), tempInfo.getStartOffset(), tempInfo.getLength());

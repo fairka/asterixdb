@@ -99,4 +99,8 @@ public interface IIntervalJoinUtil {
     boolean checkToLoadNextProbeTuple(IFrameTupleAccessor buildAccessor, int buildTupleIndex,
             IFrameTupleAccessor probeAccessor, int probeTupleIndex);
 
+    boolean checkToRemoveLeftActive();
+
+    boolean checkToRemoveRightActive();
+
 }

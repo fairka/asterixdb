@@ -90,4 +90,14 @@ public abstract class AbstractIntervalJoinUtil implements IIntervalJoinUtil {
         long probeStart = IntervalJoinUtil.getIntervalStart(probeAccessor, probeTupleIndex, idProbe);
         return buildEnd > probeStart;
     }
+
+    @Override
+    public boolean checkToRemoveLeftActive() {
+        return true;
+    }
+
+    @Override
+    public boolean checkToRemoveRightActive() {
+        return true;
+    }
 }

@@ -20,33 +20,51 @@
 package org.apache.hyracks.dataflow.std.buffermanager;
 
 import java.nio.ByteBuffer;
-import java.util.List;
 
 import org.apache.hyracks.api.comm.IFrameTupleAccessor;
-import org.apache.hyracks.api.dataflow.value.RecordDescriptor;
-import org.apache.hyracks.dataflow.common.comm.io.FrameTupleAccessor;
 import org.apache.hyracks.dataflow.std.structures.TuplePointer;
 
-/**
- * tuple accessor class for a frame in a frame list using a tuple pointer.
- */
-public class TupleInFrameListAccessor extends AbstractTuplePointerAccessor {
+// TODO determine correct interface.
+public interface ITupleAccessor extends IFrameTupleAccessor {
+    int getTupleStartOffset();
 
-    private IFrameTupleAccessor bufferAccessor;
-    private List<ByteBuffer> bufferFrames;
+    int getTupleEndOffset();
 
-    public TupleInFrameListAccessor(RecordDescriptor rd, List<ByteBuffer> bufferFrames) {
-        bufferAccessor = new FrameTupleAccessor(rd);
-        this.bufferFrames = bufferFrames;
-    }
+    int getTupleLength();
 
-    @Override
-    protected IFrameTupleAccessor getInnerAccessor() {
-        return bufferAccessor;
-    }
+    int getAbsFieldStartOffset(int fieldId);
+
+    int getFieldLength(int fieldId);
 
     @Override
-    protected void resetInnerAccessor(TuplePointer tuplePointer) {
-        bufferAccessor.reset(bufferFrames.get(tuplePointer.getFrameIndex()));
-    }
+    int getFieldCount();
+
+    @Override
+    int getFieldSlotsLength();
+
+    int getFieldEndOffset(int fieldId);
+
+    int getFieldStartOffset(int fieldId);
+
+    void reset(TuplePointer tuplePointer);
+
+    @Override
+    void reset(ByteBuffer buffer);
+
+    int getTupleId();
+
+    void setTupleId(int tupleId);
+
+    void getTuplePointer(TuplePointer tp);
+
+    /**
+     * Only reset the iterator.
+     */
+    void reset();
+
+    boolean hasNext();
+
+    void next();
+
+    boolean exists();
 }

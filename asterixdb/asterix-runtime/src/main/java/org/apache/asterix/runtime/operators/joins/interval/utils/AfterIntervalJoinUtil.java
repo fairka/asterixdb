@@ -30,6 +30,11 @@ public class AfterIntervalJoinUtil extends AbstractIntervalJoinUtil {
     }
 
     @Override
+    public boolean checkToRemoveRightActive() {
+        return false;
+    }
+
+    @Override
     public boolean checkToSaveInMemory(IFrameTupleAccessor buildAccessor, int buildTupleIndex,
             IFrameTupleAccessor probeAccessor, int probeTupleIndex) {
         return true;

@@ -38,6 +38,11 @@ public class BeforeIntervalJoinUtil extends AbstractIntervalJoinUtil {
     }
 
     @Override
+    public boolean checkToRemoveLeftActive() {
+        return false;
+    }
+
+    @Override
     public boolean checkToRemoveInMemory(IFrameTupleAccessor buildAccessor, int buildTupleIndex,
             IFrameTupleAccessor probeAccessor, int probeTupleIndex) {
         return !checkToSaveInMemory(buildAccessor, buildTupleIndex, probeAccessor, probeTupleIndex);

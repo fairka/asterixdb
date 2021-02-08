@@ -174,12 +174,12 @@ public class VariableDeletableTupleMemoryManager implements IDeletableTupleBuffe
                     new DeletableFrameTupleAppender(recordDescriptor);
 
             @Override
-            IFrameTupleAccessor getInnerAccessor() {
+            protected IFrameTupleAccessor getInnerAccessor() {
                 return bufferAccessor;
             }
 
             @Override
-            void resetInnerAccessor(TuplePointer tuplePointer) {
+            protected void resetInnerAccessor(TuplePointer tuplePointer) {
                 bufferAccessor.reset(frames.get(tuplePointer.getFrameIndex()));
             }
         };

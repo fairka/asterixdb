@@ -24,38 +24,40 @@ import java.nio.ByteBuffer;
 import org.apache.hyracks.api.comm.IFrameTupleAccessor;
 import org.apache.hyracks.dataflow.std.structures.TuplePointer;
 
-public abstract class AbstractTuplePointerAccessor implements ITuplePointerAccessor {
+public abstract class AbstractTupleAccessor implements ITupleAccessor {
+    public static final int UNSET = -2;
+    public static final int INITIALIZED = -1;
 
-    protected int tid = -1;
+    protected int tupleId = UNSET;
+
+    protected int frameId;
 
     protected abstract IFrameTupleAccessor getInnerAccessor();
 
-    protected abstract void resetInnerAccessor(TuplePointer tuplePointer);
+    protected abstract void resetInnerAccessor(int frameId);
 
-    @Override
-    public void reset(TuplePointer tuplePointer) {
-        resetInnerAccessor(tuplePointer);
-        tid = tuplePointer.getTupleIndex();
-    }
+    protected abstract void resetInnerAccessor(TuplePointer tp);
+
+    protected abstract int getFrameCount();
 
     @Override
     public int getTupleStartOffset() {
-        return getTupleStartOffset(tid);
+        return getTupleStartOffset(tupleId);
     }
 
     @Override
     public int getTupleLength() {
-        return getTupleLength(tid);
+        return getTupleLength(tupleId);
     }
 
     @Override
     public int getAbsFieldStartOffset(int fieldId) {
-        return getAbsoluteFieldStartOffset(tid, fieldId);
+        return getAbsoluteFieldStartOffset(tupleId, fieldId);
     }
 
     @Override
     public int getFieldLength(int fieldId) {
-        return getFieldLength(tid, fieldId);
+        return getFieldLength(tupleId, fieldId);
     }
 
     @Override
@@ -73,52 +75,38 @@ public abstract class AbstractTuplePointerAccessor implements ITuplePointerAcces
         return getInnerAccessor().getFieldSlotsLength();
     }
 
-    protected void checkTupleIndex(int tupleIndex) {
-        if (tupleIndex != tid) {
-            throw new IllegalArgumentException(
-                    "ITupleBufferAccessor can not access the different tid other than the one given in reset function");
-        }
-    }
-
     @Override
     public int getFieldEndOffset(int tupleIndex, int fIdx) {
-        checkTupleIndex(tupleIndex);
-        return getInnerAccessor().getFieldEndOffset(tid, fIdx);
+        return getInnerAccessor().getFieldEndOffset(tupleId, fIdx);
     }
 
     @Override
     public int getFieldStartOffset(int tupleIndex, int fIdx) {
-        checkTupleIndex(tupleIndex);
         return getInnerAccessor().getFieldStartOffset(tupleIndex, fIdx);
     }
 
     @Override
     public int getFieldLength(int tupleIndex, int fIdx) {
-        checkTupleIndex(tupleIndex);
         return getInnerAccessor().getFieldLength(tupleIndex, fIdx);
     }
 
     @Override
     public int getTupleLength(int tupleIndex) {
-        checkTupleIndex(tupleIndex);
         return getInnerAccessor().getTupleLength(tupleIndex);
     }
 
     @Override
     public int getTupleEndOffset(int tupleIndex) {
-        checkTupleIndex(tupleIndex);
         return getInnerAccessor().getTupleEndOffset(tupleIndex);
     }
 
     @Override
     public int getTupleStartOffset(int tupleIndex) {
-        checkTupleIndex(tupleIndex);
         return getInnerAccessor().getTupleStartOffset(tupleIndex);
     }
 
     @Override
     public int getAbsoluteFieldStartOffset(int tupleIndex, int fIdx) {
-        checkTupleIndex(tupleIndex);
         return getInnerAccessor().getAbsoluteFieldStartOffset(tupleIndex, fIdx);
     }
 
@@ -128,7 +116,79 @@ public abstract class AbstractTuplePointerAccessor implements ITuplePointerAcces
     }
 
     @Override
+    public void reset(TuplePointer tuplePointer) {
+        resetInnerAccessor(tuplePointer.getFrameIndex());
+    }
+
+    @Override
     public void reset(ByteBuffer buffer) {
         throw new IllegalAccessError("Should never call this reset");
     }
+
+    @Override
+    public int getTupleEndOffset() {
+        return getInnerAccessor().getTupleEndOffset(tupleId);
+    }
+
+    @Override
+    public int getFieldEndOffset(int fieldId) {
+        return getInnerAccessor().getFieldEndOffset(tupleId, fieldId);
+    }
+
+    @Override
+    public int getFieldStartOffset(int fieldId) {
+        return getInnerAccessor().getFieldStartOffset(tupleId, fieldId);
+    }
+
+    @Override
+    public void getTuplePointer(TuplePointer tp) {
+        tp.reset(frameId, tupleId);
+    }
+
+    @Override
+    public int getTupleId() {
+        return tupleId;
+    }
+
+    @Override
+    public void setTupleId(int tupleId) {
+        this.tupleId = tupleId;
+    }
+
+    @Override
+    public void reset() {
+        tupleId = INITIALIZED;
+        frameId = 0;
+        resetInnerAccessor(frameId);
+    }
+
+    @Override
+    public boolean hasNext() {
+        if (tupleId + 1 < getTupleCount() || frameId + 1 < getFrameCount()) {
+            return true;
+        }
+        return false;
+    }
+
+    @Override
+    public boolean exists() {
+        return INITIALIZED < tupleId && getTupleEndOffset(tupleId) > 0 && tupleId < getTupleCount()
+                && frameId < getFrameCount();
+    }
+
+    @Override
+    public void next() {
+        // TODO Consider error messages
+        if (tupleId + 1 < getTupleCount()) {
+            ++tupleId;
+        } else if (frameId + 1 < getFrameCount()) {
+            ++frameId;
+            resetInnerAccessor(frameId);
+            tupleId = 0;
+        } else {
+            // Force exists to fail, by incrementing the tuple pointer.
+            ++tupleId;
+        }
+    }
+
 }
