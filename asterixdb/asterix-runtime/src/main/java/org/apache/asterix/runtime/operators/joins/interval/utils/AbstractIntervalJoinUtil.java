@@ -62,7 +62,7 @@ public abstract class AbstractIntervalJoinUtil implements IIntervalJoinUtil {
 
     @Override
     public boolean checkToSaveInResult(IFrameTupleAccessor buildAccessor, int buildTupleIndex,
-            IFrameTupleAccessor probeAccessor, int probeTupleIndex) throws HyracksDataException {
+            IFrameTupleAccessor probeAccessor, int probeTupleIndex, boolean reversed) throws HyracksDataException {
         IntervalJoinUtil.getIntervalPointable(buildAccessor, buildTupleIndex, idBuild, ipBuild);
         IntervalJoinUtil.getIntervalPointable(probeAccessor, probeTupleIndex, idProbe, ipProbe);
         return compareInterval(ipBuild, ipProbe);
@@ -92,12 +92,20 @@ public abstract class AbstractIntervalJoinUtil implements IIntervalJoinUtil {
     }
 
     @Override
-    public boolean checkToRemoveLeftActive() {
+    public boolean checkToRemoveBuildActive() {
         return true;
     }
 
     @Override
-    public boolean checkToRemoveRightActive() {
+    public boolean checkToRemoveProbeActive() {
         return true;
+    }
+
+    /**
+     * Left (first argument) interval starts after the Right (second argument) interval ends.
+     */
+    @Override
+    public boolean checkToRemoveInMemory(long start0, long start1) {
+        return start0 > start1;
     }
 }

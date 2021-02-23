@@ -38,7 +38,7 @@ public class BeforeIntervalJoinUtil extends AbstractIntervalJoinUtil {
     }
 
     @Override
-    public boolean checkToRemoveLeftActive() {
+    public boolean checkToRemoveBuildActive() {
         return false;
     }
 

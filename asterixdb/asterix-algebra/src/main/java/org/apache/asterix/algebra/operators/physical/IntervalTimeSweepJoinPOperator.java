@@ -23,8 +23,8 @@ import java.util.List;
 import java.util.logging.Logger;
 
 import org.apache.asterix.optimizer.rules.util.IntervalPartitions;
+import org.apache.asterix.runtime.operators.joins.interval.TimeSweep.IntervalTimeSweepJoinOperatorDescriptor;
 import org.apache.asterix.runtime.operators.joins.interval.utils.IIntervalJoinUtilFactory;
-import org.apache.asterix.runtime.operators.joins.interval.TimeSweep.IntervalIndexJoinOperatorDescriptor;
 import org.apache.hyracks.algebricks.common.exceptions.AlgebricksException;
 import org.apache.hyracks.algebricks.core.algebra.base.IHyracksJobBuilder;
 import org.apache.hyracks.algebricks.core.algebra.base.ILogicalOperator;
@@ -51,7 +51,7 @@ import org.apache.hyracks.api.dataflow.IOperatorDescriptor;
 import org.apache.hyracks.api.dataflow.value.RecordDescriptor;
 import org.apache.hyracks.api.job.IOperatorDescriptorRegistry;
 
-public class IntervalIndexJoinPOperator extends AbstractJoinPOperator {
+public class IntervalTimeSweepJoinPOperator extends AbstractJoinPOperator {
 
     private final List<LogicalVariable> keysLeftBranch;
     private final List<LogicalVariable> keysRightBranch;
@@ -59,9 +59,9 @@ public class IntervalIndexJoinPOperator extends AbstractJoinPOperator {
     private final IntervalPartitions intervalPartitions;
     private final int memSizeInFrames;
 
-    private static final Logger LOGGER = Logger.getLogger(IntervalIndexJoinPOperator.class.getName());
+    private static final Logger LOGGER = Logger.getLogger(IntervalTimeSweepJoinPOperator.class.getName());
 
-    public IntervalIndexJoinPOperator(JoinKind kind, JoinPartitioningType partitioningType,
+    public IntervalTimeSweepJoinPOperator(JoinKind kind, JoinPartitioningType partitioningType,
             List<LogicalVariable> sideLeftOfEqualities, List<LogicalVariable> sideRightOfEqualities,
             int memSizeInFrames, IIntervalJoinUtilFactory mjcf, IntervalPartitions intervalPartitions) {
         super(kind, partitioningType);
@@ -150,8 +150,8 @@ public class IntervalIndexJoinPOperator extends AbstractJoinPOperator {
         int[] keysRight = JobGenHelper.variablesToFieldIndexes(keysRightBranch, inputSchemas[1]);
 
         IOperatorDescriptorRegistry spec = builder.getJobSpec();
-        RecordDescriptor recordDescriptor = JobGenHelper.mkRecordDescriptor(context.getTypeEnvironment(op), opSchema,
-                context);
+        RecordDescriptor recordDescriptor =
+                JobGenHelper.mkRecordDescriptor(context.getTypeEnvironment(op), opSchema, context);
 
         IOperatorDescriptor opDesc = getIntervalOperatorDescriptor(keysLeft, keysRight, spec, recordDescriptor, mjcf);
         contributeOpDesc(builder, (AbstractLogicalOperator) op, opDesc);
@@ -164,6 +164,7 @@ public class IntervalIndexJoinPOperator extends AbstractJoinPOperator {
 
     IOperatorDescriptor getIntervalOperatorDescriptor(int[] keysLeft, int[] keysRight, IOperatorDescriptorRegistry spec,
             RecordDescriptor recordDescriptor, IIntervalJoinUtilFactory mjcf) {
-        return new IntervalIndexJoinOperatorDescriptor(spec, memSizeInFrames, keysLeft, keysRight, recordDescriptor, mjcf);
+        return new IntervalTimeSweepJoinOperatorDescriptor(spec, memSizeInFrames, keysLeft, keysRight, recordDescriptor,
+                mjcf);
     }
 }

@@ -64,7 +64,7 @@ public class IntervalSideTuple {
 
     public boolean compareJoin(IntervalSideTuple ist) throws HyracksDataException {
         return imjc.checkToSaveInResult(cursor.getAccessor(), cursor.getTupleId(), ist.cursor.getAccessor(),
-                ist.cursor.getTupleId());
+                ist.cursor.getTupleId(), false);
     }
 
     public boolean removeFromMemory(IntervalSideTuple ist) {

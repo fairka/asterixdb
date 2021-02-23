@@ -42,7 +42,7 @@ import org.apache.hyracks.dataflow.std.base.AbstractStateObject;
 import org.apache.hyracks.dataflow.std.base.AbstractUnaryInputSinkOperatorNodePushable;
 import org.apache.hyracks.dataflow.std.base.AbstractUnaryInputUnaryOutputOperatorNodePushable;
 
-public class IntervalIndexJoinOperatorDescriptor extends AbstractOperatorDescriptor {
+public class IntervalTimeSweepJoinOperatorDescriptor extends AbstractOperatorDescriptor {
     private static final long serialVersionUID = 1L;
 
     private static final int JOIN_BUILD_ACTIVITY_ID = 0;
@@ -52,7 +52,7 @@ public class IntervalIndexJoinOperatorDescriptor extends AbstractOperatorDescrip
     private final int memoryForJoin;
     private final IIntervalJoinUtilFactory imjcf;
 
-    public IntervalIndexJoinOperatorDescriptor(IOperatorDescriptorRegistry spec, int memoryForJoin, int[] buildKey,
+    public IntervalTimeSweepJoinOperatorDescriptor(IOperatorDescriptorRegistry spec, int memoryForJoin, int[] buildKey,
             int[] probeKeys, RecordDescriptor recordDescriptor, IIntervalJoinUtilFactory imjcf) {
         super(spec, 2, 1);
         outRecDescs[0] = recordDescriptor;
@@ -80,7 +80,7 @@ public class IntervalIndexJoinOperatorDescriptor extends AbstractOperatorDescrip
     }
 
     public static class JoinCacheTaskState extends AbstractStateObject {
-        private IntervalIndexJoiner joiner;
+        private IntervalTimeSweepJoiner joiner;
 
         private JoinCacheTaskState(JobId jobId, TaskId taskId) {
             super(jobId, taskId);
@@ -117,7 +117,7 @@ public class IntervalIndexJoinOperatorDescriptor extends AbstractOperatorDescrip
                     Comparator<EndPointIndexItem> endPointComparator =
                             true ? EndPointIndexItem.EndPointAscComparator : EndPointIndexItem.EndPointDescComparator;
 
-                    state.joiner = new IntervalIndexJoiner(ctx, memoryForJoin, imjc, buildKey, probeKey, rd0, rd1,
+                    state.joiner = new IntervalTimeSweepJoiner(ctx, memoryForJoin, imjc, buildKey, probeKey, rd0, rd1,
                             endPointComparator);
                 }
 

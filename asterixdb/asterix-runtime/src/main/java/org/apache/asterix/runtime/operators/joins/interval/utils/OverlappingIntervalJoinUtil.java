@@ -66,18 +66,34 @@ public class OverlappingIntervalJoinUtil extends AbstractIntervalJoinUtil {
 
     @Override
     public boolean checkToSaveInResult(IFrameTupleAccessor buildAccessor, int buildTupleIndex,
-            IFrameTupleAccessor probeAccessor, int probeTupleIndex) throws HyracksDataException {
+            IFrameTupleAccessor probeAccessor, int probeTupleIndex, boolean reversed) throws HyracksDataException {
         IntervalJoinUtil.getIntervalPointable(buildAccessor, buildTupleIndex, idBuild, ipBuild);
         IntervalJoinUtil.getIntervalPointable(probeAccessor, probeTupleIndex, idProbe, ipProbe);
-        if (ipBuild.getStartValue() < partitionStart && ipProbe.getStartValue() < partitionStart) {
-            // These tuples match in a different partition
-            return false;
+        if (reversed) {
+            if (ipProbe.getStartValue() < partitionStart && ipBuild.getStartValue() < partitionStart) {
+                // These tuples match in a different partition
+                return false;
+            }
+            return compareInterval(ipProbe, ipBuild);
+        } else {
+            if (ipBuild.getStartValue() < partitionStart && ipProbe.getStartValue() < partitionStart) {
+                // These tuples match in a different partition
+                return false;
+            }
+            return compareInterval(ipBuild, ipProbe);
         }
-        return compareInterval(ipBuild, ipProbe);
     }
 
     @Override
     public boolean compareInterval(AIntervalPointable ipBuild, AIntervalPointable ipProbe) throws HyracksDataException {
         return il.overlapping(ipBuild, ipProbe);
+    }
+
+    /**
+     * Left (first argument) interval starts after the Right (second argument) interval ends.
+     */
+    @Override
+    public boolean checkToRemoveInMemory(long start0, long end1) {
+        return start0 >= end1;
     }
 }

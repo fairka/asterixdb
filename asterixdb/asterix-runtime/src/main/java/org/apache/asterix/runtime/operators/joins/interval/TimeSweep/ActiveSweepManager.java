@@ -26,7 +26,7 @@ import java.util.PriorityQueue;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
-import org.apache.asterix.runtime.operators.joins.interval.utils.memory.ITupleCursor;
+import org.apache.asterix.runtime.operators.joins.interval.utils.memory.FrameTupleCursor;
 import org.apache.asterix.runtime.operators.joins.interval.utils.memory.IntervalJoinUtil;
 import org.apache.hyracks.api.exceptions.HyracksDataException;
 import org.apache.hyracks.dataflow.std.buffermanager.IPartitionedDeletableTupleBufferManager;
@@ -54,7 +54,7 @@ public class ActiveSweepManager {
         this.indexPoint = point;
     }
 
-    public boolean addTuple(ITupleCursor cursor, TuplePointer tp) throws HyracksDataException {
+    public boolean addTuple(FrameTupleCursor cursor, TuplePointer tp) throws HyracksDataException {
         if (bufferManager.insertTuple(partition, cursor.getAccessor(), cursor.getTupleId(), tp)) {
             long point;
             if (indexPoint == 1) {

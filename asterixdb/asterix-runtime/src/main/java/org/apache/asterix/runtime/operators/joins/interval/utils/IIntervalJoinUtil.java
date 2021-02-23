@@ -62,7 +62,7 @@ public interface IIntervalJoinUtil {
      * @throws HyracksDataException
      */
     boolean checkToSaveInResult(IFrameTupleAccessor buildAccessor, int buildTupleIndex,
-            IFrameTupleAccessor probeAccessor, int probeTupleIndex) throws HyracksDataException;
+            IFrameTupleAccessor probeAccessor, int probeTupleIndex, boolean reversed) throws HyracksDataException;
 
     /**
      * Check to see if the interval matches the join condition.
@@ -99,8 +99,10 @@ public interface IIntervalJoinUtil {
     boolean checkToLoadNextProbeTuple(IFrameTupleAccessor buildAccessor, int buildTupleIndex,
             IFrameTupleAccessor probeAccessor, int probeTupleIndex);
 
-    boolean checkToRemoveLeftActive();
+    boolean checkToRemoveBuildActive();
 
-    boolean checkToRemoveRightActive();
+    boolean checkToRemoveProbeActive();
+
+    boolean checkToRemoveInMemory(long start0, long start1);
 
 }

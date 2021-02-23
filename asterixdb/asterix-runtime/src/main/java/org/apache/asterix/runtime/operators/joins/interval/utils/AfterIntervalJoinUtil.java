@@ -30,7 +30,7 @@ public class AfterIntervalJoinUtil extends AbstractIntervalJoinUtil {
     }
 
     @Override
-    public boolean checkToRemoveRightActive() {
+    public boolean checkToRemoveProbeActive() {
         return false;
     }
 
