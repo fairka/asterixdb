@@ -144,8 +144,8 @@ public class MetadataTransactionContext extends MetadataCache {
     }
 
     public void dropIndex(DataverseName dataverseName, String datasetName, String indexName) {
-        Index index = new Index(dataverseName, datasetName, indexName, null, null, null, null, false, false, false,
-                MetadataUtil.PENDING_NO_OP);
+        Index index =
+                new Index(dataverseName, datasetName, indexName, null, null, false, false, MetadataUtil.PENDING_NO_OP);
         droppedCache.addIndexIfNotExists(index);
         logAndApply(new MetadataLogicalOperation(index, false));
     }
@@ -213,7 +213,7 @@ public class MetadataTransactionContext extends MetadataCache {
     }
 
     public void dropLibrary(DataverseName dataverseName, String libraryName) {
-        Library library = new Library(dataverseName, libraryName, null, MetadataUtil.PENDING_NO_OP);
+        Library library = new Library(dataverseName, libraryName, null, null, MetadataUtil.PENDING_NO_OP);
         droppedCache.addLibraryIfNotExists(library);
         logAndApply(new MetadataLogicalOperation(library, false));
     }

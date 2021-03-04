@@ -39,6 +39,7 @@ import java.util.Objects;
 import java.util.Properties;
 import java.util.Set;
 import java.util.concurrent.ExecutorService;
+import java.util.stream.Collectors;
 
 import org.apache.asterix.active.ActivityState;
 import org.apache.asterix.active.EntityId;
@@ -51,7 +52,7 @@ import org.apache.asterix.api.http.server.ApiServlet;
 import org.apache.asterix.app.active.ActiveEntityEventsListener;
 import org.apache.asterix.app.active.ActiveNotificationHandler;
 import org.apache.asterix.app.active.FeedEventsListener;
-import org.apache.asterix.app.external.ExternalLibraryUtil;
+import org.apache.asterix.app.external.ExternalLibraryJobUtils;
 import org.apache.asterix.app.result.ExecutionError;
 import org.apache.asterix.app.result.ResultHandle;
 import org.apache.asterix.app.result.ResultReader;
@@ -1041,7 +1042,9 @@ public class QueryTranslator extends AbstractLangTranslator implements IStatemen
 
             DatasetType datasetType = ds.getDatasetType();
             IndexType indexType = stmtCreateIndex.getIndexType();
-            boolean isSecondaryPrimary = stmtCreateIndex.getFieldExprs().isEmpty();
+            List<CreateIndexStatement.IndexedElement> indexedElements = stmtCreateIndex.getIndexedElements();
+            int indexedElementsCount = indexedElements.size();
+            boolean isSecondaryPrimary = indexedElementsCount == 0;
             validateIndexType(datasetType, indexType, isSecondaryPrimary, sourceLoc);
 
             String indexName = stmtCreateIndex.getIndexName().getValue();
@@ -1056,111 +1059,234 @@ public class QueryTranslator extends AbstractLangTranslator implements IStatemen
                 }
             }
 
-            List<Integer> keySourceIndicators;
-            if (isSecondaryPrimary && datasetType == DatasetType.INTERNAL) {
-                // find keySourceIndicators for secondary primary index since the parser isn't aware of them
-                keySourceIndicators = ((InternalDatasetDetails) ds.getDatasetDetails()).getKeySourceIndicator();
-            } else {
-                keySourceIndicators = stmtCreateIndex.getFieldSourceIndicators();
-            }
-            // disable creating an index on meta fields (fields with source indicator == 1 are meta fields)
-            if (keySourceIndicators.stream().anyMatch(fieldSource -> fieldSource == 1) && !isSecondaryPrimary) {
-                throw new AsterixException(ErrorCode.COMPILATION_ERROR, sourceLoc,
-                        "Cannot create index on meta fields");
-            }
             Datatype dt = MetadataManager.INSTANCE.getDatatype(metadataProvider.getMetadataTxnContext(),
                     ds.getItemTypeDataverseName(), ds.getItemTypeName());
             ARecordType aRecordType = (ARecordType) dt.getDatatype();
+            /* TODO: unused for now becase indexes on meta are disabled -- see below
             ARecordType metaRecordType = null;
             if (ds.hasMetaPart()) {
                 Datatype metaDt = MetadataManager.INSTANCE.getDatatype(metadataProvider.getMetadataTxnContext(),
                         ds.getMetaItemTypeDataverseName(), ds.getMetaItemTypeName());
                 metaRecordType = (ARecordType) metaDt.getDatatype();
             }
+            */
 
-            List<List<String>> indexFields = new ArrayList<>();
-            List<IAType> indexFieldTypes = new ArrayList<>();
-            int keyIndex = 0;
+            List<List<IAType>> indexFieldTypes = new ArrayList<>(indexedElementsCount);
+            boolean hadUnnest = false;
             boolean overridesFieldTypes = false;
 
             // this set is used to detect duplicates in the specified keys in the create
             // index statement
             // e.g. CREATE INDEX someIdx on dataset(id,id).
-            // checking only the names is not enough. Need also to check the source
-            // indicators for cases like:
-            // CREATE INDEX someIdx on dataset(meta().id, id)
-            Set<Pair<List<String>, Integer>> indexKeysSet = new HashSet<>();
+            // checking only the names is not enough.
+            // Need also to check the source indicators for the most general case
+            // (even though indexes on meta fields are curently disabled -- see below)
+            Set<Triple<Integer, List<List<String>>, List<List<String>>>> indexKeysSet = new HashSet<>();
 
-            for (Pair<List<String>, IndexedTypeExpression> fieldExpr : stmtCreateIndex.getFieldExprs()) {
-                IAType fieldType = null;
-                ARecordType subType =
-                        KeyFieldTypeUtil.chooseSource(keySourceIndicators, keyIndex, aRecordType, metaRecordType);
-                boolean isOpen = subType.isOpen();
-                int i = 0;
-                if (fieldExpr.first.size() > 1 && !isOpen) {
-                    while (i < fieldExpr.first.size() - 1 && !isOpen) {
-                        subType = (ARecordType) subType.getFieldType(fieldExpr.first.get(i));
-                        i++;
-                        isOpen = subType.isOpen();
-                    }
+            for (CreateIndexStatement.IndexedElement indexedElement : indexedElements) {
+                // disable creating an index on meta fields (fields with source indicator == 1 are meta fields)
+                if (indexedElement.getSourceIndicator() != Index.RECORD_INDICATOR) {
+                    throw new AsterixException(ErrorCode.COMPILATION_ERROR, indexedElement.getSourceLocation(),
+                            "Cannot create index on meta fields");
                 }
-                if (fieldExpr.second == null) {
-                    fieldType = subType.getSubFieldType(fieldExpr.first.subList(i, fieldExpr.first.size()));
+                ARecordType sourceRecordType = aRecordType;
+                IAType inputTypePrime;
+                boolean inputTypeNullable, inputTypeMissable;
+                List<Pair<List<String>, IndexedTypeExpression>> projectList = indexedElement.getProjectList();
+                int projectCount = projectList.size();
+                if (indexedElement.hasUnnest()) {
+                    if (indexType != IndexType.ARRAY) {
+                        throw new CompilationException(ErrorCode.COMPILATION_INCOMPATIBLE_INDEX_TYPE,
+                                indexedElement.getSourceLocation(), String.valueOf(indexType));
+                    }
+                    // allow only 1 unnesting element in ARRAY index
+                    if (hadUnnest) {
+                        throw new CompilationException(ErrorCode.COMPILATION_ERROR, indexedElement.getSourceLocation(),
+                                "Cannot create composite index with multiple array fields using different arrays");
+                    }
+                    hadUnnest = true;
+                    if (projectCount == 0) {
+                        // Note. UNNEST with no SELECT is supposed to have 1 project element with 'null' path
+                        throw new CompilationException(ErrorCode.COMPILATION_ERROR, indexedElement.getSourceLocation(),
+                                "Invalid index element");
+                    }
+                    Triple<IAType, Boolean, Boolean> unnestTypeResult = KeyFieldTypeUtil.getKeyUnnestType(
+                            sourceRecordType, indexedElement.getUnnestList(), indexedElement.getSourceLocation());
+                    if (unnestTypeResult == null) {
+                        inputTypePrime = null; // = ANY
+                        inputTypeNullable = inputTypeMissable = true;
+                    } else {
+                        inputTypePrime = unnestTypeResult.first;
+                        inputTypeNullable = unnestTypeResult.second;
+                        inputTypeMissable = unnestTypeResult.third;
+                    }
                 } else {
-                    if (!stmtCreateIndex.isEnforced() && indexType != IndexType.BTREE) {
-                        throw new AsterixException(ErrorCode.INDEX_ILLEGAL_NON_ENFORCED_TYPED, sourceLoc, indexType);
+                    if (projectCount != 1) {
+                        throw new CompilationException(ErrorCode.COMPILATION_ERROR, indexedElement.getSourceLocation(),
+                                "Invalid index element");
                     }
-                    if (stmtCreateIndex.isEnforced() && !fieldExpr.second.isUnknownable()) {
-                        throw new AsterixException(ErrorCode.INDEX_ILLEGAL_ENFORCED_NON_OPTIONAL, sourceLoc,
-                                String.valueOf(fieldExpr.first));
-                    }
-                    // don't allow creating an enforced index on a closed-type field, fields that
-                    // are part of schema.
-                    // get the field type, if it's not null, then the field is closed-type
-                    if (stmtCreateIndex.isEnforced()
-                            && subType.getSubFieldType(fieldExpr.first.subList(i, fieldExpr.first.size())) != null) {
-                        throw new AsterixException(ErrorCode.INDEX_ILLEGAL_ENFORCED_ON_CLOSED_FIELD, sourceLoc,
-                                String.valueOf(fieldExpr.first));
-                    }
-                    if (!isOpen) {
-                        throw new CompilationException(ErrorCode.COMPILATION_ERROR, sourceLoc, "Typed index on \""
-                                + fieldExpr.first + "\" field could be created only for open datatype");
-                    }
-                    if (stmtCreateIndex.hasMetaField()) {
-                        throw new CompilationException(ErrorCode.COMPILATION_ERROR, sourceLoc,
-                                "Typed open index can only be created on the record part");
-                    }
-                    Map<TypeSignature, IAType> typeMap = TypeTranslator.computeTypes(dataverseName, indexName,
-                            fieldExpr.second.getType(), dataverseName, mdTxnCtx);
-                    TypeSignature typeSignature = new TypeSignature(dataverseName, indexName);
-                    fieldType = typeMap.get(typeSignature);
-                    overridesFieldTypes = true;
-                }
-                if (fieldType == null) {
-                    throw new CompilationException(ErrorCode.UNKNOWN_TYPE, sourceLoc, fieldExpr.second == null
-                            ? String.valueOf(fieldExpr.first) : String.valueOf(fieldExpr.second));
+                    inputTypePrime = sourceRecordType;
+                    inputTypeNullable = inputTypeMissable = false;
                 }
 
-                // try to add the key & its source to the set of keys, if key couldn't be added,
-                // there is a duplicate
-                if (!indexKeysSet
-                        .add(new Pair<>(fieldExpr.first, stmtCreateIndex.getFieldSourceIndicators().get(keyIndex)))) {
-                    throw new AsterixException(ErrorCode.INDEX_ILLEGAL_REPETITIVE_FIELD, sourceLoc,
-                            String.valueOf(fieldExpr.first));
+                // at this point 'inputTypePrime' is either a record, or if we had unnest then it could also be anything else.
+                List<IAType> fieldTypes = new ArrayList<>(projectCount);
+                for (int i = 0; i < projectCount; i++) {
+                    Pair<List<String>, IndexedTypeExpression> projectPair = projectList.get(i);
+                    List<String> projectPath = projectPair.first;
+                    IndexedTypeExpression projectTypeExpr = projectPair.second;
+                    IAType projectTypePrime;
+                    boolean projectTypeNullable, projectTypeMissable;
+                    if (projectPath == null) {
+                        boolean emptyPathOk = indexedElement.hasUnnest() && i == 0;
+                        if (!emptyPathOk) {
+                            throw new CompilationException(ErrorCode.COMPILATION_ERROR,
+                                    indexedElement.getSourceLocation(), "Invalid index element");
+                        }
+                        projectTypePrime = inputTypePrime;
+                        projectTypeNullable = inputTypeNullable;
+                        projectTypeMissable = inputTypeMissable;
+                    } else if (inputTypePrime == null) {
+                        projectTypePrime = null; // ANY
+                        projectTypeNullable = projectTypeMissable = true;
+                    } else {
+                        if (inputTypePrime.getTypeTag() != ATypeTag.OBJECT) {
+                            throw new CompilationException(ErrorCode.TYPE_MISMATCH_GENERIC, sourceLoc, ATypeTag.OBJECT,
+                                    inputTypePrime.getTypeTag());
+                        }
+                        ARecordType inputTypePrimeRecord = (ARecordType) inputTypePrime;
+                        Triple<IAType, Boolean, Boolean> projectTypeResult = KeyFieldTypeUtil.getKeyProjectType(
+                                inputTypePrimeRecord, projectPath, indexedElement.getSourceLocation());
+                        if (projectTypeResult != null) {
+                            projectTypePrime = projectTypeResult.first;
+                            projectTypeNullable = inputTypeNullable || projectTypeResult.second;
+                            projectTypeMissable = inputTypeMissable || projectTypeResult.third;
+                        } else {
+                            projectTypePrime = null; // ANY
+                            projectTypeNullable = projectTypeMissable = true;
+                        }
+                    }
+
+                    IAType fieldTypePrime;
+                    boolean fieldTypeNullable, fieldTypeMissable;
+                    if (projectTypeExpr == null) {
+                        fieldTypePrime = projectTypePrime;
+                        fieldTypeNullable = projectTypeNullable;
+                        fieldTypeMissable = projectTypeMissable;
+                    } else {
+                        if (stmtCreateIndex.isEnforced()) {
+                            if (!projectTypeExpr.isUnknownable()) {
+                                throw new CompilationException(ErrorCode.INDEX_ILLEGAL_ENFORCED_NON_OPTIONAL,
+                                        indexedElement.getSourceLocation(), String.valueOf(projectPath));
+                            }
+                            // don't allow creating an enforced index on a closed-type field, fields that
+                            // are part of schema get the field type, if it's not null, then the field is closed-type
+                            if (projectTypePrime != null) {
+                                throw new CompilationException(ErrorCode.INDEX_ILLEGAL_ENFORCED_ON_CLOSED_FIELD,
+                                        indexedElement.getSourceLocation(), String.valueOf(projectPath));
+                            }
+                        } else {
+                            if (indexType != IndexType.BTREE && indexType != IndexType.ARRAY) {
+                                throw new CompilationException(ErrorCode.INDEX_ILLEGAL_NON_ENFORCED_TYPED,
+                                        indexedElement.getSourceLocation(), indexType);
+                            }
+                            if (projectTypePrime != null) {
+                                throw new CompilationException(ErrorCode.COMPILATION_ERROR,
+                                        indexedElement.getSourceLocation(), "Typed index on \"" + projectPath
+                                                + "\" field could be created only for open datatype");
+                            }
+                        }
+
+                        Map<TypeSignature, IAType> typeMap = TypeTranslator.computeTypes(dataverseName, indexName,
+                                projectTypeExpr.getType(), dataverseName, mdTxnCtx);
+                        TypeSignature typeSignature = new TypeSignature(dataverseName, indexName);
+                        fieldTypePrime = typeMap.get(typeSignature);
+                        // BACK-COMPAT: keep prime type only if we're overriding field types
+                        fieldTypeNullable = fieldTypeMissable = false;
+                        overridesFieldTypes = true;
+                    }
+
+                    if (fieldTypePrime == null) {
+                        throw new CompilationException(ErrorCode.UNKNOWN_TYPE, indexedElement.getSourceLocation(),
+                                String.valueOf(projectPath));
+                    }
+                    validateIndexFieldType(indexType, fieldTypePrime, projectPath, indexedElement.getSourceLocation());
+
+                    IAType fieldType =
+                            KeyFieldTypeUtil.makeUnknownableType(fieldTypePrime, fieldTypeNullable, fieldTypeMissable);
+                    fieldTypes.add(fieldType);
                 }
 
-                indexFields.add(fieldExpr.first);
-                indexFieldTypes.add(fieldType);
-                ++keyIndex;
+                // Try to add the key & its source to the set of keys for duplicate detection.
+                if (!indexKeysSet.add(indexedElement.toIdentifier())) {
+                    throw new AsterixException(ErrorCode.INDEX_ILLEGAL_REPETITIVE_FIELD,
+                            indexedElement.getSourceLocation(), indexedElement.getProjectListDisplayForm());
+                }
+
+                indexFieldTypes.add(fieldTypes);
             }
 
-            validateIndexKeyFields(stmtCreateIndex, keySourceIndicators, aRecordType, metaRecordType, indexFields,
-                    indexFieldTypes);
+            Index.IIndexDetails indexDetails;
+            if (Index.IndexCategory.of(indexType) == Index.IndexCategory.ARRAY) {
+                if (!hadUnnest) {
+                    // prohibited by the grammar
+                    throw new CompilationException(ErrorCode.COMPILATION_ILLEGAL_STATE, sourceLoc,
+                            String.valueOf(indexType));
+                }
+                if (stmtCreateIndex.isEnforced()) {
+                    // not supported yet.
+                    throw new CompilationException(ErrorCode.COMPILATION_INCOMPATIBLE_INDEX_TYPE, sourceLoc,
+                            String.valueOf(indexType));
+                }
+                if (indexedElementsCount > 1) {
+                    // TODO (GLENN): Add in support for composite atomic / array indexes.
+                    throw new CompilationException(ErrorCode.COMPILATION_INCOMPATIBLE_INDEX_TYPE, sourceLoc,
+                            String.valueOf(indexType));
+                }
 
-            Index newIndex =
-                    new Index(dataverseName, datasetName, indexName, indexType, indexFields, keySourceIndicators,
-                            indexFieldTypes, stmtCreateIndex.getGramLength(), stmtCreateIndex.getFullTextConfigName(),
-                            overridesFieldTypes, stmtCreateIndex.isEnforced(), false, MetadataUtil.PENDING_ADD_OP);
+                List<Index.ArrayIndexElement> indexElementList = new ArrayList<>(indexedElementsCount);
+                for (int i = 0; i < indexedElementsCount; i++) {
+                    CreateIndexStatement.IndexedElement indexedElement = indexedElements.get(i);
+                    List<List<String>> projectList =
+                            indexedElement.getProjectList().stream().map(Pair::getFirst).collect(Collectors.toList());
+                    indexElementList.add(new Index.ArrayIndexElement(indexedElement.getUnnestList(), projectList,
+                            indexFieldTypes.get(i), indexedElement.getSourceIndicator()));
+                }
+                indexDetails = new Index.ArrayIndexDetails(indexElementList, overridesFieldTypes);
+            } else {
+                List<List<String>> keyFieldNames = new ArrayList<>(indexedElementsCount);
+                List<IAType> keyFieldTypes = new ArrayList<>(indexedElementsCount);
+                List<Integer> keyFieldSourceIndicators = new ArrayList<>(indexedElementsCount);
+                if (isSecondaryPrimary) {
+                    // BACK-COMPAT: secondary primary index has one source indicator
+                    // which is set to META_RECORD_INDICATOR
+                    keyFieldSourceIndicators.add(Index.META_RECORD_INDICATOR);
+                } else {
+                    for (int i = 0; i < indexedElementsCount; i++) {
+                        CreateIndexStatement.IndexedElement indexedElement = indexedElements.get(i);
+                        keyFieldNames.add(indexedElement.getProjectList().get(0).first);
+                        keyFieldTypes.add(indexFieldTypes.get(i).get(0));
+                        keyFieldSourceIndicators.add(indexedElement.getSourceIndicator());
+                    }
+                }
+                switch (Index.IndexCategory.of(indexType)) {
+                    case VALUE:
+                        indexDetails = new Index.ValueIndexDetails(keyFieldNames, keyFieldSourceIndicators,
+                                keyFieldTypes, overridesFieldTypes);
+                        break;
+                    case TEXT:
+                        indexDetails = new Index.TextIndexDetails(keyFieldNames, keyFieldSourceIndicators,
+                                keyFieldTypes, overridesFieldTypes, stmtCreateIndex.getGramLength(),
+                                stmtCreateIndex.getFullTextConfigName());
+                        break;
+                    default:
+                        throw new CompilationException(ErrorCode.COMPILATION_ILLEGAL_STATE, sourceLoc,
+                                String.valueOf(indexType));
+                }
+            }
+
+            Index newIndex = new Index(dataverseName, datasetName, indexName, indexType, indexDetails,
+                    stmtCreateIndex.isEnforced(), false, MetadataUtil.PENDING_ADD_OP);
 
             bActiveTxn = false; // doCreateIndexImpl() takes over the current transaction
             doCreateIndexImpl(hcc, metadataProvider, ds, newIndex, jobFlags, sourceLoc);
@@ -1356,9 +1482,9 @@ public class QueryTranslator extends AbstractLangTranslator implements IStatemen
                     // Add an entry for the files index
                     filesIndex = new Index(index.getDataverseName(), index.getDatasetName(),
                             IndexingConstants.getFilesIndexName(index.getDatasetName()), IndexType.BTREE,
-                            ExternalIndexingOperations.FILE_INDEX_FIELD_NAMES, null,
-                            ExternalIndexingOperations.FILE_INDEX_FIELD_TYPES, false, false, false,
-                            MetadataUtil.PENDING_ADD_OP);
+                            new Index.ValueIndexDetails(ExternalIndexingOperations.FILE_INDEX_FIELD_NAMES, null,
+                                    ExternalIndexingOperations.FILE_INDEX_FIELD_TYPES, false),
+                            false, false, MetadataUtil.PENDING_ADD_OP);
                     MetadataManager.INSTANCE.addIndex(metadataProvider.getMetadataTxnContext(), filesIndex);
                     // Add files to the external files index
                     for (ExternalFile file : externalFilesSnapshot) {
@@ -1367,10 +1493,6 @@ public class QueryTranslator extends AbstractLangTranslator implements IStatemen
                     // This is the first index for the external dataset, replicate the files index
                     spec = ExternalIndexingOperations.buildFilesIndexCreateJobSpec(ds, externalFilesSnapshot,
                             metadataProvider);
-                    if (spec == null) {
-                        throw new CompilationException(ErrorCode.COMPILATION_ERROR, sourceLoc,
-                                "Failed to create job spec for replicating Files Index For external dataset");
-                    }
                     filesIndexReplicated = true;
                     runJob(hcc, spec, jobFlags);
                 }
@@ -1378,16 +1500,54 @@ public class QueryTranslator extends AbstractLangTranslator implements IStatemen
 
             // check whether there exists another enforced index on the same field
             if (index.isEnforced()) {
+                List<List<String>> indexKeyFieldNames;
+                List<IAType> indexKeyFieldTypes;
+                switch (Index.IndexCategory.of(index.getIndexType())) {
+                    case VALUE:
+                        Index.ValueIndexDetails valueIndexDetails = (Index.ValueIndexDetails) index.getIndexDetails();
+                        indexKeyFieldNames = valueIndexDetails.getKeyFieldNames();
+                        indexKeyFieldTypes = valueIndexDetails.getKeyFieldTypes();
+                        break;
+                    case TEXT:
+                        Index.TextIndexDetails textIndexDetails = (Index.TextIndexDetails) index.getIndexDetails();
+                        indexKeyFieldNames = textIndexDetails.getKeyFieldNames();
+                        indexKeyFieldTypes = textIndexDetails.getKeyFieldTypes();
+                        break;
+                    default:
+                        throw new CompilationException(ErrorCode.COMPILATION_ILLEGAL_STATE, sourceLoc, "");
+                }
                 List<Index> indexes = MetadataManager.INSTANCE.getDatasetIndexes(
                         metadataProvider.getMetadataTxnContext(), index.getDataverseName(), index.getDatasetName());
                 for (Index existingIndex : indexes) {
-                    if (existingIndex.getKeyFieldNames().equals(index.getKeyFieldNames())
-                            && !existingIndex.getKeyFieldTypes().equals(index.getKeyFieldTypes())
-                            && existingIndex.isEnforced()) {
-                        throw new CompilationException(ErrorCode.COMPILATION_ERROR, sourceLoc, "Cannot create index "
-                                + index.getIndexName() + " , enforced index " + existingIndex.getIndexName()
-                                + " on field \"" + StringUtils.join(index.getKeyFieldNames(), ',')
-                                + "\" is already defined with type \"" + existingIndex.getKeyFieldTypes() + "\"");
+                    if (!existingIndex.isEnforced()) {
+                        continue;
+                    }
+                    List<List<String>> existingIndexKeyFieldNames;
+                    List<IAType> existingIndexKeyFieldTypes;
+                    switch (Index.IndexCategory.of(existingIndex.getIndexType())) {
+                        case VALUE:
+                            Index.ValueIndexDetails valueIndexDetails =
+                                    (Index.ValueIndexDetails) existingIndex.getIndexDetails();
+                            existingIndexKeyFieldNames = valueIndexDetails.getKeyFieldNames();
+                            existingIndexKeyFieldTypes = valueIndexDetails.getKeyFieldTypes();
+                            break;
+                        case TEXT:
+                            Index.TextIndexDetails textIndexDetails =
+                                    (Index.TextIndexDetails) existingIndex.getIndexDetails();
+                            existingIndexKeyFieldNames = textIndexDetails.getKeyFieldNames();
+                            existingIndexKeyFieldTypes = textIndexDetails.getKeyFieldTypes();
+                            break;
+                        default:
+                            // ARRAY indexed cannot be enforced yet.
+                            throw new CompilationException(ErrorCode.COMPILATION_ILLEGAL_STATE, sourceLoc, "");
+                    }
+                    if (existingIndexKeyFieldNames.equals(indexKeyFieldNames)
+                            && !existingIndexKeyFieldTypes.equals(indexKeyFieldTypes)) {
+                        throw new CompilationException(ErrorCode.COMPILATION_ERROR, sourceLoc,
+                                "Cannot create index " + index.getIndexName() + " , enforced index "
+                                        + existingIndex.getIndexName() + " on field \""
+                                        + StringUtils.join(indexKeyFieldNames, ',')
+                                        + "\" is already defined with type \"" + existingIndexKeyFieldTypes + "\"");
                     }
                 }
             }
@@ -1552,13 +1712,15 @@ public class QueryTranslator extends AbstractLangTranslator implements IStatemen
         if (datasetType == DatasetType.EXTERNAL && isSecondaryPrimaryIndex) {
             throw new CompilationException(ErrorCode.CANNOT_CREATE_SEC_PRIMARY_IDX_ON_EXT_DATASET);
         }
+        if (indexType != IndexType.BTREE && isSecondaryPrimaryIndex) {
+            throw new CompilationException(ErrorCode.COMPILATION_INCOMPATIBLE_INDEX_TYPE, sourceLoc,
+                    String.valueOf(indexType));
+        }
     }
 
-    protected void validateIndexKeyFields(CreateIndexStatement stmtCreateIndex, List<Integer> keySourceIndicators,
-            ARecordType aRecordType, ARecordType metaRecordType, List<List<String>> indexFields,
-            List<IAType> indexFieldTypes) throws AlgebricksException {
-        ValidateUtil.validateKeyFields(aRecordType, metaRecordType, indexFields, keySourceIndicators, indexFieldTypes,
-                stmtCreateIndex.getIndexType(), stmtCreateIndex.getSourceLocation());
+    protected void validateIndexFieldType(IndexType indexType, IAType fieldType, List<String> displayFieldName,
+            SourceLocation sourceLoc) throws AlgebricksException {
+        ValidateUtil.validateIndexFieldType(indexType, fieldType, displayFieldName, sourceLoc);
     }
 
     protected void handleCreateTypeStatement(MetadataProvider metadataProvider, Statement stmt) throws Exception {
@@ -1699,7 +1861,7 @@ public class QueryTranslator extends AbstractLangTranslator implements IStatemen
             // #. prepare jobs which will drop corresponding libraries.
             List<Library> libraries = MetadataManager.INSTANCE.getDataverseLibraries(mdTxnCtx, dataverseName);
             for (Library library : libraries) {
-                jobsToExecute.add(ExternalLibraryUtil.buildDropLibraryJobSpec(dataverseName, library.getName(),
+                jobsToExecute.add(ExternalLibraryJobUtils.buildDropLibraryJobSpec(dataverseName, library.getName(),
                         metadataProvider));
             }
 
@@ -1832,8 +1994,7 @@ public class QueryTranslator extends AbstractLangTranslator implements IStatemen
             if (dv == null) {
                 if (ifExists) {
                     if (warningCollector.shouldWarn()) {
-                        warningCollector
-                                .warn(WarningUtil.forAsterix(sourceLoc, ErrorCode.UNKNOWN_DATAVERSE, dataverseName));
+                        warningCollector.warn(Warning.of(sourceLoc, ErrorCode.UNKNOWN_DATAVERSE, dataverseName));
                     }
                     MetadataManager.INSTANCE.commitTransaction(mdTxnCtx.getValue());
                     return false;
@@ -1951,10 +2112,8 @@ public class QueryTranslator extends AbstractLangTranslator implements IStatemen
                 // #. mark PendingDropOp on the existing index
                 MetadataManager.INSTANCE.dropIndex(mdTxnCtx, dataverseName, datasetName, indexName);
                 MetadataManager.INSTANCE.addIndex(mdTxnCtx,
-                        new Index(dataverseName, datasetName, indexName, index.getIndexType(), index.getKeyFieldNames(),
-                                index.getKeyFieldSourceIndicators(), index.getKeyFieldTypes(),
-                                index.isOverridingKeyFieldTypes(), index.isEnforced(), index.isPrimaryIndex(),
-                                MetadataUtil.PENDING_DROP_OP));
+                        new Index(dataverseName, datasetName, indexName, index.getIndexType(), index.getIndexDetails(),
+                                index.isEnforced(), index.isPrimaryIndex(), MetadataUtil.PENDING_DROP_OP));
 
                 // #. commit the existing transaction before calling runJob.
                 MetadataManager.INSTANCE.commitTransaction(mdTxnCtx);
@@ -2004,10 +2163,9 @@ public class QueryTranslator extends AbstractLangTranslator implements IStatemen
                                     externalIndex.getIndexName());
                             MetadataManager.INSTANCE.addIndex(mdTxnCtx,
                                     new Index(dataverseName, datasetName, externalIndex.getIndexName(),
-                                            externalIndex.getIndexType(), externalIndex.getKeyFieldNames(),
-                                            externalIndex.getKeyFieldSourceIndicators(), index.getKeyFieldTypes(),
-                                            index.isOverridingKeyFieldTypes(), index.isEnforced(),
-                                            externalIndex.isPrimaryIndex(), MetadataUtil.PENDING_DROP_OP));
+                                            externalIndex.getIndexType(), externalIndex.getIndexDetails(),
+                                            externalIndex.isEnforced(), externalIndex.isPrimaryIndex(),
+                                            MetadataUtil.PENDING_DROP_OP));
                         }
                     }
                 }
@@ -2015,10 +2173,8 @@ public class QueryTranslator extends AbstractLangTranslator implements IStatemen
                 // #. mark PendingDropOp on the existing index
                 MetadataManager.INSTANCE.dropIndex(mdTxnCtx, dataverseName, datasetName, indexName);
                 MetadataManager.INSTANCE.addIndex(mdTxnCtx,
-                        new Index(dataverseName, datasetName, indexName, index.getIndexType(), index.getKeyFieldNames(),
-                                index.getKeyFieldSourceIndicators(), index.getKeyFieldTypes(),
-                                index.isOverridingKeyFieldTypes(), index.isEnforced(), index.isPrimaryIndex(),
-                                MetadataUtil.PENDING_DROP_OP));
+                        new Index(dataverseName, datasetName, indexName, index.getIndexType(), index.getIndexDetails(),
+                                index.isEnforced(), index.isPrimaryIndex(), MetadataUtil.PENDING_DROP_OP));
 
                 // #. commit the existing transaction before calling runJob.
                 MetadataManager.INSTANCE.commitTransaction(mdTxnCtx);
@@ -2190,8 +2346,7 @@ public class QueryTranslator extends AbstractLangTranslator implements IStatemen
             if (dv == null) {
                 if (stmtTypeDrop.getIfExists()) {
                     if (warningCollector.shouldWarn()) {
-                        warningCollector
-                                .warn(WarningUtil.forAsterix(sourceLoc, ErrorCode.UNKNOWN_DATAVERSE, dataverseName));
+                        warningCollector.warn(Warning.of(sourceLoc, ErrorCode.UNKNOWN_DATAVERSE, dataverseName));
                     }
                     MetadataManager.INSTANCE.commitTransaction(mdTxnCtx);
                     return;
@@ -2417,7 +2572,7 @@ public class QueryTranslator extends AbstractLangTranslator implements IStatemen
                 apiFramework.reWriteQuery(declaredFunctions, metadataProvider, wrappedQuery, sessionOutput, false,
                         paramVars, warningCollector);
                 List<List<Triple<DataverseName, String, String>>> dependencies = FunctionUtil.getFunctionDependencies(
-                        rewriterFactory.createQueryRewriter(), cfs.getFunctionBodyExpression(), metadataProvider);
+                        rewriterFactory.createQueryRewriter(), cfs.getFunctionBodyExpression());
 
                 newInlineTypes = Collections.emptyMap();
                 function = new Function(functionSignature, paramNames, null, null, cfs.getFunctionBody(),
@@ -2679,16 +2834,17 @@ public class QueryTranslator extends AbstractLangTranslator implements IStatemen
         CreateLibraryStatement cls = (CreateLibraryStatement) stmt;
         DataverseName dataverseName = getActiveDataverseName(cls.getDataverseName());
         String libraryName = cls.getLibraryName();
+        String libraryHash = cls.getHash();
         lockUtil.createLibraryBegin(lockManager, metadataProvider.getLocks(), dataverseName, libraryName);
         try {
-            doCreateLibrary(metadataProvider, dataverseName, libraryName, cls, hcc);
+            doCreateLibrary(metadataProvider, dataverseName, libraryName, libraryHash, cls, hcc);
         } finally {
             metadataProvider.getLocks().unlock();
         }
     }
 
     private void doCreateLibrary(MetadataProvider metadataProvider, DataverseName dataverseName, String libraryName,
-            CreateLibraryStatement cls, IHyracksClientConnection hcc) throws Exception {
+            String libraryHash, CreateLibraryStatement cls, IHyracksClientConnection hcc) throws Exception {
         JobUtils.ProgressState progress = ProgressState.NO_PROGRESS;
         boolean prepareJobSuccessful = false;
         JobSpecification abortJobSpec = null;
@@ -2710,7 +2866,7 @@ public class QueryTranslator extends AbstractLangTranslator implements IStatemen
 
             // #. add/update library with PendingAddOp
             Library libraryPendingAdd =
-                    new Library(dataverseName, libraryName, language.name(), MetadataUtil.PENDING_ADD_OP);
+                    new Library(dataverseName, libraryName, language.name(), libraryHash, MetadataUtil.PENDING_ADD_OP);
             if (existingLibrary == null) {
                 MetadataManager.INSTANCE.addLibrary(mdTxnCtx, libraryPendingAdd);
             } else {
@@ -2719,7 +2875,7 @@ public class QueryTranslator extends AbstractLangTranslator implements IStatemen
 
             // #. prepare to create library artifacts in NC.
             Triple<JobSpecification, JobSpecification, JobSpecification> jobSpecs =
-                    ExternalLibraryUtil.buildCreateLibraryJobSpec(dataverseName, libraryName, language,
+                    ExternalLibraryJobUtils.buildCreateLibraryJobSpec(dataverseName, libraryName, language,
                             cls.getLocation(), cls.getAuthToken(), metadataProvider);
             JobSpecification prepareJobSpec = jobSpecs.first;
             JobSpecification commitJobSpec = jobSpecs.second;
@@ -2739,7 +2895,8 @@ public class QueryTranslator extends AbstractLangTranslator implements IStatemen
             bActiveTxn = true;
             metadataProvider.setMetadataTxnContext(mdTxnCtx);
 
-            Library newLibrary = new Library(dataverseName, libraryName, language.name(), MetadataUtil.PENDING_NO_OP);
+            Library newLibrary =
+                    new Library(dataverseName, libraryName, language.name(), libraryHash, MetadataUtil.PENDING_NO_OP);
             MetadataManager.INSTANCE.updateLibrary(mdTxnCtx, newLibrary);
 
             MetadataManager.INSTANCE.commitTransaction(mdTxnCtx);
@@ -2760,8 +2917,8 @@ public class QueryTranslator extends AbstractLangTranslator implements IStatemen
                 } else if (existingLibrary == null) {
                     // 'commit' job failed for a new library -> try removing the library
                     try {
-                        JobSpecification dropLibraryJobSpec = ExternalLibraryUtil.buildDropLibraryJobSpec(dataverseName,
-                                libraryName, metadataProvider);
+                        JobSpecification dropLibraryJobSpec = ExternalLibraryJobUtils
+                                .buildDropLibraryJobSpec(dataverseName, libraryName, metadataProvider);
                         runJob(hcc, dropLibraryJobSpec, jobFlags);
                     } catch (Exception e2) {
                         e.addSuppressed(e2);
@@ -2841,12 +2998,12 @@ public class QueryTranslator extends AbstractLangTranslator implements IStatemen
             // #. mark the existing library as PendingDropOp
             // do drop instead of update because drop will fail if the library is used by functions/adapters
             MetadataManager.INSTANCE.dropLibrary(mdTxnCtx, dataverseName, libraryName);
-            MetadataManager.INSTANCE.addLibrary(mdTxnCtx,
-                    new Library(dataverseName, libraryName, library.getLanguage(), MetadataUtil.PENDING_DROP_OP));
+            MetadataManager.INSTANCE.addLibrary(mdTxnCtx, new Library(dataverseName, libraryName, library.getLanguage(),
+                    library.getHash(), MetadataUtil.PENDING_DROP_OP));
 
             // #. drop library artifacts in NCs.
             JobSpecification jobSpec =
-                    ExternalLibraryUtil.buildDropLibraryJobSpec(dataverseName, libraryName, metadataProvider);
+                    ExternalLibraryJobUtils.buildDropLibraryJobSpec(dataverseName, libraryName, metadataProvider);
 
             MetadataManager.INSTANCE.commitTransaction(mdTxnCtx);
             bActiveTxn = false;
