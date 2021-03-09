@@ -108,4 +108,12 @@ public abstract class AbstractIntervalJoinUtil implements IIntervalJoinUtil {
     public boolean checkToRemoveInMemory(long start0, long start1) {
         return start0 > start1;
     }
+
+    @Override
+    public boolean choosePath(IFrameTupleAccessor buildAccessor, int buildTupleIndex, IFrameTupleAccessor probeAccessor,
+            int probeTupleIndex) {
+        long buildStart = IntervalJoinUtil.getIntervalStart(buildAccessor, buildTupleIndex, idBuild);
+        long probeStart = IntervalJoinUtil.getIntervalEnd(probeAccessor, probeTupleIndex, idProbe);
+        return buildStart > probeStart;
+    }
 }

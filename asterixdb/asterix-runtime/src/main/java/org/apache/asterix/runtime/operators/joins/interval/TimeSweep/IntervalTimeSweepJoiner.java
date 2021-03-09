@@ -177,11 +177,10 @@ public class IntervalTimeSweepJoiner {
                 } else if (!continueProbe) {
                     choseProbePath = false;
                 } else {
-                    long buildStart = IntervalJoinUtil.getIntervalStart(inputCursor[BUILD_PARTITION].getAccessor(),
-                            inputCursor[BUILD_PARTITION].getTupleId(), buildKey);
-                    long probeStart = IntervalJoinUtil.getIntervalStart(inputCursor[PROBE_PARTITION].getAccessor(),
-                            inputCursor[PROBE_PARTITION].getTupleId(), probeKey);
-                    choseProbePath = !(buildStart <= probeStart);
+                    //choseProbePath = !(buildStart <= probeStart);
+                    choseProbePath = iju.choosePath(inputCursor[BUILD_PARTITION].getAccessor(),
+                            inputCursor[BUILD_PARTITION].getTupleId(), inputCursor[PROBE_PARTITION].getAccessor(),
+                            inputCursor[PROBE_PARTITION].getTupleId());
                 }
                 // Process the correct side based on chosen path.
                 if (choseProbePath) {
@@ -217,11 +216,11 @@ public class IntervalTimeSweepJoiner {
 
     private void processRemoveOldTuples(int active, int passive, int key) throws HyracksDataException {
         //Remove from passive that can no longer match with active.
-        //        while (activeManager[passive].hasRecords()
-        //                && iju.checkToRemoveInMemory(IntervalJoinUtil.getIntervalStart(inputCursor[active].getAccessor(),
-        //                        inputCursor[active].getTupleId(), key), activeManager[passive].getTopPoint())) {
-        //            activeManager[passive].removeTop();
-        //        }
+        while (activeManager[passive].hasRecords()
+                && iju.checkToRemoveInMemory(IntervalJoinUtil.getIntervalStart(inputCursor[active].getAccessor(),
+                        inputCursor[active].getTupleId(), key), activeManager[passive].getTopPoint())) {
+            activeManager[passive].removeTop();
+        }
     }
 
     private void addToMemoryAndProcessJoin(int active, int passive, boolean reversed, IFrameWriter writer)
