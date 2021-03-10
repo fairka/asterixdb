@@ -19,6 +19,15 @@
 
 package org.apache.asterix.runtime.operators.joins.interval.TimeSweep;
 
+import static org.junit.Assert.assertEquals;
+
+import java.io.ByteArrayOutputStream;
+import java.io.DataOutput;
+import java.io.DataOutputStream;
+import java.io.IOException;
+import java.nio.ByteBuffer;
+import java.util.logging.Logger;
+
 import org.apache.asterix.dataflow.data.nontagged.serde.AIntervalSerializerDeserializer;
 import org.apache.asterix.om.base.AInterval;
 import org.apache.asterix.om.types.ATypeTag;
@@ -33,23 +42,18 @@ import org.apache.hyracks.api.exceptions.HyracksDataException;
 import org.apache.hyracks.dataflow.common.comm.io.FrameTupleAppender;
 import org.apache.hyracks.dataflow.std.buffermanager.IPartitionedDeletableTupleBufferManager;
 import org.apache.hyracks.dataflow.std.structures.TuplePointer;
+import org.apache.hyracks.test.support.TestUtils;
 import org.junit.Before;
 import org.junit.Test;
 
-import java.io.ByteArrayOutputStream;
-import java.io.DataOutput;
-import java.io.DataOutputStream;
-import java.io.IOException;
-import java.nio.ByteBuffer;
-
-import static org.junit.Assert.assertEquals;
-
 public class ActiveSweepManagerTest {
+
+    private static final Logger LOGGER = Logger.getLogger(IntervalTimeSweepJoiner.class.getName());
 
     private final ISerializerDeserializer<AInterval> intervalSerde = AIntervalSerializerDeserializer.INSTANCE;
     @SuppressWarnings("rawtypes")
-    private final ISerializerDeserializer[] SerDers = new ISerializerDeserializer[] {
-            AIntervalSerializerDeserializer.INSTANCE };
+    private final ISerializerDeserializer[] SerDers =
+            new ISerializerDeserializer[] { AIntervalSerializerDeserializer.INSTANCE };
     private final RecordDescriptor RecordDesc = new RecordDescriptor(SerDers);
 
     private final int FRAME_SIZE = 320;
@@ -90,32 +94,31 @@ public class ActiveSweepManagerTest {
 
     private ByteBuffer prepareData(IHyracksTaskContext ctx, AInterval[] intervals) throws HyracksDataException {
         IFrame frame = new VSizeFrame(ctx);
-        FrameTupleAppender fffta = new FrameTupleAppender();
-        fffta.reset(frame, true);
+        FrameTupleAppender fffta = new FrameTupleAppender(frame);
 
         byte[] serializedIntervals = getIntervalBytes(intervals);
         for (int i = 0; i < intervals.length; ++i) {
             fffta.append(serializedIntervals, i * INTERVAL_LENGTH, INTERVAL_LENGTH);
         }
-
         return frame.getBuffer();
     }
 
     private void prepareMemory(ActiveSweepManager activeManager) throws HyracksDataException {
-        FrameTupleCursor accessor = new FrameTupleCursor(RecordDesc);
+        FrameTupleCursor cursor = new FrameTupleCursor(RecordDesc);
         ByteBuffer buffer = prepareData(ctx, INTERVALS);
-        accessor.reset(buffer);
+        cursor.reset(buffer);
+        cursor.next();
+
         TuplePointer tp = new TuplePointer();
-        accessor.next();
-        activeManager.addTuple(accessor, tp);
+        activeManager.addTuple(cursor, tp);
 
         tp = new TuplePointer();
-        accessor.next();
-        activeManager.addTuple(accessor, tp);
+        cursor.next();
+        activeManager.addTuple(cursor, tp);
 
         tp = new TuplePointer();
-        accessor.next();
-        activeManager.addTuple(accessor, tp);
+        cursor.next();
+        activeManager.addTuple(cursor, tp);
     }
 
     IHyracksTaskContext ctx;
@@ -124,8 +127,8 @@ public class ActiveSweepManagerTest {
     public void initial() throws HyracksDataException {
         int memorySize = 5;
         ctx = TestUtils.create(FRAME_SIZE);
-        RecordDescriptor intervalRD = new RecordDescriptor(
-                new ISerializerDeserializer[] { AIntervalSerializerDeserializer.INSTANCE });
+        RecordDescriptor intervalRD =
+                new RecordDescriptor(new ISerializerDeserializer[] { AIntervalSerializerDeserializer.INSTANCE });
         RecordDescriptor[] records = { intervalRD, intervalRD };
         bufferManager = new VPartitionDeletableTupleBufferManager(ctx,
                 VPartitionDeletableTupleBufferManager.NO_CONSTRAIN, 2, memorySize * ctx.getInitialFrameSize(), records);
@@ -202,8 +205,10 @@ public class ActiveSweepManagerTest {
 
         assertEquals(101, activeManager.getTopPoint());
         activeManager.removeTop();
+        // Actual 0
         assertEquals(100, activeManager.getTopPoint());
         activeManager.removeTop();
+        // Actual 0
         assertEquals(99, activeManager.getTopPoint());
         activeManager.removeTop();
 
