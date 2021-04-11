@@ -50,7 +50,7 @@ public class ActiveSweepManager {
         this.bufferManager = bufferManager;
         this.key = key;
         this.partition = joinBranch;
-        indexQueue = new PriorityQueue<EndPointIndexItem>(16, endPointComparator);
+        indexQueue = new PriorityQueue<>(16, endPointComparator);
         this.indexPoint = point;
     }
 
@@ -62,8 +62,6 @@ public class ActiveSweepManager {
             } else {
                 point = IntervalJoinUtil.getIntervalStart(cursor.getAccessor(), cursor.getTupleId(), key);
             }
-            long pointEnd = IntervalJoinUtil.getIntervalEnd(cursor.getAccessor(), cursor.getTupleId(), key);
-            EndPointIndexItem v = new EndPointIndexItem(tp, indexPoint, pointEnd);
             EndPointIndexItem e = new EndPointIndexItem(tp, indexPoint, point);
             indexQueue.add(e);
             active.add(tp);

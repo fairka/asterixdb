@@ -39,6 +39,7 @@ import org.apache.hyracks.api.context.IHyracksTaskContext;
 import org.apache.hyracks.api.dataflow.value.ISerializerDeserializer;
 import org.apache.hyracks.api.dataflow.value.RecordDescriptor;
 import org.apache.hyracks.api.exceptions.HyracksDataException;
+import org.apache.hyracks.dataflow.common.comm.io.ArrayTupleBuilder;
 import org.apache.hyracks.dataflow.common.comm.io.FrameTupleAppender;
 import org.apache.hyracks.dataflow.std.buffermanager.IPartitionedDeletableTupleBufferManager;
 import org.apache.hyracks.dataflow.std.structures.TuplePointer;
@@ -60,7 +61,7 @@ public class ActiveSweepManagerTest {
 
     private final AInterval[] INTERVALS = new AInterval[] { new AInterval(99, 301, (byte) 16),
             new AInterval(100, 300, (byte) 16), new AInterval(101, 299, (byte) 16) };
-    private final int INTERVAL_LENGTH = Byte.BYTES + Long.BYTES + Long.BYTES;
+    private final int INTERVAL_LENGTH = Byte.BYTES + Byte.BYTES + Long.BYTES + Long.BYTES;
 
     /*
      * Tests
@@ -77,14 +78,12 @@ public class ActiveSweepManagerTest {
     FrameTupleAppender appender;
 
     @SuppressWarnings("unused")
-    private byte[] getIntervalBytes(AInterval[] intervals) throws HyracksDataException {
+    private byte[] getIntervalBytes(AInterval[] intervals, int i) throws HyracksDataException {
         try {
             ByteArrayOutputStream bos = new ByteArrayOutputStream();
             DataOutput dos = new DataOutputStream(bos);
-            for (int i = 0; i < intervals.length; ++i) {
-                dos.write(ATypeTag.SERIALIZED_INTERVAL_TYPE_TAG);
-                intervalSerde.serialize(intervals[i], dos);
-            }
+            dos.write(ATypeTag.SERIALIZED_INTERVAL_TYPE_TAG);
+            intervalSerde.serialize(intervals[i], dos);
             bos.close();
             return bos.toByteArray();
         } catch (IOException e) {
@@ -93,13 +92,22 @@ public class ActiveSweepManagerTest {
     }
 
     private ByteBuffer prepareData(IHyracksTaskContext ctx, AInterval[] intervals) throws HyracksDataException {
-        IFrame frame = new VSizeFrame(ctx);
-        FrameTupleAppender fffta = new FrameTupleAppender(frame);
 
-        byte[] serializedIntervals = getIntervalBytes(intervals);
-        for (int i = 0; i < intervals.length; ++i) {
-            fffta.append(serializedIntervals, i * INTERVAL_LENGTH, INTERVAL_LENGTH);
+        IFrame frame = new VSizeFrame(ctx);
+        FrameTupleAppender fffta = new FrameTupleAppender();
+        fffta.reset(frame, true);
+
+        ArrayTupleBuilder tb = new ArrayTupleBuilder(RecordDesc.getFieldCount());
+
+        byte[] serializedInterval;
+
+        for (int i = 0; i < intervals.length; i++) {
+            tb.reset();
+            serializedInterval = getIntervalBytes(intervals, i);
+            tb.addField(serializedInterval, 0, serializedInterval.length);
+            fffta.append(tb.getFieldEndOffsets(), tb.getByteArray(), 0, tb.getSize());
         }
+
         return frame.getBuffer();
     }
 
