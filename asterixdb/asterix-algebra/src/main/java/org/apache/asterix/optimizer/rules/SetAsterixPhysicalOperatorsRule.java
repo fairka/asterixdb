@@ -18,6 +18,8 @@
  */
 package org.apache.asterix.optimizer.rules;
 
+import static org.apache.asterix.common.utils.IdentifierUtil.dataset;
+
 import java.util.ArrayList;
 import java.util.List;
 
@@ -75,7 +77,7 @@ public final class SetAsterixPhysicalOperatorsRule extends SetAlgebricksPhysical
 
     // Disable ASSIGN_BATCH physical operator if this option is set to 'false'
     public static final String REWRITE_ATTEMPT_BATCH_ASSIGN = "rewrite_attempt_batch_assign";
-    static final boolean REWRITE_ATTEMPT_BATCH_ASSIGN_DEFAULT = false;
+    static final boolean REWRITE_ATTEMPT_BATCH_ASSIGN_DEFAULT = true;
 
     @Override
     protected ILogicalOperatorVisitor<IPhysicalOperator, Boolean> createPhysicalOperatorFactoryVisitor(
@@ -265,7 +267,8 @@ public final class SetAsterixPhysicalOperatorsRule extends SetAlgebricksPhysical
             INodeDomain storageDomain = mp.findNodeDomain(dataset.getNodeGroupName());
             if (dsi == null) {
                 throw new CompilationException(ErrorCode.COMPILATION_ERROR, op.getSourceLocation(),
-                        "Could not find index " + jobGenParams.getIndexName() + " for dataset " + dataSourceId);
+                        "Could not find index " + jobGenParams.getIndexName() + " for " + dataset() + " "
+                                + dataSourceId);
             }
             IndexType indexType = jobGenParams.getIndexType();
             boolean requiresBroadcast = jobGenParams.getRequiresBroadcast();

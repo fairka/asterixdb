@@ -834,6 +834,11 @@
       </compilation-unit>
     </test-case>
     <test-case FilePath="aggregate">
+      <compilation-unit name="sum/scalar_sum_type">
+        <output-dir compare="Text">sum/scalar_sum_type</output-dir>
+      </compilation-unit>
+    </test-case>
+    <test-case FilePath="aggregate">
       <compilation-unit name="scalar_var">
         <output-dir compare="Text">scalar_var</output-dir>
       </compilation-unit>
@@ -2094,6 +2099,11 @@
     <test-case FilePath="aggregate-sql">
       <compilation-unit name="sum/scalar_sum_null">
         <output-dir compare="Text">sum/scalar_sum_null</output-dir>
+      </compilation-unit>
+    </test-case>
+    <test-case FilePath="aggregate-sql">
+      <compilation-unit name="sum/scalar_sum_type">
+        <output-dir compare="Text">sum/scalar_sum_type</output-dir>
       </compilation-unit>
     </test-case>
     <test-case FilePath="aggregate-sql">
@@ -4845,7 +4855,7 @@
     <test-case FilePath="dml">
       <compilation-unit name="upsert-dataset-with-meta">
         <output-dir compare="Text">upsert-dataset-with-meta</output-dir>
-        <expected-error>upsert into dataset is not supported on Datasets with Meta records</expected-error>
+        <expected-error>upsert into dataset is not supported on datasets with meta record</expected-error>
       </compilation-unit>
     </test-case>
     <test-case FilePath="dml">
@@ -4871,13 +4881,13 @@
     <test-case FilePath="dml">
       <compilation-unit name="delete-dataset-with-meta">
         <output-dir compare="Text">delete-dataset-with-meta</output-dir>
-        <expected-error>delete from dataset is not supported on Datasets with Meta records</expected-error>
+        <expected-error>delete from dataset is not supported on datasets with meta records</expected-error>
       </compilation-unit>
     </test-case>
     <test-case FilePath="dml">
       <compilation-unit name="insert-dataset-with-meta">
         <output-dir compare="Text">insert-dataset-with-meta</output-dir>
-        <expected-error>insert into dataset is not supported on Datasets with Meta records</expected-error>
+        <expected-error>insert into dataset is not supported on datasets with meta records</expected-error>
       </compilation-unit>
     </test-case>
     <test-case FilePath="dml">
@@ -6687,7 +6697,7 @@
         <output-dir compare="Text">partition-by-nonexistent-field</output-dir>
         <expected-error>Field "id" is not found</expected-error>
         <expected-error>Cannot find dataset with name testds in dataverse test</expected-error>
-        <expected-error>Cannot find dataset testds in dataverse test nor an alias with name testds!</expected-error>
+        <expected-error>Cannot find dataset testds in dataverse test nor an alias with name testds</expected-error>
       </compilation-unit>
     </test-case>
     <test-case FilePath="misc">
@@ -10830,6 +10840,11 @@
         <output-dir compare="Text">query-ASTERIXDB-2815</output-dir>
       </compilation-unit>
     </test-case>
+    <test-case FilePath="subquery">
+      <compilation-unit name="query-ASTERIXDB-2845">
+        <output-dir compare="Text">query-ASTERIXDB-2845</output-dir>
+      </compilation-unit>
+    </test-case>
   </test-group>
   <test-group name="subset-collection">
     <test-case FilePath="subset-collection">
@@ -10873,6 +10888,11 @@
       <compilation-unit name="synonym-02-negative">
         <output-dir compare="Text">none</output-dir>
         <expected-error>ASX1063: Cannot find dataverse with name UNKNOWN_DATAVERSE</expected-error>
+      </compilation-unit>
+    </test-case>
+    <test-case FilePath="synonym">
+      <compilation-unit name="synonym-03">
+        <output-dir compare="Text">synonym-03</output-dir>
       </compilation-unit>
     </test-case>
   </test-group>
@@ -12328,6 +12348,7 @@
       <compilation-unit name="drop-dataverse">
         <output-dir compare="Text">drop-dataverse</output-dir>
         <expected-error>ASX1147: Cannot drop dataverse: type a.a being used by dataset b.b1</expected-error>
+        <expected-error>ASX1147: Cannot drop dataverse: synonym a.s1 being used by function b.f1()</expected-error>
         <source-location>false</source-location>
       </compilation-unit>
     </test-case>
@@ -12362,26 +12383,26 @@
     <test-case FilePath="user-defined-functions">
       <compilation-unit name="bad-function-ddl-1">
         <output-dir compare="Text">bad-function-ddl-1</output-dir>
-        <expected-error>Cannot find dataset TweetMessages in dataverse experiments nor an alias with name TweetMessages!</expected-error>
-        <expected-error>Cannot find dataset TweetMessages2 in dataverse experiments2 nor an alias with name TweetMessages2!</expected-error>
+        <expected-error>Cannot find dataset TweetMessages in dataverse experiments nor an alias with name TweetMessages</expected-error>
+        <expected-error>Cannot find dataset TweetMessages2 in dataverse experiments2 nor an alias with name TweetMessages2</expected-error>
       </compilation-unit>
     </test-case>
     <test-case FilePath="user-defined-functions">
       <compilation-unit name="bad-function-ddl-2">
         <output-dir compare="Text">bad-function-ddl-2</output-dir>
-        <expected-error>Cannot find dataset TweetMessages in dataverse experiments2 nor an alias with name TweetMessages!</expected-error>
+        <expected-error>Cannot find dataset TweetMessages in dataverse experiments2 nor an alias with name TweetMessages</expected-error>
       </compilation-unit>
     </test-case>
     <test-case FilePath="user-defined-functions">
       <compilation-unit name="bad-function-ddl-3">
         <output-dir compare="Text">bad-function-ddl-3</output-dir>
-        <expected-error>Cannot find dataset TweetMessages in dataverse experiments nor an alias with name TweetMessages!</expected-error>
+        <expected-error>Cannot find dataset TweetMessages in dataverse experiments nor an alias with name TweetMessages</expected-error>
       </compilation-unit>
     </test-case>
     <test-case FilePath="user-defined-functions">
       <compilation-unit name="bad-function-ddl-4">
         <output-dir compare="Text">bad-function-ddl-4</output-dir>
-        <expected-error>Cannot find dataset TweetMessages in dataverse experients nor an alias with name TweetMessages!</expected-error>
+        <expected-error>Cannot find dataset TweetMessages in dataverse experients nor an alias with name TweetMessages</expected-error>
       </compilation-unit>
     </test-case>
     <test-case FilePath="user-defined-functions">
@@ -12400,13 +12421,13 @@
     <test-case FilePath="user-defined-functions">
       <compilation-unit name="bad-function-ddl-7">
         <output-dir compare="Text">bad-function-ddl-7</output-dir>
-        <expected-error>Cannot find dataset TweetMessaes in dataverse experiments nor an alias with name TweetMessaes!</expected-error>
+        <expected-error>Cannot find dataset TweetMessaes in dataverse experiments nor an alias with name TweetMessaes</expected-error>
       </compilation-unit>
     </test-case>
     <test-case FilePath="user-defined-functions">
       <compilation-unit name="bad-function-ddl-8">
         <output-dir compare="Text">bad-function-ddl-8</output-dir>
-        <expected-error>Cannot find dataset TweetMessaes in dataverse experiments nor an alias with name TweetMessaes!</expected-error>
+        <expected-error>Cannot find dataset TweetMessaes in dataverse experiments nor an alias with name TweetMessaes</expected-error>
       </compilation-unit>
     </test-case>
     <test-case FilePath="user-defined-functions">
@@ -12471,8 +12492,10 @@
     <test-case FilePath="user-defined-functions">
       <compilation-unit name="drop-dependency-4">
         <output-dir compare="Text">drop-dependency-4</output-dir>
-        <expected-error>Cannot drop dataset C.TweetMessages being used by function B.f2(2)</expected-error>
-        <expected-error>Cannot drop dataset C.TweetMessages being used by function B.f2(...)</expected-error>
+        <expected-error>ASX1148: Cannot drop dataset C.TweetMessages being used by function B.f2(2)</expected-error>
+        <expected-error>ASX1148: Cannot drop dataset C.TweetMessages being used by function B.f2(...)</expected-error>
+        <expected-error>ASX1148: Cannot drop synonym C.TweetMessagesSyn being used by function B.f2(2)</expected-error>
+        <expected-error>ASX1148: Cannot drop synonym C.TweetMessagesSyn being used by function B.f2(...)</expected-error>
         <source-location>false</source-location>
       </compilation-unit>
     </test-case>
@@ -12489,8 +12512,10 @@
     <test-case FilePath="user-defined-functions">
       <compilation-unit name="drop-dependency-6">
         <output-dir compare="Text">drop-dependency-6</output-dir>
-        <expected-error>Cannot drop dataset C.TweetMessages being used by function C.f2(2)</expected-error>
-        <expected-error>Cannot drop dataset C.TweetMessages being used by function C.f2(...)</expected-error>
+        <expected-error>ASX1148: Cannot drop dataset C.TweetMessages being used by function C.f2(2)</expected-error>
+        <expected-error>ASX1148: Cannot drop dataset C.TweetMessages being used by function C.f2(...)</expected-error>
+        <expected-error>ASX1148: Cannot drop synonym C.TweetMessagesSyn being used by function C.f2(2)</expected-error>
+        <expected-error>ASX1148: Cannot drop synonym C.TweetMessagesSyn being used by function C.f2(...)</expected-error>
         <source-location>false</source-location>
       </compilation-unit>
     </test-case>
@@ -12890,7 +12915,7 @@
     <test-case FilePath="load">
       <compilation-unit name="dataset-with-meta">
         <output-dir compare="Text">dataset-with-meta</output-dir>
-        <expected-error>ASX1079: Compilation error: DatasetWithMeta: load dataset is not supported on Datasets with Meta records (in line 27, at column 1)</expected-error>
+        <expected-error>ASX1079: Compilation error: DatasetWithMeta: load dataset is not supported on datasets with meta records (in line 27, at column 1)</expected-error>
       </compilation-unit>
     </test-case>
     <test-case FilePath="load">
@@ -13258,7 +13283,7 @@
     <test-case FilePath="meta">
       <compilation-unit name="query_dataset_with_meta_failure">
         <output-dir compare="Text">query_dataset_with_meta_failure</output-dir>
-        <expected-error>ASX1079: Compilation error: Cannot resolve ambiguous meta function call. There are more than one dataset choice! (in line 24, at column 7)</expected-error>
+        <expected-error>ASX1079: Compilation error: Cannot resolve ambiguous meta function call. There are more than one dataset choice (in line 24, at column 7)</expected-error>
       </compilation-unit>
     </test-case>
   </test-group>
@@ -13370,6 +13395,11 @@
     <test-case FilePath="leftouterjoin">
       <compilation-unit name="query-ASTERIXDB-769">
         <output-dir compare="Text">query-ASTERIXDB-769</output-dir>
+      </compilation-unit>
+    </test-case>
+    <test-case FilePath="leftouterjoin">
+      <compilation-unit name="query-ASTERIXDB-2857">
+        <output-dir compare="Text">query-ASTERIXDB-2857</output-dir>
       </compilation-unit>
     </test-case>
     <test-case FilePath="leftouterjoin">
@@ -14071,16 +14101,16 @@
         <output-dir compare="Text">length</output-dir>
       </compilation-unit>
     </test-case>
-    <test-case FilePath="binary">
-      <compilation-unit name="query_id">
-        <output-dir compare="Text">query_id</output-dir>
-      </compilation-unit>
-    </test-case>
   </test-group>
   <test-group name="unnest">
     <test-case FilePath="unnest">
       <compilation-unit name="ASTERIXDB-2750_unnest_join">
         <output-dir compare="Text">ASTERIXDB-2750_unnest_join</output-dir>
+      </compilation-unit>
+    </test-case>
+    <test-case FilePath="unnest">
+      <compilation-unit name="ASTERIXDB-2844_unnest_syntax">
+        <output-dir compare="Text">ASTERIXDB-2844_unnest_syntax</output-dir>
       </compilation-unit>
     </test-case>
     <test-case FilePath="unnest">
