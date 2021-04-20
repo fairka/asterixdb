@@ -26,7 +26,6 @@ import java.util.logging.Logger;
 import org.apache.asterix.runtime.operators.joins.interval.TimeSweep.memory.VPartitionDeletableTupleBufferManager;
 import org.apache.asterix.runtime.operators.joins.interval.utils.IIntervalJoinUtil;
 import org.apache.asterix.runtime.operators.joins.interval.utils.memory.FrameTupleCursor;
-import org.apache.asterix.runtime.operators.joins.interval.utils.memory.IntervalJoinUtil;
 import org.apache.asterix.runtime.operators.joins.interval.utils.memory.RunFileStream;
 import org.apache.hyracks.api.comm.IFrame;
 import org.apache.hyracks.api.comm.IFrameTupleAccessor;
@@ -177,14 +176,13 @@ public class IntervalTimeSweepJoiner {
                 } else if (!continueProbe) {
                     choseProbePath = false;
                 } else {
-                    //choseProbePath = !(buildStart <= probeStart);
                     choseProbePath = iju.choosePath(inputCursor[BUILD_PARTITION].getAccessor(),
                             inputCursor[BUILD_PARTITION].getTupleId(), inputCursor[PROBE_PARTITION].getAccessor(),
                             inputCursor[PROBE_PARTITION].getTupleId());
                 }
                 // Process the correct side based on chosen path.
                 if (choseProbePath) {
-                    processRemoveOldTuples(PROBE_PARTITION, BUILD_PARTITION, probeKey);
+                    processRemoveOldTuples(PROBE_PARTITION, BUILD_PARTITION, probeKey, false);
                     addToMemoryAndProcessJoin(PROBE_PARTITION, BUILD_PARTITION, false, writer);
                     // Needs to check for another frame
                     continueProbe = hasNext(PROBE_PARTITION);
@@ -192,7 +190,7 @@ public class IntervalTimeSweepJoiner {
                         inputCursor[PROBE_PARTITION].next();
                     }
                 } else {
-                    processRemoveOldTuples(BUILD_PARTITION, PROBE_PARTITION, buildKey);
+                    processRemoveOldTuples(BUILD_PARTITION, PROBE_PARTITION, buildKey, true);
                     addToMemoryAndProcessJoin(BUILD_PARTITION, PROBE_PARTITION, true, writer);
                     // Needs to check for another frame
                     continueBuild = hasNext(BUILD_PARTITION);
@@ -214,12 +212,20 @@ public class IntervalTimeSweepJoiner {
         runFileStream[PROBE_PARTITION].removeRunFile();
     }
 
-    private void processRemoveOldTuples(int active, int passive, int key) throws HyracksDataException {
+    private void processRemoveOldTuples(int active, int passive, int key, boolean reversed)
+            throws HyracksDataException {
         //Remove from passive that can no longer match with active.
-        while (activeManager[passive].hasRecords()
-                && iju.checkToRemoveInMemory(IntervalJoinUtil.getIntervalStart(inputCursor[active].getAccessor(),
-                        inputCursor[active].getTupleId(), key), activeManager[passive].getTopPoint())) {
-            activeManager[passive].removeTop();
+        //TuplePrinterUtil.printTuple("Active", inputCursor[active].getAccessor(), inputCursor[active].getTupleId());
+        if (reversed) {
+            while (activeManager[active].hasRecords() && iju.checkToRemoveInMemory(inputCursor[passive].getAccessor(),
+                    inputCursor[passive].getTupleId(), key, activeManager[active].getTopPoint(), true)) {
+                activeManager[active].removeTop();
+            }
+        } else {
+            while (activeManager[passive].hasRecords() && iju.checkToRemoveInMemory(inputCursor[active].getAccessor(),
+                    inputCursor[active].getTupleId(), key, activeManager[passive].getTopPoint(), false)) {
+                activeManager[passive].removeTop();
+            }
         }
     }
 
@@ -240,7 +246,7 @@ public class IntervalTimeSweepJoiner {
         for (TuplePointer outerTp : outer) {
             outerAccessor.reset(outerTp);
             if (iju.checkToSaveInResult(outerAccessor, outerTp.getTupleIndex(), tupleCursor.getAccessor(),
-                    tupleCursor.getTupleId(), reversed)) { // THis had reversed in it.
+                    tupleCursor.getTupleId(), reversed)) {
                 addToResult(outerAccessor, outerTp.getTupleIndex(), tupleCursor.getAccessor(), tupleCursor.getTupleId(),
                         reversed, writer);
             }

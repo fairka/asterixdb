@@ -63,8 +63,13 @@ public abstract class AbstractIntervalJoinUtil implements IIntervalJoinUtil {
     @Override
     public boolean checkToSaveInResult(IFrameTupleAccessor buildAccessor, int buildTupleIndex,
             IFrameTupleAccessor probeAccessor, int probeTupleIndex, boolean reversed) throws HyracksDataException {
-        IntervalJoinUtil.getIntervalPointable(buildAccessor, buildTupleIndex, idBuild, ipBuild);
-        IntervalJoinUtil.getIntervalPointable(probeAccessor, probeTupleIndex, idProbe, ipProbe);
+        if (reversed) {
+            IntervalJoinUtil.getIntervalPointable(buildAccessor, buildTupleIndex, idBuild, ipProbe);
+            IntervalJoinUtil.getIntervalPointable(probeAccessor, probeTupleIndex, idProbe, ipBuild);
+        } else {
+            IntervalJoinUtil.getIntervalPointable(buildAccessor, buildTupleIndex, idBuild, ipBuild);
+            IntervalJoinUtil.getIntervalPointable(probeAccessor, probeTupleIndex, idProbe, ipProbe);
+        }
         return compareInterval(ipBuild, ipProbe);
     }
 
@@ -91,6 +96,7 @@ public abstract class AbstractIntervalJoinUtil implements IIntervalJoinUtil {
         return buildEnd > probeStart;
     }
 
+    //Checked
     @Override
     public boolean checkToRemoveBuildActive() {
         return true;
@@ -105,8 +111,14 @@ public abstract class AbstractIntervalJoinUtil implements IIntervalJoinUtil {
      * Left (first argument) interval starts after the Right (second argument) interval ends.
      */
     @Override
-    public boolean checkToRemoveInMemory(long start0, long start1) {
-        return start0 > start1;
+    public boolean checkToRemoveInMemory(IFrameTupleAccessor accessor0, int tupleIndex0, int key0, long end1,
+            boolean reversed) {
+        long start0 = IntervalJoinUtil.getIntervalStart(accessor0, tupleIndex0, key0);
+
+        if (reversed) {
+            return start0 < end1;
+        }
+        return start0 > end1;
     }
 
     @Override

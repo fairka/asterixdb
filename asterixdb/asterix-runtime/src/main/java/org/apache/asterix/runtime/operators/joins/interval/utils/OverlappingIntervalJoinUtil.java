@@ -48,8 +48,8 @@ public class OverlappingIntervalJoinUtil extends AbstractIntervalJoinUtil {
     @Override
     public boolean checkForEarlyExit(IFrameTupleAccessor buildAccessor, int buildTupleIndex,
             IFrameTupleAccessor probeAccessor, int probeTupleIndex) {
-        long probeStart = IntervalJoinUtil.getIntervalStart(probeAccessor, probeTupleIndex, idProbe);
         long buildEnd = IntervalJoinUtil.getIntervalEnd(buildAccessor, buildTupleIndex, idBuild);
+        long probeStart = IntervalJoinUtil.getIntervalStart(probeAccessor, probeTupleIndex, idProbe);
         return buildEnd <= probeStart;
     }
 
@@ -93,8 +93,13 @@ public class OverlappingIntervalJoinUtil extends AbstractIntervalJoinUtil {
      * Left (first argument) interval starts after the Right (second argument) interval ends.
      */
     @Override
-    public boolean checkToRemoveInMemory(long start0, long end1) {
-        return start0 < end1;
+    public boolean checkToRemoveInMemory(IFrameTupleAccessor accessor0, int tupleIndex0, int key0, long point1,
+            boolean reversed) {
+        long start0 = IntervalJoinUtil.getIntervalStart(accessor0, tupleIndex0, key0);
+        if (reversed) {
+            return point1 >= start0;
+        }
+        return start0 >= point1;
     }
 
     @Override

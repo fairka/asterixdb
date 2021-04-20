@@ -103,7 +103,8 @@ public interface IIntervalJoinUtil {
 
     boolean checkToRemoveProbeActive();
 
-    boolean checkToRemoveInMemory(long start0, long start1);
+    boolean checkToRemoveInMemory(IFrameTupleAccessor accessor0, int tupleIndex0, int key0, long end1,
+            boolean reversed);
 
     boolean choosePath(IFrameTupleAccessor buildAccessor, int buildTupleIndex, IFrameTupleAccessor probeAccessor,
             int probeTupleIndex);
