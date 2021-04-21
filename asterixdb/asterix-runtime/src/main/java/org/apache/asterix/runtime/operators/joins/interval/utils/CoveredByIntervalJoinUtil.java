@@ -40,6 +40,13 @@ public class CoveredByIntervalJoinUtil extends AbstractIntervalInverseJoinUtil {
         return buildStart <= probeEnd;
     }
 
+    @Override
+    public boolean checkToRemoveInMemory(IFrameTupleAccessor accessor0, int tupleIndex0, int key0, long point1,
+            boolean reversed) {
+        long point0 = IntervalJoinUtil.getIntervalStart(accessor0, tupleIndex0, key0);
+        return point0 > point1;
+    }
+
     /**
      * Left (first argument) interval starts after the Right (second argument) interval ends.
      */

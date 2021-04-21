@@ -34,13 +34,9 @@ public class OverlapsIntervalJoinUtil extends AbstractIntervalJoinUtil {
         return il.overlaps(ipBuild, ipProbe);
     }
 
-    /**
-     * Left (first argument) interval starts after the Right (second argument) interval ends.
-     */
     @Override
     public boolean checkToRemoveInMemory(IFrameTupleAccessor accessor0, int tupleIndex0, int key0, long end1,
             boolean reversed) {
-        long start0 = IntervalJoinUtil.getIntervalStart(accessor0, tupleIndex0, key0);
         return false;
     }
 
