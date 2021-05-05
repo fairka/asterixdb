@@ -36,10 +36,16 @@ import org.apache.asterix.runtime.operators.joins.interval.utils.AfterIntervalJo
 import org.apache.asterix.runtime.operators.joins.interval.utils.BeforeIntervalJoinUtilFactory;
 import org.apache.asterix.runtime.operators.joins.interval.utils.CoveredByIntervalJoinUtilFactory;
 import org.apache.asterix.runtime.operators.joins.interval.utils.CoversIntervalJoinUtilFactory;
+import org.apache.asterix.runtime.operators.joins.interval.utils.EndedByIntervalJoinUtilFactory;
+import org.apache.asterix.runtime.operators.joins.interval.utils.EndsIntervalJoinUtilFactory;
 import org.apache.asterix.runtime.operators.joins.interval.utils.IIntervalJoinUtilFactory;
+import org.apache.asterix.runtime.operators.joins.interval.utils.MeetsIntervalJoinUtilFactory;
+import org.apache.asterix.runtime.operators.joins.interval.utils.MetByIntervalJoinUtilFactory;
 import org.apache.asterix.runtime.operators.joins.interval.utils.OverlappedByIntervalJoinUtilFactory;
 import org.apache.asterix.runtime.operators.joins.interval.utils.OverlappingIntervalJoinUtilFactory;
 import org.apache.asterix.runtime.operators.joins.interval.utils.OverlapsIntervalJoinUtilFactory;
+import org.apache.asterix.runtime.operators.joins.interval.utils.StartedByIntervalJoinUtilFactory;
+import org.apache.asterix.runtime.operators.joins.interval.utils.StartsIntervalJoinUtilFactory;
 import org.apache.commons.lang3.mutable.Mutable;
 import org.apache.commons.lang3.mutable.MutableObject;
 import org.apache.hyracks.algebricks.common.exceptions.AlgebricksException;
@@ -55,7 +61,7 @@ import org.apache.hyracks.algebricks.core.algebra.functions.FunctionIdentifier;
 import org.apache.hyracks.algebricks.core.algebra.functions.IFunctionInfo;
 import org.apache.hyracks.algebricks.core.algebra.operators.logical.AbstractBinaryJoinOperator;
 import org.apache.hyracks.algebricks.core.algebra.operators.logical.AssignOperator;
-import org.apache.hyracks.algebricks.core.algebra.operators.logical.OrderOperator;
+import org.apache.hyracks.algebricks.core.algebra.operators.logical.OrderOperator.IOrder.OrderKind;
 import org.apache.hyracks.algebricks.core.algebra.operators.physical.AbstractJoinPOperator;
 import org.apache.hyracks.algebricks.core.algebra.operators.physical.AssignPOperator;
 import org.apache.hyracks.algebricks.core.algebra.properties.IPartitioningProperty.PartitioningType;
@@ -74,6 +80,12 @@ public class IntervalJoinUtils {
         INTERVAL_JOIN_CONDITIONS.put(BuiltinFunctions.INTERVAL_OVERLAPPED_BY, BuiltinFunctions.INTERVAL_OVERLAPS);
         INTERVAL_JOIN_CONDITIONS.put(BuiltinFunctions.INTERVAL_OVERLAPPING, BuiltinFunctions.INTERVAL_OVERLAPPING);
         INTERVAL_JOIN_CONDITIONS.put(BuiltinFunctions.INTERVAL_OVERLAPS, BuiltinFunctions.INTERVAL_OVERLAPPED_BY);
+        INTERVAL_JOIN_CONDITIONS.put(BuiltinFunctions.INTERVAL_ENDED_BY, BuiltinFunctions.INTERVAL_ENDS);
+        INTERVAL_JOIN_CONDITIONS.put(BuiltinFunctions.INTERVAL_ENDS, BuiltinFunctions.INTERVAL_ENDED_BY);
+        INTERVAL_JOIN_CONDITIONS.put(BuiltinFunctions.INTERVAL_MEETS, BuiltinFunctions.INTERVAL_MET_BY);
+        INTERVAL_JOIN_CONDITIONS.put(BuiltinFunctions.INTERVAL_MET_BY, BuiltinFunctions.INTERVAL_MEETS);
+        INTERVAL_JOIN_CONDITIONS.put(BuiltinFunctions.INTERVAL_STARTED_BY, BuiltinFunctions.INTERVAL_STARTS);
+        INTERVAL_JOIN_CONDITIONS.put(BuiltinFunctions.INTERVAL_STARTS, BuiltinFunctions.INTERVAL_STARTED_BY);
     }
 
     protected static RangeAnnotation findRangeAnnotation(AbstractFunctionCallExpression fexp) {
@@ -107,12 +119,15 @@ public class IntervalJoinUtils {
         insertPartitionSortKey(op, left, leftPartitionVar, sideLeft.get(0), context);
         insertPartitionSortKey(op, right, rightPartitionVar, sideRight.get(0), context);
 
-        List<IntervalColumn> leftIC = Collections.singletonList(new IntervalColumn(leftPartitionVar.get(0),
-                leftPartitionVar.get(1), OrderOperator.IOrder.OrderKind.ASC));
-        List<IntervalColumn> rightIC = Collections.singletonList(new IntervalColumn(rightPartitionVar.get(0),
-                rightPartitionVar.get(1), OrderOperator.IOrder.OrderKind.ASC));
+        final int INTERVAL_START_INDEX = 0;
+        final int INTERVAL_END_INDEX = 1;
+        int rightFirstSortField = INTERVAL_START_INDEX;
+        int rightSecondSortField = INTERVAL_END_INDEX;
+        int leftFirstSortField = INTERVAL_START_INDEX;
+        int leftSecondSortField = INTERVAL_END_INDEX;
+        OrderKind orderOfJoin = OrderKind.ASC;
 
-        //Set Partitioning Types
+        //Set Partitioning Types and reverse order of join if necessary
         PartitioningType leftPartitioningType = PartitioningType.ORDERED_PARTITIONED;
         PartitioningType rightPartitioningType = PartitioningType.ORDERED_PARTITIONED;
         if (fi.equals(BuiltinFunctions.INTERVAL_OVERLAPPED_BY)) {
@@ -130,9 +145,41 @@ public class IntervalJoinUtils {
             leftPartitioningType = PartitioningType.PARTIAL_BROADCAST_ORDERED_FOLLOWING;
         } else if (fi.equals(BuiltinFunctions.INTERVAL_AFTER)) {
             rightPartitioningType = PartitioningType.PARTIAL_BROADCAST_ORDERED_FOLLOWING;
+        } else if (fi.equals(BuiltinFunctions.INTERVAL_STARTS)) {
+            // Default Partitioning
+        } else if (fi.equals(BuiltinFunctions.INTERVAL_STARTED_BY)) {
+            // Default Partitioning
+        } else if (fi.equals(BuiltinFunctions.INTERVAL_ENDS)) {
+            // Reverse order of Join
+            leftFirstSortField = INTERVAL_END_INDEX;
+            leftSecondSortField = INTERVAL_START_INDEX;
+            rightFirstSortField = INTERVAL_END_INDEX;
+            rightSecondSortField = INTERVAL_START_INDEX;
+            orderOfJoin = OrderKind.DESC;
+        } else if (fi.equals(BuiltinFunctions.INTERVAL_ENDED_BY)) {
+            // Reverse order of Join
+            leftFirstSortField = INTERVAL_END_INDEX;
+            leftSecondSortField = INTERVAL_START_INDEX;
+            rightFirstSortField = INTERVAL_END_INDEX;
+            rightSecondSortField = INTERVAL_START_INDEX;
+            orderOfJoin = OrderKind.DESC;
+        } else if (fi.equals(BuiltinFunctions.INTERVAL_MEETS)) {
+            leftFirstSortField = INTERVAL_END_INDEX;
+            leftSecondSortField = INTERVAL_START_INDEX;
+        } else if (fi.equals(BuiltinFunctions.INTERVAL_MET_BY)) {
+            rightFirstSortField = INTERVAL_END_INDEX;
+            rightSecondSortField = INTERVAL_START_INDEX;
         } else {
             throw new CompilationException(ErrorCode.COMPILATION_ILLEGAL_STATE, fi.getName());
         }
+
+        List<IntervalColumn> leftIC =
+                Collections.singletonList(new IntervalColumn(leftPartitionVar.get(leftFirstSortField),
+                        leftPartitionVar.get(leftSecondSortField), orderOfJoin));
+        List<IntervalColumn> rightIC =
+                Collections.singletonList(new IntervalColumn(rightPartitionVar.get(rightFirstSortField),
+                        rightPartitionVar.get(rightSecondSortField), orderOfJoin));
+
         return new IntervalPartitions(rangeMap, leftIC, rightIC, leftPartitioningType, rightPartitioningType);
     }
 
@@ -199,6 +246,18 @@ public class IntervalJoinUtils {
             mjcf = new AfterIntervalJoinUtilFactory();
         } else if (fi.equals(BuiltinFunctions.INTERVAL_OVERLAPPING)) {
             mjcf = new OverlappingIntervalJoinUtilFactory(rangeMap);
+        } else if (fi.equals(BuiltinFunctions.INTERVAL_ENDED_BY)) {
+            mjcf = new EndedByIntervalJoinUtilFactory();
+        } else if (fi.equals(BuiltinFunctions.INTERVAL_ENDS)) {
+            mjcf = new EndsIntervalJoinUtilFactory();
+        } else if (fi.equals(BuiltinFunctions.INTERVAL_MEETS)) {
+            mjcf = new MeetsIntervalJoinUtilFactory();
+        } else if (fi.equals(BuiltinFunctions.INTERVAL_MET_BY)) {
+            mjcf = new MetByIntervalJoinUtilFactory();
+        } else if (fi.equals(BuiltinFunctions.INTERVAL_STARTED_BY)) {
+            mjcf = new StartedByIntervalJoinUtilFactory();
+        } else if (fi.equals(BuiltinFunctions.INTERVAL_STARTS)) {
+            mjcf = new StartsIntervalJoinUtilFactory();
         } else {
             throw new CompilationException(ErrorCode.COMPILATION_ILLEGAL_STATE, fi.getName());
         }

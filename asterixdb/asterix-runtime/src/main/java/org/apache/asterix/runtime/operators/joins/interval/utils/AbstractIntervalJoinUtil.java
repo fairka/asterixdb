@@ -90,4 +90,37 @@ public abstract class AbstractIntervalJoinUtil implements IIntervalJoinUtil {
         long probeStart = IntervalJoinUtil.getIntervalStart(probeAccessor, probeTupleIndex, idProbe);
         return buildEnd > probeStart;
     }
+
+    //Checked
+    @Override
+    public boolean checkToRemoveBuildActive() {
+        return true;
+    }
+
+    @Override
+    public boolean checkToRemoveProbeActive() {
+        return true;
+    }
+
+    /**
+     * Left (first argument) interval starts after the Right (second argument) interval ends.
+     */
+    @Override
+    public boolean checkToRemoveInMemory(IFrameTupleAccessor accessor0, int tupleIndex0, int key0, long end1,
+            boolean reversed) {
+        long start0 = IntervalJoinUtil.getIntervalStart(accessor0, tupleIndex0, key0);
+
+        if (reversed) {
+            return start0 < end1;
+        }
+        return start0 > end1;
+    }
+
+    @Override
+    public boolean choosePath(IFrameTupleAccessor buildAccessor, int buildTupleIndex, IFrameTupleAccessor probeAccessor,
+            int probeTupleIndex) {
+        long buildStart = IntervalJoinUtil.getIntervalStart(buildAccessor, buildTupleIndex, idBuild);
+        long probeStart = IntervalJoinUtil.getIntervalEnd(probeAccessor, probeTupleIndex, idProbe);
+        return buildStart > probeStart;
+    }
 }

@@ -23,23 +23,18 @@ import org.apache.asterix.runtime.operators.joins.interval.utils.memory.Interval
 import org.apache.hyracks.api.comm.IFrameTupleAccessor;
 import org.apache.hyracks.api.exceptions.HyracksDataException;
 
-public class BeforeIntervalJoinUtil extends AbstractIntervalJoinUtil {
+public class EndsIntervalJoinUtil extends AbstractIntervalJoinUtil {
 
-    public BeforeIntervalJoinUtil(int buildKey, int probeKey) {
+    public EndsIntervalJoinUtil(int buildKey, int probeKey) {
         super(buildKey, probeKey);
     }
 
     @Override
     public boolean checkToSaveInMemory(IFrameTupleAccessor buildAccessor, int buildTupleIndex,
             IFrameTupleAccessor probeAccessor, int probeTupleIndex) {
-        long buildStart = IntervalJoinUtil.getIntervalStart(buildAccessor, buildTupleIndex, idBuild);
-        long probeStart = IntervalJoinUtil.getIntervalStart(probeAccessor, probeTupleIndex, idProbe);
-        return buildStart < probeStart;
-    }
-
-    @Override
-    public boolean checkToRemoveBuildActive() {
-        return false;
+        long buildEnd = IntervalJoinUtil.getIntervalEnd(buildAccessor, buildTupleIndex, idBuild);
+        long probeEnd = IntervalJoinUtil.getIntervalEnd(probeAccessor, probeTupleIndex, idProbe);
+        return buildEnd >= probeEnd;
     }
 
     @Override
@@ -49,19 +44,7 @@ public class BeforeIntervalJoinUtil extends AbstractIntervalJoinUtil {
     }
 
     @Override
-    public boolean checkForEarlyExit(IFrameTupleAccessor buildAccessor, int buildTupleIndex,
-            IFrameTupleAccessor probeAccessor, int probeTupleIndex) {
-        return false;
-    }
-
-    @Override
     public boolean compareInterval(AIntervalPointable ipBuild, AIntervalPointable ipProbe) throws HyracksDataException {
-        return il.before(ipBuild, ipProbe);
-    }
-
-    @Override
-    public boolean checkToLoadNextProbeTuple(IFrameTupleAccessor buildAccessor, int buildTupleIndex,
-            IFrameTupleAccessor probeAccessor, int probeTupleIndex) {
-        return true;
+        return il.ends(ipProbe, ipBuild);
     }
 }

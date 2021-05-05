@@ -19,6 +19,8 @@
 package org.apache.asterix.runtime.operators.joins.interval.utils;
 
 import org.apache.asterix.om.pointables.nonvisitor.AIntervalPointable;
+import org.apache.asterix.runtime.operators.joins.interval.utils.memory.IntervalJoinUtil;
+import org.apache.hyracks.api.comm.IFrameTupleAccessor;
 import org.apache.hyracks.api.exceptions.HyracksDataException;
 
 public class OverlappedByIntervalJoinUtil extends AbstractIntervalInverseJoinUtil {
@@ -30,5 +32,19 @@ public class OverlappedByIntervalJoinUtil extends AbstractIntervalInverseJoinUti
     @Override
     public boolean compareInterval(AIntervalPointable ipBuild, AIntervalPointable ipProbe) throws HyracksDataException {
         return il.overlappedBy(ipBuild, ipProbe);
+    }
+
+    /**
+     * Left (first argument) interval starts after the Right (second argument) interval ends.
+     */
+    @Override
+    public boolean checkToRemoveInMemory(IFrameTupleAccessor accessor0, int tupleIndex0, int key0, long end1,
+            boolean reversed) {
+        long start0 = IntervalJoinUtil.getIntervalStart(accessor0, tupleIndex0, key0);
+
+        if (reversed) {
+            return start0 < end1;
+        }
+        return start0 > end1;
     }
 }

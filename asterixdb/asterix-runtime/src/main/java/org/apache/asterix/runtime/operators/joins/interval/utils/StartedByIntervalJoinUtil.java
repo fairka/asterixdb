@@ -19,25 +19,16 @@
 package org.apache.asterix.runtime.operators.joins.interval.utils;
 
 import org.apache.asterix.om.pointables.nonvisitor.AIntervalPointable;
-import org.apache.asterix.runtime.operators.joins.interval.utils.memory.IntervalJoinUtil;
-import org.apache.hyracks.api.comm.IFrameTupleAccessor;
 import org.apache.hyracks.api.exceptions.HyracksDataException;
 
-public class CoversIntervalJoinUtil extends AbstractIntervalJoinUtil {
+public class StartedByIntervalJoinUtil extends StartsIntervalJoinUtil {
 
-    public CoversIntervalJoinUtil(int buildKey, int probeKey) {
+    public StartedByIntervalJoinUtil(int buildKey, int probeKey) {
         super(buildKey, probeKey);
     }
 
     @Override
     public boolean compareInterval(AIntervalPointable ipBuild, AIntervalPointable ipProbe) throws HyracksDataException {
-        return il.covers(ipBuild, ipProbe);
-    }
-
-    @Override
-    public boolean checkToRemoveInMemory(IFrameTupleAccessor accessor0, int tupleIndex0, int key0, long point1,
-            boolean reversed) {
-        long point0 = IntervalJoinUtil.getIntervalStart(accessor0, tupleIndex0, key0);
-        return point0 < point1;
+        return il.startedBy(ipBuild, ipProbe);
     }
 }
