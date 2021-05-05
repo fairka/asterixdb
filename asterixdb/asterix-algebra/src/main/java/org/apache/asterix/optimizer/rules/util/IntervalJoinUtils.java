@@ -33,20 +33,12 @@ import org.apache.asterix.common.exceptions.CompilationException;
 import org.apache.asterix.common.exceptions.ErrorCode;
 import org.apache.asterix.lang.common.util.FunctionUtil;
 import org.apache.asterix.om.functions.BuiltinFunctions;
-import org.apache.asterix.runtime.operators.joins.interval.utils.AfterIntervalJoinUtilFactory;
-import org.apache.asterix.runtime.operators.joins.interval.utils.BeforeIntervalJoinUtilFactory;
 import org.apache.asterix.runtime.operators.joins.interval.utils.CoveredByIntervalJoinUtilFactory;
 import org.apache.asterix.runtime.operators.joins.interval.utils.CoversIntervalJoinUtilFactory;
-import org.apache.asterix.runtime.operators.joins.interval.utils.EndedByIntervalJoinUtilFactory;
-import org.apache.asterix.runtime.operators.joins.interval.utils.EndsIntervalJoinUtilFactory;
 import org.apache.asterix.runtime.operators.joins.interval.utils.IIntervalJoinUtilFactory;
-import org.apache.asterix.runtime.operators.joins.interval.utils.MeetsIntervalJoinUtilFactory;
-import org.apache.asterix.runtime.operators.joins.interval.utils.MetByIntervalJoinUtilFactory;
 import org.apache.asterix.runtime.operators.joins.interval.utils.OverlappedByIntervalJoinUtilFactory;
 import org.apache.asterix.runtime.operators.joins.interval.utils.OverlappingIntervalJoinUtilFactory;
 import org.apache.asterix.runtime.operators.joins.interval.utils.OverlapsIntervalJoinUtilFactory;
-import org.apache.asterix.runtime.operators.joins.interval.utils.StartedByIntervalJoinUtilFactory;
-import org.apache.asterix.runtime.operators.joins.interval.utils.StartsIntervalJoinUtilFactory;
 import org.apache.commons.lang3.mutable.Mutable;
 import org.apache.commons.lang3.mutable.MutableObject;
 import org.apache.hyracks.algebricks.common.exceptions.AlgebricksException;
@@ -250,24 +242,8 @@ public class IntervalJoinUtils {
             mjcf = new CoversIntervalJoinUtilFactory();
         } else if (fi.equals(BuiltinFunctions.INTERVAL_COVERED_BY)) {
             mjcf = new CoveredByIntervalJoinUtilFactory();
-        } else if (fi.equals(BuiltinFunctions.INTERVAL_BEFORE)) {
-            mjcf = new BeforeIntervalJoinUtilFactory();
-        } else if (fi.equals(BuiltinFunctions.INTERVAL_AFTER)) {
-            mjcf = new AfterIntervalJoinUtilFactory();
         } else if (fi.equals(BuiltinFunctions.INTERVAL_OVERLAPPING)) {
             mjcf = new OverlappingIntervalJoinUtilFactory(rangeMap);
-        } else if (fi.equals(BuiltinFunctions.INTERVAL_ENDED_BY)) {
-            mjcf = new EndedByIntervalJoinUtilFactory();
-        } else if (fi.equals(BuiltinFunctions.INTERVAL_ENDS)) {
-            mjcf = new EndsIntervalJoinUtilFactory();
-        } else if (fi.equals(BuiltinFunctions.INTERVAL_MEETS)) {
-            mjcf = new MeetsIntervalJoinUtilFactory();
-        } else if (fi.equals(BuiltinFunctions.INTERVAL_MET_BY)) {
-            mjcf = new MetByIntervalJoinUtilFactory();
-        } else if (fi.equals(BuiltinFunctions.INTERVAL_STARTED_BY)) {
-            mjcf = new StartedByIntervalJoinUtilFactory();
-        } else if (fi.equals(BuiltinFunctions.INTERVAL_STARTS)) {
-            mjcf = new StartsIntervalJoinUtilFactory();
         } else {
             throw new CompilationException(ErrorCode.COMPILATION_ILLEGAL_STATE, fi.getName());
         }
