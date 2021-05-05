@@ -26,6 +26,7 @@ import java.util.logging.Logger;
 import org.apache.asterix.runtime.operators.joins.interval.TimeSweep.memory.VPartitionDeletableTupleBufferManager;
 import org.apache.asterix.runtime.operators.joins.interval.utils.IIntervalJoinUtil;
 import org.apache.asterix.runtime.operators.joins.interval.utils.memory.FrameTupleCursor;
+import org.apache.asterix.runtime.operators.joins.interval.utils.memory.RunFilePointer;
 import org.apache.asterix.runtime.operators.joins.interval.utils.memory.RunFileStream;
 import org.apache.hyracks.api.comm.IFrame;
 import org.apache.hyracks.api.comm.IFrameTupleAccessor;
@@ -63,6 +64,9 @@ public class IntervalTimeSweepJoiner {
     protected final FrameTupleAppender resultAppender;
     private final VPartitionDeletableTupleBufferManager bufferManager;
     private final ITupleAccessor[] memoryAccessor;
+    private final RunFilePointer[] runFilePointer;
+
+    private final int[] streamIndex;
 
     private final ActiveSweepManager[] activeManager;
     private final byte point;
@@ -118,6 +122,14 @@ public class IntervalTimeSweepJoiner {
         activeManager[PROBE_PARTITION] =
                 new ActiveSweepManager(bufferManager, probeKey, PROBE_PARTITION, endPointComparator, point);
 
+        runFilePointer = new RunFilePointer[JOIN_PARTITIONS];
+        runFilePointer[BUILD_PARTITION] = new RunFilePointer();
+        runFilePointer[PROBE_PARTITION] = new RunFilePointer();
+
+        streamIndex = new int[JOIN_PARTITIONS];
+        streamIndex[BUILD_PARTITION] = -1;
+        streamIndex[PROBE_PARTITION] = -1;
+
         // Result
         this.resultAppender = new FrameTupleAppender(new VSizeFrame(ctx));
     }
@@ -142,9 +154,14 @@ public class IntervalTimeSweepJoiner {
     }
 
     public void processProbeClose(IFrameWriter writer) throws HyracksDataException {
+
         runFileStream[PROBE_PARTITION].flushRunFile();
         runFileStream[PROBE_PARTITION].startReadingRunFile(inputCursor[PROBE_PARTITION]);
+
         processJoin(writer);
+
+        runFileStream[PROBE_PARTITION].close();
+        runFileStream[BUILD_PARTITION].close();
     }
 
     private boolean hasNext(int partition) throws HyracksDataException {
@@ -152,7 +169,7 @@ public class IntervalTimeSweepJoiner {
             // Must keep condition in a separate `if` due to actions applied in loadNextBuffer.
             return true;
         } else {
-            return runFileStream[partition].loadNextBuffer(inputCursor[BUILD_PARTITION]);
+            return runFileStream[partition].loadNextBuffer(inputCursor[partition]);
         }
     }
 
@@ -237,8 +254,64 @@ public class IntervalTimeSweepJoiner {
             processTupleJoin(activeManager[passive].getActiveList(), memoryAccessor[passive], inputCursor[active],
                     reversed, writer);
         } else {
-            assert (false);
+            // Spill Case
+            freezeAndSpill(writer, reversed);
         }
+    }
+
+    private void freezeAndSpill(IFrameWriter writer, boolean reversed) throws HyracksDataException {
+
+        int freezePartition;
+        if (bufferManager.getNumTuples(BUILD_PARTITION) > bufferManager.getNumTuples(PROBE_PARTITION)) {
+            freezePartition = PROBE_PARTITION;
+        } else {
+            freezePartition = BUILD_PARTITION;
+        }
+
+        runFilePointer[freezePartition].reset(runFileStream[freezePartition].getReadPointer(),
+                inputCursor[freezePartition].getTupleId());
+
+        if (freezePartition == PROBE_PARTITION) {
+            // Probe side from disk
+            processTupleSpill(PROBE_PARTITION, BUILD_PARTITION, true, writer);
+        } else {
+            // Build side from disk
+            processTupleSpill(BUILD_PARTITION, PROBE_PARTITION, false, writer);
+
+        }
+
+    }
+
+    private void processTupleSpill(int active, int passive, boolean reversed, IFrameWriter writer)
+            throws HyracksDataException {
+        // Process left tuples one by one, check them with active memory from the right branch.
+        while (activeManager[passive].hasRecords()) {
+            // Add individual tuples.
+            processTupleJoin(activeManager[passive].getActiveList(), memoryAccessor[passive], inputCursor[active],
+                    reversed, writer);
+
+            if (inputCursor[active].hasNext()) {
+                inputCursor[active].next();
+            } else {
+                break;
+            }
+        }
+        if (!activeManager[passive].hasRecords()) {
+            unfreezeAndContinue(active);
+        }
+    }
+
+    private void unfreezeAndContinue(int frozenPartition) throws HyracksDataException {
+        int flushPartition = frozenPartition == BUILD_PARTITION ? PROBE_PARTITION : BUILD_PARTITION;
+
+        // Clear memory
+        activeManager[flushPartition].clear();
+
+        // Reset Position of Run File and cursor on frozen side.
+        runFileStream[frozenPartition].startReadingRunFile(inputCursor[frozenPartition],
+                runFilePointer[frozenPartition].getFileOffset());
+        inputCursor[frozenPartition].resetPosition(runFilePointer[frozenPartition].getTupleIndex());
+        runFilePointer[frozenPartition].reset(-1, -1);
     }
 
     private void processTupleJoin(List<TuplePointer> outer, ITupleAccessor outerAccessor, FrameTupleCursor tupleCursor,

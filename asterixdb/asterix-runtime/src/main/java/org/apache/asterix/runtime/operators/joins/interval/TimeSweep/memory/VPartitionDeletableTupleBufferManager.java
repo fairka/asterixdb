@@ -117,7 +117,7 @@ public class VPartitionDeletableTupleBufferManager extends VPartitionTupleBuffer
 
     private boolean canBeInsertedAfterFreeingFrames(int skipPartition) {
         for (int partition = 0; partition < partitionArray.length; ++partition) {
-            if (skipPartition == partition) {
+            if (skipPartition == partition || partitionArray[partition] == null) {
                 continue;
             }
             partitionArray[partition].resetIterator();

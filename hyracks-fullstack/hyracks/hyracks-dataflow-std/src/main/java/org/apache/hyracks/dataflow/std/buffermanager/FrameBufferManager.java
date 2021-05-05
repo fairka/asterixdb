@@ -30,6 +30,8 @@ import org.apache.hyracks.api.exceptions.HyracksDataException;
  */
 public class FrameBufferManager implements IFrameBufferManager {
 
+    int size = 0;
+    int iterator = -1;
     ArrayList<ByteBuffer> buffers = new ArrayList<>();
 
     @Override
@@ -56,26 +58,33 @@ public class FrameBufferManager implements IFrameBufferManager {
 
     @Override
     public void removeFrame(int frameIndex) {
-
+        buffers.set(frameIndex, null);
+        size--;
     }
 
     @Override
     public int next() {
-        return 0;
+        while (++iterator < buffers.size()) {
+            if (buffers.get(iterator) != null) {
+                break;
+            }
+        }
+        return iterator;
     }
 
     @Override
     public boolean exists() {
-        return false;
+        return iterator < buffers.size() && buffers.get(iterator) != null;
     }
 
     @Override
     public void resetIterator() {
-
+        iterator = -1;
     }
 
     @Override
     public ITupleAccessor getTupleAccessor(RecordDescriptor rd) {
+        assert (false);
         return null;
     }
 
