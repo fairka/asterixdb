@@ -73,12 +73,6 @@ public class IntervalJoinUtils {
         INTERVAL_JOIN_CONDITIONS.put(BuiltinFunctions.INTERVAL_OVERLAPPED_BY, BuiltinFunctions.INTERVAL_OVERLAPS);
         INTERVAL_JOIN_CONDITIONS.put(BuiltinFunctions.INTERVAL_OVERLAPPING, BuiltinFunctions.INTERVAL_OVERLAPPING);
         INTERVAL_JOIN_CONDITIONS.put(BuiltinFunctions.INTERVAL_OVERLAPS, BuiltinFunctions.INTERVAL_OVERLAPPED_BY);
-        INTERVAL_JOIN_CONDITIONS.put(BuiltinFunctions.INTERVAL_ENDED_BY, BuiltinFunctions.INTERVAL_ENDS);
-        INTERVAL_JOIN_CONDITIONS.put(BuiltinFunctions.INTERVAL_ENDS, BuiltinFunctions.INTERVAL_ENDED_BY);
-        INTERVAL_JOIN_CONDITIONS.put(BuiltinFunctions.INTERVAL_MEETS, BuiltinFunctions.INTERVAL_MET_BY);
-        INTERVAL_JOIN_CONDITIONS.put(BuiltinFunctions.INTERVAL_MET_BY, BuiltinFunctions.INTERVAL_MEETS);
-        INTERVAL_JOIN_CONDITIONS.put(BuiltinFunctions.INTERVAL_STARTED_BY, BuiltinFunctions.INTERVAL_STARTS);
-        INTERVAL_JOIN_CONDITIONS.put(BuiltinFunctions.INTERVAL_STARTS, BuiltinFunctions.INTERVAL_STARTED_BY);
     }
 
     protected static RangeAnnotation findRangeAnnotation(AbstractFunctionCallExpression fexp) {
@@ -147,30 +141,6 @@ public class IntervalJoinUtils {
             leftPartitioningType = PartitioningType.PARTIAL_BROADCAST_ORDERED_FOLLOWING;
         } else if (fi.equals(BuiltinFunctions.INTERVAL_AFTER)) {
             rightPartitioningType = PartitioningType.PARTIAL_BROADCAST_ORDERED_FOLLOWING;
-        } else if (fi.equals(BuiltinFunctions.INTERVAL_STARTS)) {
-            // Default Partitioning
-        } else if (fi.equals(BuiltinFunctions.INTERVAL_STARTED_BY)) {
-            // Default Partitioning
-        } else if (fi.equals(BuiltinFunctions.INTERVAL_ENDS)) {
-            // Reverse order of Join
-            leftFirstSortField = INTERVAL_END_INDEX;
-            leftSecondSortField = INTERVAL_START_INDEX;
-            rightFirstSortField = INTERVAL_END_INDEX;
-            rightSecondSortField = INTERVAL_START_INDEX;
-            orderOfJoin = OrderKind.DESC;
-        } else if (fi.equals(BuiltinFunctions.INTERVAL_ENDED_BY)) {
-            // Reverse order of Join
-            leftFirstSortField = INTERVAL_END_INDEX;
-            leftSecondSortField = INTERVAL_START_INDEX;
-            rightFirstSortField = INTERVAL_END_INDEX;
-            rightSecondSortField = INTERVAL_START_INDEX;
-            orderOfJoin = OrderKind.DESC;
-        } else if (fi.equals(BuiltinFunctions.INTERVAL_MEETS)) {
-            leftFirstSortField = INTERVAL_END_INDEX;
-            leftSecondSortField = INTERVAL_START_INDEX;
-        } else if (fi.equals(BuiltinFunctions.INTERVAL_MET_BY)) {
-            rightFirstSortField = INTERVAL_END_INDEX;
-            rightSecondSortField = INTERVAL_START_INDEX;
         } else {
             throw new CompilationException(ErrorCode.COMPILATION_ILLEGAL_STATE, fi.getName());
         }
