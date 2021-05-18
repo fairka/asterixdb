@@ -111,9 +111,8 @@ public abstract class AbstractIntervalJoinUtil implements IIntervalJoinUtil {
      * Left (first argument) interval starts after the Right (second argument) interval ends.
      */
     @Override
-    public boolean checkToRemoveInMemory(IFrameTupleAccessor accessor0, int tupleIndex0, int key0, long memoryPoint) {
-        long start0 = IntervalJoinUtil.getIntervalStart(accessor0, tupleIndex0, key0);
-        return start0 < memoryPoint;
+    public boolean checkToRemoveInMemory(long streamPoint, long memoryPoint, boolean reversed) {
+        return streamPoint < memoryPoint;
     }
 
     @Override

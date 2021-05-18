@@ -25,6 +25,7 @@ import java.util.logging.Logger;
 import org.apache.asterix.runtime.operators.joins.interval.TimeSweep.memory.VPartitionDeletableTupleBufferManager;
 import org.apache.asterix.runtime.operators.joins.interval.utils.IIntervalJoinUtil;
 import org.apache.asterix.runtime.operators.joins.interval.utils.memory.FrameTupleCursor;
+import org.apache.asterix.runtime.operators.joins.interval.utils.memory.IntervalJoinUtil;
 import org.apache.asterix.runtime.operators.joins.interval.utils.memory.RunFilePointer;
 import org.apache.asterix.runtime.operators.joins.interval.utils.memory.RunFileStream;
 import org.apache.hyracks.api.comm.IFrame;
@@ -229,6 +230,16 @@ public class IntervalTimeSweepJoiner {
         runFileStream[PROBE_PARTITION].removeRunFile();
     }
 
+    private void processRemoveOldTuples(int memoryPartition, int streamPartition, int key, boolean reversed)
+            throws HyracksDataException {
+        while (activeManager[streamPartition].hasRecords() && iju.checkToRemoveInMemory(
+                IntervalJoinUtil.getIntervalStart(inputCursor[memoryPartition].getAccessor(),
+                        inputCursor[memoryPartition].getTupleId(), key),
+                activeManager[streamPartition].getTopPoint(), reversed)) {
+            activeManager[streamPartition].removeTop();
+        }
+    }
+
     private boolean addToMemoryAndProcessJoin(int memoryPartition, int streamPartition, boolean reversed,
             IFrameWriter writer) throws HyracksDataException {
         //Add to active, end point index and buffer.
@@ -282,6 +293,8 @@ public class IntervalTimeSweepJoiner {
         boolean continueStream = true;
         while (continueStream) {
             // Add individual tuples.
+            processRemoveOldTuples(streamPartition, memoryPartition,
+                    streamPartition == PROBE_PARTITION ? probeKey : buildKey, reversed);
             processTupleJoin(activeManager[memoryPartition].getActiveList(), memoryAccessor[memoryPartition],
                     inputCursor[streamPartition], reversed, writer);
 
@@ -313,20 +326,4 @@ public class IntervalTimeSweepJoiner {
         }
     }
 
-    private void processRemoveOldTuples(int memoryPartition, int streamPartition, int key, boolean reversed)
-            throws HyracksDataException {
-        if (reversed) {
-            while (activeManager[streamPartition].hasRecords() && iju.checkToRemoveInMemory(
-                    inputCursor[memoryPartition].getAccessor(), inputCursor[memoryPartition].getTupleId(), key,
-                    activeManager[streamPartition].getTopPoint())) {
-                activeManager[streamPartition].removeTop();
-            }
-        } else {
-            while (activeManager[memoryPartition].hasRecords() && iju.checkToRemoveInMemory(
-                    inputCursor[streamPartition].getAccessor(), inputCursor[streamPartition].getTupleId(), key,
-                    activeManager[memoryPartition].getTopPoint())) {
-                activeManager[memoryPartition].removeTop();
-            }
-        }
-    }
 }

@@ -93,9 +93,8 @@ public class OverlappingIntervalJoinUtil extends AbstractIntervalJoinUtil {
      * Left (first argument) interval starts after the Right (second argument) interval ends.
      */
     @Override
-    public boolean checkToRemoveInMemory(IFrameTupleAccessor accessor0, int tupleIndex0, int key0, long memoryEnd) {
-        long start0 = IntervalJoinUtil.getIntervalStart(accessor0, tupleIndex0, key0);
-        return start0 < memoryEnd;
+    public boolean checkToRemoveInMemory(long streamPoint, long memoryEnd, boolean reversed) {
+        return streamPoint < memoryEnd;
     }
 
     @Override

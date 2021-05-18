@@ -35,9 +35,12 @@ public class OverlapsIntervalJoinUtil extends AbstractIntervalJoinUtil {
     }
 
     @Override
-    public boolean checkToRemoveInMemory(IFrameTupleAccessor accessor0, int tupleIndex0, int key0, long memoryPoint) {
-        long start0 = IntervalJoinUtil.getIntervalStart(accessor0, tupleIndex0, key0);
-        return start0 < memoryPoint;
+    public boolean checkToRemoveInMemory(long streamPoint, long memoryPoint, boolean reversed) {
+        if (reversed) {
+            return streamPoint < memoryPoint;
+
+        }
+        return false;
     }
 
     @Override

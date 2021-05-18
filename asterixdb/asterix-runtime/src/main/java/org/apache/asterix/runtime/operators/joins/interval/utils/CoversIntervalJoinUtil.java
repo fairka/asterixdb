@@ -19,8 +19,6 @@
 package org.apache.asterix.runtime.operators.joins.interval.utils;
 
 import org.apache.asterix.om.pointables.nonvisitor.AIntervalPointable;
-import org.apache.asterix.runtime.operators.joins.interval.utils.memory.IntervalJoinUtil;
-import org.apache.hyracks.api.comm.IFrameTupleAccessor;
 import org.apache.hyracks.api.exceptions.HyracksDataException;
 
 public class CoversIntervalJoinUtil extends AbstractIntervalJoinUtil {
@@ -35,8 +33,11 @@ public class CoversIntervalJoinUtil extends AbstractIntervalJoinUtil {
     }
 
     @Override
-    public boolean checkToRemoveInMemory(IFrameTupleAccessor accessor0, int tupleIndex0, int key0, long memoryPoint) {
-        long point0 = IntervalJoinUtil.getIntervalStart(accessor0, tupleIndex0, key0);
-        return point0 < memoryPoint;
+    public boolean checkToRemoveInMemory(long streamPoint, long memoryPoint, boolean reversed) {
+        if (reversed) {
+            return streamPoint < memoryPoint;
+        }
+        return false;
+
     }
 }

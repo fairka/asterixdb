@@ -41,9 +41,11 @@ public class CoveredByIntervalJoinUtil extends AbstractIntervalInverseJoinUtil {
     }
 
     @Override
-    public boolean checkToRemoveInMemory(IFrameTupleAccessor accessor0, int tupleIndex0, int key0, long memoryPoint) {
-        long point0 = IntervalJoinUtil.getIntervalStart(accessor0, tupleIndex0, key0);
-        return point0 > memoryPoint;
+    public boolean checkToRemoveInMemory(long streamPoint, long memoryPoint, boolean reversed) {
+        if (reversed) {
+            return false;
+        }
+        return streamPoint > memoryPoint;
     }
 
     /**
