@@ -20,7 +20,6 @@
 package org.apache.asterix.runtime.operators.joins.interval.TimeSweep;
 
 import java.nio.ByteBuffer;
-import java.util.Comparator;
 
 import org.apache.asterix.runtime.operators.joins.interval.utils.IIntervalJoinUtil;
 import org.apache.asterix.runtime.operators.joins.interval.utils.IIntervalJoinUtilFactory;
@@ -113,12 +112,7 @@ public class IntervalTimeSweepJoinOperatorDescriptor extends AbstractOperatorDes
 
                     IIntervalJoinUtil imjc = imjcf.createIntervalMergeJoinUtil(buildKey, probeKey, ctx, nPartitions);
 
-                    byte point = true ? EndPointIndexItem.START_POINT : EndPointIndexItem.END_POINT;
-                    Comparator<EndPointIndexItem> endPointComparator =
-                            true ? EndPointIndexItem.EndPointAscComparator : EndPointIndexItem.EndPointDescComparator;
-
-                    state.joiner = new IntervalTimeSweepJoiner(ctx, memoryForJoin, imjc, buildKey, probeKey, rd0, rd1,
-                            endPointComparator);
+                    state.joiner = new IntervalTimeSweepJoiner(ctx, memoryForJoin, imjc, buildKey, probeKey, rd0, rd1);
                 }
 
                 @Override

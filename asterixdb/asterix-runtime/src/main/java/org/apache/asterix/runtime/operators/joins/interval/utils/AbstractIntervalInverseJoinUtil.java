@@ -57,4 +57,9 @@ public abstract class AbstractIntervalInverseJoinUtil extends AbstractIntervalJo
         return buildStart >= probeStart;
     }
 
+    @Override
+    public boolean reversed() {
+        return true;
+    }
+
 }

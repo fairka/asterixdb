@@ -117,11 +117,14 @@ public class IntervalJoinUtils {
 
         final int INTERVAL_START_INDEX = 0;
         final int INTERVAL_END_INDEX = 1;
-        int rightFirstSortField = INTERVAL_START_INDEX;
-        int rightSecondSortField = INTERVAL_END_INDEX;
-        int leftFirstSortField = INTERVAL_START_INDEX;
-        int leftSecondSortField = INTERVAL_END_INDEX;
         OrderKind orderOfJoin = OrderKind.ASC;
+
+        List<IntervalColumn> leftIC =
+                Collections.singletonList(new IntervalColumn(leftPartitionVar.get(INTERVAL_START_INDEX),
+                        leftPartitionVar.get(INTERVAL_END_INDEX), orderOfJoin));
+        List<IntervalColumn> rightIC =
+                Collections.singletonList(new IntervalColumn(rightPartitionVar.get(INTERVAL_START_INDEX),
+                        rightPartitionVar.get(INTERVAL_END_INDEX), orderOfJoin));
 
         //Set Partitioning Types and reverse order of join if necessary
         PartitioningType leftPartitioningType = PartitioningType.ORDERED_PARTITIONED;
@@ -144,13 +147,6 @@ public class IntervalJoinUtils {
         } else {
             throw new CompilationException(ErrorCode.COMPILATION_ILLEGAL_STATE, fi.getName());
         }
-
-        List<IntervalColumn> leftIC =
-                Collections.singletonList(new IntervalColumn(leftPartitionVar.get(leftFirstSortField),
-                        leftPartitionVar.get(leftSecondSortField), orderOfJoin));
-        List<IntervalColumn> rightIC =
-                Collections.singletonList(new IntervalColumn(rightPartitionVar.get(rightFirstSortField),
-                        rightPartitionVar.get(rightSecondSortField), orderOfJoin));
 
         return new IntervalPartitions(rangeMap, leftIC, rightIC, leftPartitioningType, rightPartitioningType);
     }

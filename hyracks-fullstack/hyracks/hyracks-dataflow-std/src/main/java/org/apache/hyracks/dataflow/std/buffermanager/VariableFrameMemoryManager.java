@@ -122,6 +122,7 @@ public class VariableFrameMemoryManager implements IFrameBufferManager {
         return numLogicalFrames - 1; // returns the index of the logical frame appended
     }
 
+    // Todo: Get rid of
     @Override
     public void removeFrame(int frameIndex) {
 
