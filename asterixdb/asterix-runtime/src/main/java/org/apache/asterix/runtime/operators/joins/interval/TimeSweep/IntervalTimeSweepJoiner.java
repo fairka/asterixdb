@@ -247,15 +247,14 @@ public class IntervalTimeSweepJoiner {
                     inputCursor[memoryPartition], reversed, writer);
             return;
         }
-        freezeAndSpill(writer, memoryPartition);
+        freezeAndSpill(writer);
         addToMemoryAndProcessJoin(memoryPartition, streamPartition, reversed, writer);
     }
 
-    private int freezeAndSpill(IFrameWriter writer, int activePartition) throws HyracksDataException {
+    private int freezeAndSpill(IFrameWriter writer) throws HyracksDataException {
 
         int streamPartition;
         int memoryPartition;
-        boolean continueStream = true;
         if (bufferManager.getNumTuples(BUILD_PARTITION) > bufferManager.getNumTuples(PROBE_PARTITION)) {
             memoryPartition = BUILD_PARTITION;
             streamPartition = PROBE_PARTITION;
@@ -266,7 +265,7 @@ public class IntervalTimeSweepJoiner {
         runFilePointer[streamPartition].reset(runFileStream[streamPartition].getReadPointer(),
                 inputCursor[streamPartition].getTupleId());
 
-        processTupleSpill(memoryPartition, streamPartition, writer, continueStream);
+        processTupleSpill(memoryPartition, streamPartition, writer);
 
         // Clear memory
         activeManager[memoryPartition].clear();
@@ -280,15 +279,21 @@ public class IntervalTimeSweepJoiner {
         return memoryPartition;
     }
 
-    private void processTupleSpill(int memoryPartition, int streamPartition, IFrameWriter writer,
-            boolean continueStream) throws HyracksDataException {
+    private void processTupleSpill(int memoryPartition, int streamPartition, IFrameWriter writer)
+            throws HyracksDataException {
         // Process left tuples one by one, check them with active memory from the right branch.
+        boolean reversed = false;
+        boolean continueStream = true;
+        if (streamPartition == BUILD_PARTITION) {
+            reversed = true;
+        }
+
         while (continueStream) {
             // Add individual tuples.
             //            processRemoveOldTuples(streamPartition, memoryPartition,
             //                    streamPartition == PROBE_PARTITION ? probeKey : buildKey);
             processTupleJoin(activeManager[memoryPartition].getActiveList(), memoryAccessor[memoryPartition],
-                    inputCursor[streamPartition], false, writer);
+                    inputCursor[streamPartition], reversed, writer);
 
             continueStream = hasNext(streamPartition);
             if (continueStream) {

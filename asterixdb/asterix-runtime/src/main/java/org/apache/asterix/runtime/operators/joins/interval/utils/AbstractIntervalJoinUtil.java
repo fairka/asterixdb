@@ -108,7 +108,7 @@ public abstract class AbstractIntervalJoinUtil implements IIntervalJoinUtil {
     public boolean choosePath(IFrameTupleAccessor buildAccessor, int buildTupleIndex, IFrameTupleAccessor probeAccessor,
             int probeTupleIndex) {
         long buildStart = IntervalJoinUtil.getIntervalStart(buildAccessor, buildTupleIndex, idBuild);
-        long probeStart = IntervalJoinUtil.getIntervalEnd(probeAccessor, probeTupleIndex, idProbe);
+        long probeStart = IntervalJoinUtil.getIntervalStart(probeAccessor, probeTupleIndex, idProbe);
         return buildStart > probeStart;
     }
 }
