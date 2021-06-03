@@ -25,7 +25,6 @@ import java.util.logging.Logger;
 import org.apache.asterix.runtime.operators.joins.interval.TimeSweep.memory.VPartitionDeletableTupleBufferManager;
 import org.apache.asterix.runtime.operators.joins.interval.utils.IIntervalJoinUtil;
 import org.apache.asterix.runtime.operators.joins.interval.utils.memory.FrameTupleCursor;
-import org.apache.asterix.runtime.operators.joins.interval.utils.memory.IntervalJoinUtil;
 import org.apache.asterix.runtime.operators.joins.interval.utils.memory.RunFilePointer;
 import org.apache.asterix.runtime.operators.joins.interval.utils.memory.RunFileStream;
 import org.apache.hyracks.api.comm.IFrame;
@@ -198,15 +197,14 @@ public class IntervalTimeSweepJoiner {
                 }
                 // Process the correct side based on chosen path.
                 if (choseProbePath) {
-                    //processRemoveOldTuples(PROBE_PARTITION, BUILD_PARTITION, probeKey);
                     addToMemoryAndProcessJoin(PROBE_PARTITION, BUILD_PARTITION, false, writer);
+                    // Needs to check for another frame
                     continueProbe = hasNext(PROBE_PARTITION);
                     if (continueProbe) {
                         inputCursor[PROBE_PARTITION].next();
                     }
 
                 } else {
-                    //processRemoveOldTuples(BUILD_PARTITION, PROBE_PARTITION, buildKey);
                     addToMemoryAndProcessJoin(BUILD_PARTITION, PROBE_PARTITION, true, writer);
                     // Needs to check for another frame
                     continueBuild = hasNext(BUILD_PARTITION);
@@ -228,16 +226,6 @@ public class IntervalTimeSweepJoiner {
         runFileStream[PROBE_PARTITION].removeRunFile();
     }
 
-    private void processRemoveOldTuples(int memoryPartition, int streamPartition, int memoryKey)
-            throws HyracksDataException {
-        while (activeManager[streamPartition].hasRecords()
-                && iju.checkToRemoveInMemory(activeManager[streamPartition].getTopPoint(),
-                        IntervalJoinUtil.getIntervalStart(inputCursor[memoryPartition].getAccessor(),
-                                inputCursor[memoryPartition].getTupleId(), memoryKey))) {
-            activeManager[streamPartition].removeTop();
-        }
-    }
-
     private void addToMemoryAndProcessJoin(int memoryPartition, int streamPartition, boolean reversed,
             IFrameWriter writer) throws HyracksDataException {
         //Add to active, end point index and buffer.
@@ -251,21 +239,23 @@ public class IntervalTimeSweepJoiner {
         addToMemoryAndProcessJoin(memoryPartition, streamPartition, reversed, writer);
     }
 
-    private int freezeAndSpill(IFrameWriter writer) throws HyracksDataException {
+    private void freezeAndSpill(IFrameWriter writer) throws HyracksDataException {
 
         int streamPartition;
         int memoryPartition;
+        boolean reversed = false;
         if (bufferManager.getNumTuples(BUILD_PARTITION) > bufferManager.getNumTuples(PROBE_PARTITION)) {
             memoryPartition = BUILD_PARTITION;
             streamPartition = PROBE_PARTITION;
         } else {
             memoryPartition = PROBE_PARTITION;
             streamPartition = BUILD_PARTITION;
+            reversed = true;
         }
         runFilePointer[streamPartition].reset(runFileStream[streamPartition].getReadPointer(),
                 inputCursor[streamPartition].getTupleId());
 
-        processTupleSpill(memoryPartition, streamPartition, writer);
+        processTupleSpill(memoryPartition, streamPartition, reversed, writer);
 
         // Clear memory
         activeManager[memoryPartition].clear();
@@ -275,26 +265,16 @@ public class IntervalTimeSweepJoiner {
                 runFilePointer[streamPartition].getFileOffset());
         inputCursor[streamPartition].resetPosition(runFilePointer[streamPartition].getTupleIndex());
         runFilePointer[streamPartition].reset(-1, -1);
-
-        return memoryPartition;
     }
 
-    private void processTupleSpill(int memoryPartition, int streamPartition, IFrameWriter writer)
+    private void processTupleSpill(int memoryPartition, int streamPartition, boolean reversed, IFrameWriter writer)
             throws HyracksDataException {
         // Process left tuples one by one, check them with active memory from the right branch.
-        boolean reversed = false;
         boolean continueStream = true;
-        if (streamPartition == BUILD_PARTITION) {
-            reversed = true;
-        }
-
         while (continueStream) {
             // Add individual tuples.
-            //            processRemoveOldTuples(streamPartition, memoryPartition,
-            //                    streamPartition == PROBE_PARTITION ? probeKey : buildKey);
             processTupleJoin(activeManager[memoryPartition].getActiveList(), memoryAccessor[memoryPartition],
                     inputCursor[streamPartition], reversed, writer);
-
             continueStream = hasNext(streamPartition);
             if (continueStream) {
                 inputCursor[streamPartition].next();
