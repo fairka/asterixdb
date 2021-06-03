@@ -56,10 +56,4 @@ public abstract class AbstractIntervalInverseJoinUtil extends AbstractIntervalJo
         long probeStart = IntervalJoinUtil.getIntervalStart(probeAccessor, probeTupleIndex, idProbe);
         return buildStart >= probeStart;
     }
-
-    @Override
-    public boolean reversed() {
-        return true;
-    }
-
 }

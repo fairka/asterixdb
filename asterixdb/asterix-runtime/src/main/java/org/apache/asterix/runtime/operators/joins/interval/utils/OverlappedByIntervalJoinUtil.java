@@ -31,15 +31,4 @@ public class OverlappedByIntervalJoinUtil extends AbstractIntervalInverseJoinUti
     public boolean compareInterval(AIntervalPointable ipBuild, AIntervalPointable ipProbe) throws HyracksDataException {
         return il.overlappedBy(ipBuild, ipProbe);
     }
-
-    /**
-     * Left (first argument) interval starts after the Right (second argument) interval ends.
-     */
-    @Override
-    public boolean checkToRemoveInMemory(long streamPoint, long memoryEnd, boolean reversed) {
-        if (reversed) {
-            return false;
-        }
-        return streamPoint > memoryEnd;
-    }
 }

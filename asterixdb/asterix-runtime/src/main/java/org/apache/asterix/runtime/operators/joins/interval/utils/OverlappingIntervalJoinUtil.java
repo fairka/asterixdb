@@ -88,20 +88,4 @@ public class OverlappingIntervalJoinUtil extends AbstractIntervalJoinUtil {
     public boolean compareInterval(AIntervalPointable ipBuild, AIntervalPointable ipProbe) throws HyracksDataException {
         return il.overlapping(ipBuild, ipProbe);
     }
-
-    /**
-     * Left (first argument) interval starts after the Right (second argument) interval ends.
-     */
-    @Override
-    public boolean checkToRemoveInMemory(long streamPoint, long memoryEnd, boolean reversed) {
-        return streamPoint < memoryEnd;
-    }
-
-    @Override
-    public boolean choosePath(IFrameTupleAccessor buildAccessor, int buildTupleIndex, IFrameTupleAccessor probeAccessor,
-            int probeTupleIndex) {
-        long buildStart = IntervalJoinUtil.getIntervalStart(buildAccessor, buildTupleIndex, idBuild);
-        long probeStart = IntervalJoinUtil.getIntervalStart(probeAccessor, probeTupleIndex, idProbe);
-        return buildStart >= probeStart;
-    }
 }

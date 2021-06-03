@@ -96,23 +96,12 @@ public abstract class AbstractIntervalJoinUtil implements IIntervalJoinUtil {
         return buildEnd > probeStart;
     }
 
-    //Checked
-    @Override
-    public boolean checkToRemoveBuildActive() {
-        return true;
-    }
-
-    @Override
-    public boolean checkToRemoveProbeActive() {
-        return true;
-    }
-
     /**
      * Left (first argument) interval starts after the Right (second argument) interval ends.
      */
     @Override
-    public boolean checkToRemoveInMemory(long streamPoint, long memoryPoint, boolean reversed) {
-        return streamPoint < memoryPoint;
+    public boolean checkToRemoveInMemory(long memoryEndPoint, long streamStartPoint) {
+        return memoryEndPoint < streamStartPoint;
     }
 
     @Override
@@ -121,10 +110,5 @@ public abstract class AbstractIntervalJoinUtil implements IIntervalJoinUtil {
         long buildStart = IntervalJoinUtil.getIntervalStart(buildAccessor, buildTupleIndex, idBuild);
         long probeStart = IntervalJoinUtil.getIntervalEnd(probeAccessor, probeTupleIndex, idProbe);
         return buildStart > probeStart;
-    }
-
-    @Override
-    public boolean reversed() {
-        return false;
     }
 }

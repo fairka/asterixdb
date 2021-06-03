@@ -40,14 +40,6 @@ public class CoveredByIntervalJoinUtil extends AbstractIntervalInverseJoinUtil {
         return buildStart <= probeEnd;
     }
 
-    @Override
-    public boolean checkToRemoveInMemory(long streamPoint, long memoryPoint, boolean reversed) {
-        if (reversed) {
-            return false;
-        }
-        return streamPoint > memoryPoint;
-    }
-
     /**
      * Left (first argument) interval starts after the Right (second argument) interval ends.
      */
