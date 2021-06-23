@@ -25,6 +25,7 @@ import java.util.logging.Logger;
 import org.apache.asterix.runtime.operators.joins.interval.TimeSweep.memory.VPartitionDeletableTupleBufferManager;
 import org.apache.asterix.runtime.operators.joins.interval.utils.IIntervalJoinUtil;
 import org.apache.asterix.runtime.operators.joins.interval.utils.memory.FrameTupleCursor;
+import org.apache.asterix.runtime.operators.joins.interval.utils.memory.IntervalJoinUtil;
 import org.apache.asterix.runtime.operators.joins.interval.utils.memory.RunFilePointer;
 import org.apache.asterix.runtime.operators.joins.interval.utils.memory.RunFileStream;
 import org.apache.hyracks.api.comm.IFrame;
@@ -47,8 +48,6 @@ import org.apache.hyracks.dataflow.std.structures.TuplePointer;
  * The both right and left use memory to maintain active intervals for the join.
  */
 public class IntervalTimeSweepJoiner {
-
-    private static final Logger LOGGER = Logger.getLogger(IntervalTimeSweepJoiner.class.getName());
 
     protected static final int JOIN_PARTITIONS = 2;
     protected static final int BUILD_PARTITION = 0;
@@ -197,7 +196,8 @@ public class IntervalTimeSweepJoiner {
                 }
                 // Process the correct side based on chosen path.
                 if (choseProbePath) {
-                    addToMemoryAndProcessJoin(PROBE_PARTITION, BUILD_PARTITION, false, writer);
+                    processRemoveOldTuples(BUILD_PARTITION, PROBE_PARTITION, probeKey);
+                    addToMemoryAndProcessJoin(BUILD_PARTITION, PROBE_PARTITION, false, writer);
                     // Needs to check for another frame
                     continueProbe = hasNext(PROBE_PARTITION);
                     if (continueProbe) {
@@ -205,7 +205,8 @@ public class IntervalTimeSweepJoiner {
                     }
 
                 } else {
-                    addToMemoryAndProcessJoin(BUILD_PARTITION, PROBE_PARTITION, true, writer);
+                    processRemoveOldTuples(PROBE_PARTITION, BUILD_PARTITION, buildKey);
+                    addToMemoryAndProcessJoin(PROBE_PARTITION, BUILD_PARTITION, true, writer);
                     // Needs to check for another frame
                     continueBuild = hasNext(BUILD_PARTITION);
                     if (continueBuild) {
@@ -230,13 +231,24 @@ public class IntervalTimeSweepJoiner {
             IFrameWriter writer) throws HyracksDataException {
         //Add to active, end point index and buffer.
         TuplePointer tp = new TuplePointer();
-        if (activeManager[memoryPartition].addTuple(inputCursor[memoryPartition], tp)) {
-            processTupleJoin(activeManager[streamPartition].getActiveList(), memoryAccessor[streamPartition],
-                    inputCursor[memoryPartition], reversed, writer);
+        if (activeManager[streamPartition].addTuple(inputCursor[streamPartition], tp)) {
+            processTupleJoin(activeManager[memoryPartition].getActiveList(), memoryAccessor[memoryPartition],
+                    inputCursor[streamPartition], reversed, writer);
             return;
         }
         freezeAndSpill(writer);
         addToMemoryAndProcessJoin(memoryPartition, streamPartition, reversed, writer);
+    }
+
+    private void processRemoveOldTuples(int memoryPartition, int streamPartition, int streamKey)
+            throws HyracksDataException {
+        // Remove from passive that can no longer match with active.
+        while (activeManager[memoryPartition].hasRecords()
+                && iju.checkToRemoveInMemory(activeManager[memoryPartition].getTopPoint(),
+                        IntervalJoinUtil.getIntervalStart(inputCursor[streamPartition].getAccessor(),
+                                inputCursor[streamPartition].getTupleId(), streamKey))) {
+            activeManager[memoryPartition].removeTop();
+        }
     }
 
     private void freezeAndSpill(IFrameWriter writer) throws HyracksDataException {
@@ -273,8 +285,11 @@ public class IntervalTimeSweepJoiner {
         boolean continueStream = true;
         while (continueStream) {
             // Add individual tuples.
+            processRemoveOldTuples(memoryPartition, streamPartition,
+                    streamPartition == PROBE_PARTITION ? probeKey : buildKey);
             processTupleJoin(activeManager[memoryPartition].getActiveList(), memoryAccessor[memoryPartition],
                     inputCursor[streamPartition], reversed, writer);
+
             continueStream = hasNext(streamPartition);
             if (continueStream) {
                 inputCursor[streamPartition].next();

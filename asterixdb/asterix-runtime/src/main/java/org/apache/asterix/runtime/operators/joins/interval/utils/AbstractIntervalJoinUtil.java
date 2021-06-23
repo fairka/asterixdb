@@ -100,8 +100,8 @@ public abstract class AbstractIntervalJoinUtil implements IIntervalJoinUtil {
      * Left (first argument) interval starts after the Right (second argument) interval ends.
      */
     @Override
-    public boolean checkToRemoveInMemory(long memoryEndPoint, long streamStartPoint) {
-        return memoryEndPoint < streamStartPoint;
+    public boolean checkToRemoveInMemory(long endPoint, long startPoint) {
+        return endPoint < startPoint;
     }
 
     @Override

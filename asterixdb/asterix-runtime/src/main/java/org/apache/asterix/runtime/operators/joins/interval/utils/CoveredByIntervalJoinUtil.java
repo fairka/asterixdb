@@ -53,6 +53,11 @@ public class CoveredByIntervalJoinUtil extends AbstractIntervalInverseJoinUtil {
     }
 
     @Override
+    public boolean checkToRemoveInMemory(long endPoint, long startPoint) {
+        return false;
+    }
+
+    @Override
     public boolean compareInterval(AIntervalPointable ipBuild, AIntervalPointable ipProbe) throws HyracksDataException {
         return il.coveredBy(ipBuild, ipProbe);
     }
